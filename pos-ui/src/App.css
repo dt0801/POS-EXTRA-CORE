@@ -1,0 +1,71 @@
+/* =============================================
+   BILL PANEL (UI styles - giữ nguyên từ code cũ)
+   ============================================= */
+.bill {
+  width: 340px;
+  background: #020617;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bill-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1e293b;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.bill-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 22px;
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+.bill-btn {
+  margin-top: 20px;
+  background: #ef4444;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.bill-btn:hover {
+  transform: scale(1.05);
+}
+
+.tab {
+  background: #1e293b;
+  padding: 8px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 14px;
+}
+
+.tab:hover {
+  background: #334155;
+}
+
+/* =============================================
+   NORMAL – Ẩn bill tài chính khỏi UI
+   ============================================= */
+#financial-bill {
+  display: none;
+}
+
+/* =============================================
+   PRINT STYLE (DEPRECATED)
+   In phiếu hiện đã được đồng bộ qua backend
+   (server.js + Electron hidden BrowserWindow).
+   Khối @media print cũ được loại bỏ để tránh
+   tồn tại 2 logic in khác nhau.
+   ============================================= */

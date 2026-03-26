@@ -1,0 +1,73 @@
+{
+  "name": "bbq-pos",
+  "version": "1.0.0",
+  "description": "POS System – Tiệm Nướng Đà Lạt Và Em",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run server\" \"npm run react\" \"wait-on http://localhost:3001 && electron .\"",
+    "server": "node server.js",
+    "react": "cd pos-ui && npm start",
+    "build": "cd pos-ui && npm run build",
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "npm run build && electron-builder build --win"
+  },
+  "build": {
+    "appId": "com.bbqpos.dalatvaem",
+    "productName": "BBQ POS",
+    "icon": "pos-ui/public/uploads/pancake-pos-icon-filled-256.ico",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/node-thermal-printer/**",
+      "node_modules/sql.js/**",
+      "node_modules/@thiagoelg/node-printer/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "server.js",
+      "node_modules/**",
+      "pos-ui/build/**",
+      "!node_modules/.cache/**",
+      "!pos-ui/node_modules/**"
+    ],
+    "extraResources": [
+      {
+        "from": "pos.db",
+        "to": "pos.db"
+      },
+      {
+        "from": "uploads",
+        "to": "uploads"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BBQ POS"
+    }
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "electron-is-dev": "^2.0.0",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "node-thermal-printer": "^4.3.3",
+    "sql.js": "^1.14.0",
+    "@thiagoelg/node-printer": "^0.0.4"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "wait-on": "^7.2.0"
+  },
+  "author": "BBQ POS"
+}

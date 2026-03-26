@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-container": "#ff6b00",
+              "on-secondary": "#ffffff",
+              "tertiary": "#0062a1",
+              "on-surface-variant": "#5a4136",
+              "outline": "#8e7164",
+              "surface-tint": "#a04100",
+              "error": "#ba1a1a",
+              "secondary-container": "#fe9a69",
+              "secondary": "#96481e",
+              "inverse-on-surface": "#f4eff5",
+              "tertiary-container": "#059eff",
+              "on-surface": "#1c1b1f",
+              "outline-variant": "#e2bfb0",
+              "error-container": "#ffdad6",
+              "surface": "#fdf8fd",
+              "on-secondary-fixed": "#351000",
+              "on-tertiary-fixed-variant": "#00497b",
+              "on-error-container": "#93000a",
+              "background": "#fdf8fd",
+              "inverse-primary": "#ffb693",
+              "on-primary-container": "#572000",
+              "surface-container-low": "#f7f2f8",
+              "primary-fixed-dim": "#ffb693",
+              "on-primary-fixed-variant": "#7a3000",
+              "primary": "#a04100",
+              "on-secondary-container": "#763006",
+              "tertiary-fixed": "#d0e4ff",
+              "on-background": "#1c1b1f",
+              "tertiary-fixed-dim": "#9ccaff",
+              "surface-dim": "#ddd9de",
+              "on-tertiary-fixed": "#001d35",
+              "on-primary-fixed": "#351000",
+              "primary-fixed": "#ffdbcc",
+              "on-secondary-fixed-variant": "#783207",
+              "surface-variant": "#e5e1e7",
+              "secondary-fixed": "#ffdbcc",
+              "on-error": "#ffffff",
+              "secondary-fixed-dim": "#ffb693",
+              "surface-bright": "#fdf8fd",
+              "on-tertiary": "#ffffff",
+              "on-tertiary-container": "#003357",
+              "surface-container-high": "#ebe7ec",
+              "surface-container-highest": "#e5e1e7",
+              "surface-container": "#f1ecf2",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ffffff",
+              "inverse-surface": "#313034"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      h1, h2, h3, .font-headline {
+        font-family: 'Manrope', sans-serif;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e2bfb0;
+        border-radius: 10px;
+      }
+    </style>
+</head>
+<body class="bg-surface-container text-on-surface flex h-screen overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-full z-40 overflow-y-auto bg-orange-50 dark:bg-stone-900 h-screen w-20 flex flex-col items-center py-6 border-r-0 font-manrope text-sm font-semibold tracking-tight">
+<div class="mb-10 text-lg font-extrabold text-orange-900 dark:text-orange-100 italic">
+            TN
+        </div>
+<nav class="flex flex-col gap-6 items-center flex-1">
+<!-- Table Map -->
+<button class="flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 w-14 h-14 hover:bg-orange-100 dark:hover:bg-stone-800 transition-colors scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+</button>
+<!-- Menu (Active) -->
+<button class="flex flex-col items-center justify-center bg-orange-600 text-white rounded-2xl w-14 h-14 transition-all duration-300 scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+</button>
+<!-- Orders -->
+<button class="flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 w-14 h-14 hover:bg-orange-100 dark:hover:bg-stone-800 transition-colors scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+</button>
+<!-- History -->
+<button class="flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 w-14 h-14 hover:bg-orange-100 dark:hover:bg-stone-800 transition-colors scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+<!-- Settings -->
+<button class="flex flex-col items-center justify-center text-stone-500 dark:text-stone-400 w-14 h-14 hover:bg-orange-100 dark:hover:bg-stone-800 transition-colors scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</nav>
+<div class="mt-auto flex flex-col items-center gap-6">
+<button class="text-stone-500 hover:text-orange-600 transition-colors">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-orange-200 overflow-hidden ring-2 ring-orange-100">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="Close-up portrait of a professional restaurant manager with a friendly expression in a modern sunlit office" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZT6ETUGQGE1iiLYQX9V4zCKl0pMI6cDErfx-TXCmxRcUN7KcIuhXN8umJNXqadKOTHycPmyU0OVMPCMMTthyb-_404sNPwRkbBAEb8K3cTMbocT_h2Tgf0GsZirwJYMueaH_naHSk_hxezOmtdMxJMHRKNnB6XUYKxffMh5HXgJxAxm-cEBi2uI32ugClrVJUVlHZn97R6RpTdLpNe7xJ9R4lepg9je-A_9ixwle6ElFaF_Wi2qwITLnjHqA3FR179WjWU9Bx4U_U"/>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="ml-20 flex-1 flex flex-col min-w-0">
+<!-- TopAppBar (Shared Component) -->
+<header class="flex items-center justify-between px-8 w-full h-16 border-b-0 bg-stone-50/80 backdrop-blur-md dark:bg-stone-950/80 shadow-sm dark:shadow-none font-manrope text-base font-bold">
+<div class="flex items-center gap-8">
+<h1 class="text-xl font-black text-stone-900 dark:text-white uppercase tracking-tighter">
+                    Tiệm Nướng Đà Lạt Và Em
+                </h1>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-orange-600 border-b-2 border-orange-600 pb-1" href="#">Main Hall</a>
+<a class="text-stone-500 hover:text-stone-800 dark:text-stone-400 transition-colors" href="#">VIP Room</a>
+<a class="text-stone-500 hover:text-stone-800 dark:text-stone-400 transition-colors" href="#">Garden</a>
+<a class="text-stone-500 hover:text-stone-800 dark:text-stone-400 transition-colors" href="#">Terrace</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 material-symbols-outlined scale-75">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-high rounded-full border-none focus:ring-2 focus:ring-primary text-sm w-64 transition-all" placeholder="Tìm món ăn..." type="text"/>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 text-stone-500 hover:text-orange-600 transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</button>
+<button class="p-2 text-stone-500 hover:text-orange-600 transition-colors">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+</button>
+</div>
+</div>
+</header>
+<!-- POS Canvas -->
+<div class="flex-1 flex overflow-hidden p-6 gap-6">
+<!-- Left Side: Menu Grid Area -->
+<div class="flex-1 flex flex-col gap-6 overflow-hidden">
+<!-- Category Tabs -->
+<div class="flex items-center gap-3 overflow-x-auto pb-2 custom-scrollbar">
+<button class="px-6 py-2.5 bg-primary-container text-white font-headline font-bold rounded-xl shadow-md transition-all whitespace-nowrap">Tất cả</button>
+<button class="px-6 py-2.5 bg-surface-container-lowest text-on-surface-variant font-headline font-bold rounded-xl hover:bg-orange-50 transition-all whitespace-nowrap">Bò Nướng</button>
+<button class="px-6 py-2.5 bg-surface-container-lowest text-on-surface-variant font-headline font-bold rounded-xl hover:bg-orange-50 transition-all whitespace-nowrap">Hải Sản</button>
+<button class="px-6 py-2.5 bg-surface-container-lowest text-on-surface-variant font-headline font-bold rounded-xl hover:bg-orange-50 transition-all whitespace-nowrap">Heo Tộc</button>
+<button class="px-6 py-2.5 bg-surface-container-lowest text-on-surface-variant font-headline font-bold rounded-xl hover:bg-orange-50 transition-all whitespace-nowrap">Đồ Uống</button>
+<button class="px-6 py-2.5 bg-surface-container-lowest text-on-surface-variant font-headline font-bold rounded-xl hover:bg-orange-50 transition-all whitespace-nowrap">Combo</button>
+</div>
+<!-- Bento Grid Menu -->
+<div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+<!-- Menu Item Card 1 -->
+<div class="group bg-surface-container-lowest rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:translate-y-[-4px]">
+<div class="h-40 relative overflow-hidden">
+<img alt="Bò nướng tảng" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="Grilled beef steaks on a wooden board with rosemary and rock salt, dramatic lighting with smoke" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVgp_UT21hSea9f36d9RNU6S-vftZ0YW4jh1ZQ1p9q5ObFR-Kx40yjezKYp37arJSMjZYPrjjufMxEW0xR16ofShN3Uzman-hJ_Z9u7DA3T_EPwGtGfwBZzmn0k4VLZ80MD09qHSsUyHif2ZLOhRoH2N6-GTw9BgYO4vBVOs--REQTPS7V9WyzWBbZQSxbwlj6uMNeQtK5soS_B7dZvTYXoW-EwN1WRX_xD91sINtV1rfXClPrlklO36lCB6XM2_PT5aFTq0zLUr6D"/>
+<div class="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary">BEST SELLER</div>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h3 class="font-headline font-extrabold text-stone-900 line-clamp-1 mb-1">Bò Nướng Đá Tảng</h3>
+<p class="text-sm text-stone-500 mb-4">Mềm mại, thơm nức...</p>
+<div class="mt-auto flex items-center justify-between">
+<span class="font-headline font-black text-lg text-primary">189k</span>
+<button class="w-10 h-10 rounded-2xl bg-orange-100 text-primary flex items-center justify-center hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Menu Item Card 2 -->
+<div class="group bg-surface-container-lowest rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:translate-y-[-4px]">
+<div class="h-40 relative overflow-hidden">
+<img alt="Lẩu Atiso Đà Lạt" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="Steaming hot pot with fresh artichokes and meat slices on a dark table, authentic Vietnamese style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHoB-PUypTF_UiLUh95jU1BpwIdkfVAWyRq20np-5lL0rSV8bAzMJ3elvpi89bEvRH9COZsD7BshZetTd0beHoNUKDm_LPkft3a-s7C8nPEzG0BKJCBvDdvyNZAtmeN0JQwjTV9RAKbIHJGFXAZuss8PkdrdzvfmSc0dYGS2AgUR5yArMtRGeoJMz7hEiqyE-I0QGrO5Oy8YStNRk0rhp7Xg5n-CUtc0HnAFeGRfZlNRF7QRzD3A_q7J6do9xp1sS7wVJCL246rsZO"/>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h3 class="font-headline font-extrabold text-stone-900 line-clamp-1 mb-1">Lẩu Atiso Đà Lạt</h3>
+<p class="text-sm text-stone-500 mb-4">Vị thanh mát đặc trưng</p>
+<div class="mt-auto flex items-center justify-between">
+<span class="font-headline font-black text-lg text-primary">245k</span>
+<button class="w-10 h-10 rounded-2xl bg-orange-100 text-primary flex items-center justify-center hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Menu Item Card 3 -->
+<div class="group bg-surface-container-lowest rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:translate-y-[-4px]">
+<div class="h-40 relative overflow-hidden">
+<img alt="Tôm Càng Nướng Muối Ớt" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="Grilled giant river prawns with chili salt garnish on a slate plate, vibrant orange colors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCETymp9hxk1w4kDIJBcHdiECnjSo-jLFKTq4brXyuYUxRTbdO-hGNsodafDyhD3LMg4hyvt7zHm5s7_6JqGsGU7Rhy8BavF0oQU24Jjsx_EeM0O8aU3wa0vrTZtvdgyVCuUYMGF2aL7xHsGpiHUEUjOn2y8aKgDL9crxbAioA4OAZLoPSQIM5jHy3PguZAs-dWLCxeTc8hTw85oOgUWBp-hb54M3Bohfp_lcIrVznq3S17-KECh-7zaNQNGt_XC-o72tLSF7at3c0r"/>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h3 class="font-headline font-extrabold text-stone-900 line-clamp-1 mb-1">Tôm Càng Nướng</h3>
+<p class="text-sm text-stone-500 mb-4">Tươi ngon, cay nồng</p>
+<div class="mt-auto flex items-center justify-between">
+<span class="font-headline font-black text-lg text-primary">155k</span>
+<button class="w-10 h-10 rounded-2xl bg-orange-100 text-primary flex items-center justify-center hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Menu Item Card 4 -->
+<div class="group bg-surface-container-lowest rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:translate-y-[-4px]">
+<div class="h-40 relative overflow-hidden">
+<img alt="Heo Tộc Nướng Ống Tre" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="Traditional grilled pork in bamboo tubes on a rustic background, crispy skin and juicy meat" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3MXoo7FFowNUsBby0s7POs7sgglzT7-Fymkadl3e4gQAfXZq66SVGstPPWcJWI1DY0SNpYBI72MMFeP28GGPLYLo3KS2Bcrdamcy4xZ_ZezODrG3jT1FW_761HB67nxDmu03slMpj0HiHFg1vBus-uxd82UodZMcH7C9ZIkHtJkuBiMK7iAb1Ga9zXaQSy041UEIyWgVBcGCmHZv-SJpVTtO1AXVM72JrJ2reDmagkFsxqPNJj_r45uFYucAe2UF3t5hq14g5qaCr"/>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h3 class="font-headline font-extrabold text-stone-900 line-clamp-1 mb-1">Heo Tộc Ống Tre</h3>
+<p class="text-sm text-stone-500 mb-4">Đặc sản vùng cao</p>
+<div class="mt-auto flex items-center justify-between">
+<span class="font-headline font-black text-lg text-primary">179k</span>
+<button class="w-10 h-10 rounded-2xl bg-orange-100 text-primary flex items-center justify-center hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Menu Item Card 5 -->
+<div class="group bg-surface-container-lowest rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:translate-y-[-4px]">
+<div class="h-40 relative overflow-hidden">
+<img alt="Nước Ép Dâu Tây" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="Fresh strawberry juice in a glass bottle with ice and fresh berries, bright natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuADb2PHtuMZODU1VP8gXm_fYxPF0iknSnQ1r7kaer0VbF2B_ZVTdbBpXqKld1Ra1NnB1h_sMfSfy3s7fbLnnK92UHymfeTihVmSHztIXBdxeQThYd1WnAJvCPwGXBpahpESAhC3XLu76-iMA6wRO4rjLG0EXygXON27mq7DE1XuPM4qUKpMTBQaJyYtZiGJiHNDESDiCIx6mbuTDLN0TnvzAsAOzRwlNs48rOvatJs235kiuPEoQgFoY2dk1v6yUZy1BcmYUKdWCkA8"/>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h3 class="font-headline font-extrabold text-stone-900 line-clamp-1 mb-1">Nước Ép Dâu Tây</h3>
+<p class="text-sm text-stone-500 mb-4">Dâu sạch từ vườn</p>
+<div class="mt-auto flex items-center justify-between">
+<span class="font-headline font-black text-lg text-primary">45k</span>
+<button class="w-10 h-10 rounded-2xl bg-orange-100 text-primary flex items-center justify-center hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Menu Item Card 6 -->
+<div class="group bg-surface-container-lowest rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:translate-y-[-4px]">
+<div class="h-40 relative overflow-hidden">
+<img alt="Rượu Vang Đà Lạt" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="Glass of red wine next to a bottle in a dim restaurant setting, elegant and sophisticated" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHMvpF8l0UV8hWtnPUczpr9DQczyE143q6yvpVEH-7oeOUDuqQOCW3i7LoyBVx5GJ-dXMGF-aeq2dvuf8rFYLxNIqUsIFDvC_zlkFfrlYievYjg5bZJd51ZeI0ksxCBzOee2OuWX9LEBnfhOfPyWT04FfYBFl2-LlKO3N9I-bIbLkCAbf_0dnEguEqCuylWGb5TLIFmKjyH2WWlzKbqe6Wr35x-2t2Cr2nPIIhROL_38WNUWN_1OjFANCx9IScApM75E60KfKy3lC9"/>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h3 class="font-headline font-extrabold text-stone-900 line-clamp-1 mb-1">Rượu Vang Đà Lạt</h3>
+<p class="text-sm text-stone-500 mb-4">Vị chát nhẹ nồng nàn</p>
+<div class="mt-auto flex items-center justify-between">
+<span class="font-headline font-black text-lg text-primary">320k</span>
+<button class="w-10 h-10 rounded-2xl bg-orange-100 text-primary flex items-center justify-center hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Side: Order Panel -->
+<aside class="w-[400px] flex flex-col bg-surface-container-lowest rounded-[2.5rem] p-6 shadow-xl shadow-stone-200/50">
+<div class="flex items-center justify-between mb-6">
+<div>
+<h2 class="font-headline font-black text-2xl text-stone-900">Bàn 01</h2>
+<p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Order #4210</p>
+</div>
+<div class="flex gap-2">
+<button class="p-2 bg-surface-container rounded-xl text-stone-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 bg-surface-container rounded-xl text-error hover:bg-error-container transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+<!-- Order List -->
+<div class="flex-1 overflow-y-auto custom-scrollbar mb-6 space-y-4">
+<!-- Order Item 1 -->
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-2xl overflow-hidden bg-stone-100 shrink-0">
+<img alt="Bò Nướng Đá Tảng" class="w-full h-full object-cover" data-alt="Small thumbnail of grilled beef steak" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUc6fSCUP82EphPJTBuScGR-pmLwTNhMBo76rjV9ct75hTy4e_E8_28YLZKmY99p3tM2TarSuIYSvQOTRrN9V5cccnEABd9DAb5wpI58raB2dc2-_VfE3xdKBxwrvlXNa-n5suVjmbxNLd5tLAXiizN13z7szNw7EKas6y8i_YUbR6-V3rxm4sxC3dZQZcvM8cN94lKLoRejYdoMV0ms5dVu4oNRP9VdQcdZzNkmvFUYK27Dj5d3FYPaNK3FmPkDu-dPj1Dl-P_zHC"/>
+</div>
+<div class="flex-1">
+<h4 class="font-headline font-bold text-stone-900 text-sm">Bò Nướng Đá Tảng</h4>
+<div class="flex items-center gap-2 mt-1">
+<span class="px-2 py-0.5 bg-secondary-container/20 text-on-secondary-container text-[10px] font-bold rounded-full">+ Tái vừa</span>
+</div>
+</div>
+<div class="text-right">
+<div class="flex items-center justify-end gap-3 mb-1">
+<button class="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-stone-500">-</button>
+<span class="font-bold text-sm">01</span>
+<button class="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-stone-500">+</button>
+</div>
+<span class="font-headline font-bold text-sm text-stone-900">189.000₫</span>
+</div>
+</div>
+<!-- Order Item 2 -->
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-2xl overflow-hidden bg-stone-100 shrink-0">
+<img alt="Heo Tộc Ống Tre" class="w-full h-full object-cover" data-alt="Small thumbnail of grilled pork in bamboo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlRHuJYYUWzhqtcEbd4Q8ZGfUE7HMWpssF5ityW2IRjvBNJFAWeEGChTn1BUJajeN0rH0cEHM1G8PmWHl96kgx8ZtGsPky8FJDULEyz7ZAxkKlzKPy0s1fqjag4xrMW30X3noeMTTMkCrDJpzNVSLoSxTwIxoOjBrs3GtcWQhurn00hBB5JkTBfiokhIbtERYulIDQiSLka8n7zp7379NN0Si3PrBktzkBAjX6XyDKS-5xENCLWJYWl1YqFihWMzSx9S4to7ojQLew"/>
+</div>
+<div class="flex-1">
+<h4 class="font-headline font-bold text-stone-900 text-sm">Heo Tộc Ống Tre</h4>
+</div>
+<div class="text-right">
+<div class="flex items-center justify-end gap-3 mb-1">
+<button class="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-stone-500">-</button>
+<span class="font-bold text-sm">01</span>
+<button class="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-stone-500">+</button>
+</div>
+<span class="font-headline font-bold text-sm text-stone-900">179.000₫</span>
+</div>
+</div>
+<!-- Order Item 3 -->
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-2xl overflow-hidden bg-stone-100 shrink-0">
+<img alt="Nước Ép Dâu Tây" class="w-full h-full object-cover" data-alt="Small thumbnail of fresh strawberry juice" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAp8VqnX5FV1ww3SUiKHFZX8R0-ZgdmaWGOaZbtVVQXCZ78V4ERaUSrTPi3OaVZSzwnHuGn7OkNcHx6KEO6Qtung4Ev36Eu4tUC0niVnynCn4SOLQklC_e1vfXLqc5ejp30iX4o3dNPzBilQ1S8B3euSNX0w7U1kCRN8wIQ7xP4dUxsMwUdPRO2KGE-3UiWuUWdDNApzUf9Y0o7hkWQ752fAhvH3fAKlIkTUq3Y6Wp3jKjrL65f-Lmgg_IVnygYsYwJiAMAXokZ6x2"/>
+</div>
+<div class="flex-1">
+<h4 class="font-headline font-bold text-stone-900 text-sm">Nước Ép Dâu Tây</h4>
+</div>
+<div class="text-right">
+<div class="flex items-center justify-end gap-3 mb-1">
+<button class="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-stone-500">-</button>
+<span class="font-bold text-sm">01</span>
+<button class="w-6 h-6 rounded-lg bg-surface-container flex items-center justify-center text-stone-500">+</button>
+</div>
+<span class="font-headline font-bold text-sm text-stone-900">45.000₫</span>
+</div>
+</div>
+</div>
+<!-- Billing Summary -->
+<div class="pt-6 border-t border-dashed border-stone-200 space-y-3">
+<div class="flex justify-between text-sm text-stone-500 font-medium">
+<span>Tạm tính</span>
+<span class="text-stone-900">413.000₫</span>
+</div>
+<div class="flex justify-between text-sm text-stone-500 font-medium">
+<span>Phí dịch vụ (5%)</span>
+<span class="text-stone-900">20.650₫</span>
+</div>
+<div class="flex justify-between items-end pt-2">
+<span class="font-headline font-bold text-stone-900">Tổng cộng</span>
+<span class="font-headline font-black text-3xl text-primary">433.650₫</span>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="mt-8 space-y-3">
+<div class="grid grid-cols-2 gap-3">
+<button class="py-4 bg-stone-100 text-stone-600 font-headline font-bold rounded-2xl hover:bg-stone-200 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg">restaurant</span> Gửi Bếp
+                        </button>
+<button class="py-4 bg-stone-100 text-stone-600 font-headline font-bold rounded-2xl hover:bg-stone-200 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg">receipt</span> Tạm Tính
+                        </button>
+</div>
+<button class="w-full py-5 bg-gradient-to-br from-primary to-primary-container text-white font-headline font-black text-lg rounded-2xl shadow-lg shadow-orange-200 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-tight flex items-center justify-center gap-3">
+<span class="material-symbols-outlined">payments</span>
+                        THANH TOÁN &amp; IN BILL
+                    </button>
+</div>
+</aside>
+</div>
+</main>
+</body></html>

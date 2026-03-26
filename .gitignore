@@ -1,0 +1,9 @@
+node_modules/
+dist/
+pos.db
+uploads/
+pos-ui/node_modules/
+pos-ui/build/
+.env
+.DS_Store
+*.zip

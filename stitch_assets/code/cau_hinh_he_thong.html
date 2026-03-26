@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary": "#ffffff",
+              "on-primary-fixed": "#351000",
+              "primary-fixed-dim": "#ffb693",
+              "outline-variant": "#e2bfb0",
+              "on-error-container": "#93000a",
+              "outline": "#8e7164",
+              "tertiary-fixed": "#d0e4ff",
+              "on-primary-container": "#572000",
+              "surface-container-low": "#f7f2f8",
+              "on-secondary-container": "#763006",
+              "surface-variant": "#e5e1e7",
+              "secondary-fixed-dim": "#ffb693",
+              "surface-tint": "#a04100",
+              "surface-container": "#f1ecf2",
+              "on-secondary-fixed-variant": "#783207",
+              "inverse-surface": "#313034",
+              "surface-container-high": "#ebe7ec",
+              "secondary": "#96481e",
+              "on-primary-fixed-variant": "#7a3000",
+              "inverse-primary": "#ffb693",
+              "on-tertiary-container": "#003357",
+              "on-primary": "#ffffff",
+              "background": "#fdf8fd",
+              "error": "#ba1a1a",
+              "on-tertiary-fixed-variant": "#00497b",
+              "on-surface-variant": "#5a4136",
+              "error-container": "#ffdad6",
+              "on-surface": "#1c1b1f",
+              "tertiary": "#0062a1",
+              "on-background": "#1c1b1f",
+              "primary-container": "#ff6b00",
+              "secondary-fixed": "#ffdbcc",
+              "on-tertiary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "primary-fixed": "#ffdbcc",
+              "on-secondary-fixed": "#351000",
+              "tertiary-fixed-dim": "#9ccaff",
+              "primary": "#a04100",
+              "surface": "#fdf8fd",
+              "surface-dim": "#ddd9de",
+              "on-error": "#ffffff",
+              "tertiary-container": "#059eff",
+              "surface-container-highest": "#e5e1e7",
+              "secondary-container": "#fe9a69",
+              "on-tertiary-fixed": "#001d35",
+              "surface-bright": "#fdf8fd",
+              "inverse-on-surface": "#f4eff5"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface-container text-on-surface min-h-screen flex">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-screen w-64 bg-white dark:bg-zinc-950 shadow-sm p-4 space-y-2 shrink-0">
+<div class="mb-8 px-2">
+<h1 class="text-xl font-black text-orange-600 tracking-tight">Da Lat &amp; Em</h1>
+<p class="text-[10px] font-manrope font-semibold uppercase tracking-wider text-slate-500">Premium BBQ</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100 rounded-xl transition-all font-manrope text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span>Table Map</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100 rounded-xl transition-all font-manrope text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span>Menu</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100 rounded-xl transition-all font-manrope text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span>Orders</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100 rounded-xl transition-all font-manrope text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span>History</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-orange-50 text-orange-700 rounded-xl transition-all font-manrope text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined" data-icon="settings_account_box">settings_account_box</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-4">
+<button class="w-full bg-primary text-white py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+                New Order
+            </button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="w-full h-16 bg-slate-50 flex justify-between items-center px-6 shrink-0">
+<div class="flex items-center gap-4">
+<span class="md:hidden material-symbols-outlined text-on-surface" data-icon="menu">menu</span>
+<h2 class="text-lg font-bold text-orange-700 tracking-tight">Tiệm Nướng Đà Lạt Và Em</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center bg-surface-container-highest px-3 py-1.5 rounded-full">
+<span class="material-symbols-outlined text-on-surface-variant text-sm" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-40" placeholder="Tìm kiếm..." type="text"/>
+</div>
+<button class="p-2 hover:bg-slate-200/50 rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined text-slate-500" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 hover:bg-slate-200/50 rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined text-orange-600" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-secondary-container overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="professional portrait of a restaurant manager with a friendly expression in a modern uniform" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcVKh_qH-93TeDzLjW9JFlTMAYiP8aSFdri0QfXc_BKw-jHqCXTJToPvf7WKeyceAv5UmtWSC3GYp3Sa0G20yEfjUGQxIDjA6fBVurkeyVenFBi7jPDz9tIon8kxSsxBH72l0XMvq6BtfTT5BWgz_z7ThzhkHSZiXcY_x_J33NoqJt3u5fgzymZ4ydDbdehwCeU4r8lpCwHnli3FL8k0X5rUuKf1s6gQVbz8h16uca0RRFm-vunYtf3cxo_H9jEtY6K4tCapkeYgtJ"/>
+</div>
+</div>
+</header>
+<!-- Canvas Area -->
+<div class="p-8 space-y-8 overflow-y-auto">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h3 class="text-3xl font-extrabold text-on-surface tracking-tight">Cấu hình Hệ thống</h3>
+<p class="text-on-surface-variant mt-1">Quản lý thông tin cửa hàng, máy in và bảo mật tài khoản.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-6 py-2.5 rounded-xl border border-outline-variant text-on-surface hover:bg-surface-bright transition-all active:scale-95">
+<span class="material-symbols-outlined text-[20px]" data-icon="refresh">refresh</span>
+                        Thử lại quét máy in
+                    </button>
+<button class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white shadow-lg shadow-primary/20 hover:opacity-90 transition-all active:scale-95">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+                        Thêm máy in
+                    </button>
+</div>
+</div>
+<!-- Grid Content -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left Column: Store Info & Security -->
+<div class="lg:col-span-4 space-y-6">
+<!-- 1. Thông tin quán -->
+<section class="bg-surface-container-lowest p-6 rounded-xl space-y-6">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-secondary-container/20 rounded-lg">
+<span class="material-symbols-outlined text-secondary" data-icon="store">store</span>
+</div>
+<h4 class="font-bold text-lg">Thông tin quán</h4>
+</div>
+<div class="space-y-4">
+<div class="space-y-1">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Tên cửa hàng</label>
+<input class="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/20 transition-all" type="text" value="Tiệm Nướng Đà Lạt Và Em"/>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Địa chỉ</label>
+<textarea class="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/20 transition-all rows-3">Số 31/2 Đường 3/4, Phường 3, TP. Đà Lạt, Lâm Đồng</textarea>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Hotline hỗ trợ</label>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-sm" data-icon="call">call</span>
+<input class="w-full bg-surface-container border-none rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-primary/20 transition-all" type="text" value="0988 123 456"/>
+</div>
+</div>
+</div>
+<button class="w-full py-2.5 text-primary font-bold hover:bg-primary/5 rounded-xl transition-colors">Cập nhật thông tin</button>
+</section>
+<!-- 3. Bảo mật -->
+<section class="bg-surface-container-lowest p-6 rounded-xl space-y-6">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-error-container/20 rounded-lg">
+<span class="material-symbols-outlined text-error" data-icon="security">security</span>
+</div>
+<h4 class="font-bold text-lg">Bảo mật hệ thống</h4>
+</div>
+<div class="space-y-4">
+<p class="text-sm text-on-surface-variant">Thay đổi mật khẩu quản trị viên để bảo vệ dữ liệu kinh doanh.</p>
+<div class="space-y-1">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Mật khẩu cũ</label>
+<input class="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="••••••••" type="password"/>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Mật khẩu mới</label>
+<input class="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Tối thiểu 8 ký tự" type="password"/>
+</div>
+</div>
+<button class="w-full py-2.5 bg-surface-container-highest text-on-surface font-bold rounded-xl hover:bg-surface-dim transition-colors active:scale-[0.98]">
+                            Đổi mật khẩu Admin
+                        </button>
+</section>
+</div>
+<!-- Right Column: Printer Management -->
+<div class="lg:col-span-8">
+<!-- 2. Quản lý Máy in -->
+<section class="bg-surface-container-lowest p-6 rounded-xl min-h-full">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-tertiary-container/20 rounded-lg">
+<span class="material-symbols-outlined text-tertiary" data-icon="print">print</span>
+</div>
+<div>
+<h4 class="font-bold text-lg">Danh sách máy in Windows</h4>
+<p class="text-xs text-on-surface-variant">4 thiết bị đang trực tuyến</p>
+</div>
+</div>
+<div class="flex bg-surface-container p-1 rounded-xl">
+<button class="px-4 py-1.5 text-xs font-bold bg-white shadow-sm rounded-lg text-primary">Tất cả</button>
+<button class="px-4 py-1.5 text-xs font-bold text-on-surface-variant hover:text-on-surface">Cần chú ý</button>
+</div>
+</div>
+<!-- Printer List (Bento-ish Grid) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Printer Card 1 -->
+<div class="p-5 rounded-2xl bg-surface-container-low border border-transparent hover:border-primary/20 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="print">print</span>
+</div>
+<div>
+<h5 class="font-bold text-on-surface">Xprinter XP-N160II</h5>
+<span class="text-[10px] py-0.5 px-2 bg-green-100 text-green-700 rounded-full font-bold uppercase tracking-tight">Trực tuyến</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Loại phiếu:</span>
+<span class="font-semibold text-primary px-2 bg-primary/10 rounded">BILL (Hóa đơn)</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Khổ giấy:</span>
+<span class="font-semibold">80mm</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Cổng kết nối:</span>
+<span class="font-mono text-xs text-on-surface-variant">USB001</span>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant/30 flex gap-2">
+<button class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-white border border-outline-variant hover:bg-slate-50 transition-colors">In thử</button>
+<button class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-white border border-outline-variant hover:bg-slate-50 transition-colors">Cấu hình</button>
+</div>
+</div>
+<!-- Printer Card 2 -->
+<div class="p-5 rounded-2xl bg-surface-container-low border border-transparent hover:border-primary/20 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="oven_gen">oven_gen</span>
+</div>
+<div>
+<h5 class="font-bold text-on-surface">EPSON TM-T82II</h5>
+<span class="text-[10px] py-0.5 px-2 bg-green-100 text-green-700 rounded-full font-bold uppercase tracking-tight">Trực tuyến</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Loại phiếu:</span>
+<span class="font-semibold text-tertiary px-2 bg-tertiary/10 rounded">KITCHEN (Bếp)</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Khổ giấy:</span>
+<span class="font-semibold">80mm</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">IP Address:</span>
+<span class="font-mono text-xs text-on-surface-variant">192.168.1.102</span>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant/30 flex gap-2">
+<button class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-white border border-outline-variant hover:bg-slate-50 transition-colors">In thử</button>
+<button class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-white border border-outline-variant hover:bg-slate-50 transition-colors">Cấu hình</button>
+</div>
+</div>
+<!-- Printer Card 3 -->
+<div class="p-5 rounded-2xl bg-surface-container-low border border-transparent hover:border-primary/20 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-tertiary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="local_bar">local_bar</span>
+</div>
+<div>
+<h5 class="font-bold text-on-surface">SPRINTER 58mm</h5>
+<span class="text-[10px] py-0.5 px-2 bg-green-100 text-green-700 rounded-full font-bold uppercase tracking-tight">Trực tuyến</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Loại phiếu:</span>
+<span class="font-semibold text-secondary px-2 bg-secondary/10 rounded">DRINK (Quầy nước)</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Khổ giấy:</span>
+<span class="font-semibold">58mm</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Cổng kết nối:</span>
+<span class="font-mono text-xs text-on-surface-variant">LPT1</span>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant/30 flex gap-2">
+<button class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-white border border-outline-variant hover:bg-slate-50 transition-colors">In thử</button>
+<button class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-white border border-outline-variant hover:bg-slate-50 transition-colors">Cấu hình</button>
+</div>
+</div>
+<!-- Empty/Add State -->
+<div class="border-2 border-dashed border-outline-variant rounded-2xl flex flex-col items-center justify-center p-8 gap-3 opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant" data-icon="add_to_queue">add_to_queue</span>
+<p class="text-sm font-bold text-on-surface-variant">Thêm máy in mới</p>
+</div>
+</div>
+<!-- Info Alert -->
+<div class="mt-8 p-4 bg-tertiary-fixed rounded-xl flex gap-4">
+<span class="material-symbols-outlined text-on-tertiary-fixed" data-icon="info">info</span>
+<div class="text-sm text-on-tertiary-fixed">
+<p class="font-bold">Lưu ý về driver máy in</p>
+<p>Đảm bảo driver đã được cài đặt chính xác trên Windows trước khi thêm vào hệ thống POS. Hỗ trợ tốt nhất cho các dòng Xprinter, Epson, Birch.</p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-0 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] flex justify-around items-center h-16 px-4 z-50">
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="text-[10px] font-bold uppercase">Map</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="text-[10px] font-bold uppercase">Menu</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="text-[10px] font-bold uppercase">Orders</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-orange-600" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-[10px] font-bold uppercase">Config</span>
+</a>
+</nav>
+</body></html>

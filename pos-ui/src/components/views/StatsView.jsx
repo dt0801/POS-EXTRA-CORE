@@ -7,7 +7,6 @@ export default function StatsView({
   statsMonth,
   setStatsMonth,
   fetchStatsMonthly,
-  fetchStatsDaily,
   statsYear,
   setStatsYear,
   fetchStatsYearly,
@@ -29,7 +28,7 @@ export default function StatsView({
           {[["day", "Hôm nay"], ["month", "Tháng"], ["year", "Năm"]].map(([v, l]) => (
             <button key={v} onClick={() => setStatsTab(v)} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${statsTab === v ? "bg-white shadow-sm text-primary" : "text-on-surface-variant hover:text-on-surface"}`}>{l}</button>
           ))}
-          {statsTab === "month" && <input type="month" value={statsMonth} onChange={(e) => { setStatsMonth(e.target.value); fetchStatsMonthly(e.target.value); fetchStatsDaily(e.target.value); }} className="ml-2 bg-transparent border-none text-sm font-bold text-on-surface-variant focus:ring-0 outline-none cursor-pointer hover:bg-white/50 px-2 py-1 rounded-lg transition-colors" />}
+          {statsTab === "month" && <input type="month" value={statsMonth} onChange={(e) => { setStatsMonth(e.target.value); fetchStatsMonthly(e.target.value); }} className="ml-2 bg-transparent border-none text-sm font-bold text-on-surface-variant focus:ring-0 outline-none cursor-pointer hover:bg-white/50 px-2 py-1 rounded-lg transition-colors" />}
           {statsTab === "year" && <select value={statsYear} onChange={(e) => { setStatsYear(e.target.value); fetchStatsYearly(e.target.value); }} className="ml-2 bg-transparent border-none text-sm font-bold text-on-surface-variant focus:ring-0 outline-none cursor-pointer hover:bg-white/50 px-2 py-1 rounded-lg transition-colors appearance-none pr-6 font-mono">{Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString()).map((y) => <option key={y} value={y}>{y}</option>)}</select>}
         </div>
       </div>

@@ -88,6 +88,9 @@ const calcTotalQty = (tableData = {}) =>
 // MAIN COMPONENT
 // =============================================
 export default function App() {
+  // #region agent log
+  fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'pre-fix',hypothesisId:'H2',location:'src/App.js:90',message:'App render started after refactor',data:{note:'runtime log active for debug mode'},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 
   // ----- CORE STATE -----
   const [menu, setMenu]               = useState([]);
@@ -109,7 +112,6 @@ export default function App() {
 
   // Danh sách máy in Windows
   const [windowsPrinters, setWindowsPrinters] = useState([]);
-  const [loadingPrinters, setLoadingPrinters] = useState(false);
 
   // Database Printers
   const [dbPrinters, setDbPrinters] = useState([]);
@@ -152,14 +154,12 @@ export default function App() {
 
   // Lấy danh sách máy in từ Windows
   const fetchWindowsPrinters = useCallback(async () => {
-    setLoadingPrinters(true);
     try {
       const data = await fetchWindowsPrintersRequest();
       setWindowsPrinters(data);
     } catch {
       setWindowsPrinters([]);
     }
-    setLoadingPrinters(false);
   }, []);
 
   // API tương tác máy in trên Database
@@ -254,7 +254,6 @@ export default function App() {
 
   // ----- STATS STATE -----
   const [statsToday, setStatsToday]   = useState(null);
-  const [statsDaily, setStatsDaily]   = useState([]);
   const [statsMonth, setStatsMonth]   = useState(new Date().toISOString().slice(0, 7));
 
   // ----- DERIVED -----
@@ -272,16 +271,7 @@ export default function App() {
     const queryStr = removeTones(searchQuery);
     return byTab.filter(m => removeTones(m.name).includes(queryStr));
   }, [menu, filter, searchQuery]);
-  const isManageView  = sidebarView === "manage";
-
-  // Theme classes
-  const bg      = "bg-surface";
-  const bgPanel = "bg-surface-container";
-  const bgSide  = "bg-surface-container-low";
-  const bgCard  = "bg-surface-container-highest border border-outline-variant/30";
-  const text    = "text-on-surface";
-  const textSub = "text-on-surface-variant";
-  const inputCls= "bg-surface-container-highest border border-outline-variant/30 text-on-surface rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary w-full";
+  
   // =============================================
   // DATA FETCHING
   // =============================================
@@ -310,12 +300,6 @@ export default function App() {
   const fetchStatsToday = useCallback(() => {
     fetch(`${API_URL}/stats/today`).then(r => r.json()).then(setStatsToday)
       .catch(e => console.error("Lỗi fetch stats today:", e));
-  }, []);
-
-  /** Fetch doanh thu theo ngày trong tháng */
-  const fetchStatsDaily = useCallback((month) => {
-    fetch(`${API_URL}/stats/daily?month=${month}`).then(r => r.json()).then(setStatsDaily)
-      .catch(e => console.error("Lỗi fetch stats daily:", e));
   }, []);
 
   /** Fetch chi tiết 1 bill */
@@ -397,11 +381,10 @@ export default function App() {
   useEffect(() => {
     if (sidebarView === "stats") {
       fetchStatsToday();
-      fetchStatsDaily(statsMonth);
       fetchStatsMonthly(statsMonth);
       fetchStatsYearly(statsYear);
     }
-  }, [sidebarView, statsMonth, statsYear, fetchStatsToday, fetchStatsDaily, fetchStatsMonthly, fetchStatsYearly]);
+  }, [sidebarView, statsMonth, statsYear, fetchStatsToday, fetchStatsMonthly, fetchStatsYearly]);
 
   // =============================================
   // ORDER HANDLERS
@@ -474,7 +457,7 @@ export default function App() {
     return data;
   };
 
-  const buildSettingsPreviewPayload = () => ({
+  const buildSettingsPreviewPayload = useCallback(() => ({
     title: (settings.store_name || "TIỆM NƯỚNG ĐÀ LẠT VÀ EM").toUpperCase(),
     subtitle: `${settings.store_address || "Địa chỉ"} - Hotline ${settings.store_phone || "0000 000 000"}`,
     tableNum: "12",
@@ -488,11 +471,14 @@ export default function App() {
     ],
     totalLabel: "THÀNH TIỀN",
     totalValue: 488,
-    cashier: "ADMIN",
+    cashier: settings.cashier_name || "Nhân viên",
     footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
-  });
+  }), [settings.store_name, settings.store_address, settings.store_phone, settings.cashier_name]);
 
   const refreshSettingsBillPreview = useCallback(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'pre-fix',hypothesisId:'H5',location:'src/App.js:495',message:'refreshSettingsBillPreview invoked',data:{sidebarView,settingsPreviewPaper,hasBuildSettingsPreviewPayload:typeof buildSettingsPreviewPayload==='function'},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (sidebarView !== "settings") return;
     setSettingsPreviewLoading(true);
     try {
@@ -512,7 +498,7 @@ export default function App() {
       console.error(err);
     }
     setSettingsPreviewLoading(false);
-  }, [sidebarView, settingsPreviewPaper, settings.bill_css_override, settings.store_name, settings.store_address, settings.store_phone]);
+  }, [sidebarView, settingsPreviewPaper, settings.bill_css_override, buildSettingsPreviewPayload]);
 
   useEffect(() => {
     if (sidebarView !== "settings") return;
@@ -1759,7 +1745,6 @@ export default function App() {
             statsMonth={statsMonth}
             setStatsMonth={setStatsMonth}
             fetchStatsMonthly={fetchStatsMonthly}
-            fetchStatsDaily={fetchStatsDaily}
             statsYear={statsYear}
             setStatsYear={setStatsYear}
             fetchStatsYearly={fetchStatsYearly}

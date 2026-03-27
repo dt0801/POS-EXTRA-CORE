@@ -50,6 +50,19 @@ if (LEGACY_UPLOADS_DIR !== UPLOADS_DIR && fs.existsSync(LEGACY_UPLOADS_DIR)) {
   app.use("/uploads", express.static(LEGACY_UPLOADS_DIR));
 }
 
+// Debug helper: kiểm tra file upload có tồn tại trên server không
+app.get("/debug/uploads", (req, res) => {
+  const file = String(req.query.file || "").trim();
+  if (!file) return res.status(400).json({ error: "Missing ?file=" });
+  const fullPath = path.join(UPLOADS_DIR, file);
+  res.json({
+    file,
+    exists: fs.existsSync(fullPath),
+    uploadsDir: UPLOADS_DIR,
+    baseDir: BASE_DIR,
+  });
+});
+
 // Serve React build nếu tồn tại (production)
 if (fs.existsSync(UI_BUILD)) {
   app.use(express.static(UI_BUILD));
@@ -537,6 +550,9 @@ async function initMongoOnly() {
 
   await loadSettingsCache();
   await refreshPrintersCache();
+
+  console.log("📁 BASE_DIR:", BASE_DIR);
+  console.log("📁 UPLOADS_DIR:", UPLOADS_DIR);
 
   startServer();
 }

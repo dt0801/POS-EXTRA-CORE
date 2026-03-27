@@ -1,34 +1,23 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import "./App.css";
+import { FILTERS } from "./constants/filters";
+import { API_URL } from "./config/api";
+import { usePrinterStatus } from "./hooks/usePrinterStatus";
+import SidebarItem from "./components/layout/SidebarItem";
+import TablesView from "./components/views/TablesView";
+import HistoryView from "./components/views/HistoryView";
+import StatsView from "./components/views/StatsView";
+import { fetchSettings, saveAllSettings as saveAllSettingsRequest } from "./services/settingsService";
+import {
+  fetchWindowsPrinters as fetchWindowsPrintersRequest,
+  fetchDbPrinters as fetchDbPrintersRequest,
+  addDbPrinter as addDbPrinterRequest,
+} from "./services/printerService";
 
 // =============================================
 // CONSTANTS
 // =============================================
-
 const TOTAL_TABLES = 20;
-// label hiển thị trên nút, key dùng để lọcaa meAnu
-const FILTERS = [
-  { key: "ALL",      label: "Tất cả"    },
-  { key: "COMBO",    label: "Combo"     },
-  { key: "KHAI_VI",  label: "Khai vị"   },
-  { key: "SIGNATURE",label: "Signature" },
-  { key: "NHAU",     label: "Nhậu"      },
-  { key: "GA",       label: "Gà"        },
-  { key: "BO",       label: "Bò"        },
-  { key: "HEO",      label: "Heo/Nai"   },
-  { key: "ECH",      label: "Ếch"       },
-  { key: "CA",       label: "Cá"        },
-  { key: "LUON",     label: "Lươn"      },
-  { key: "SO_DIEP",  label: "Sò điệp"   },
-  { key: "HAISAN",   label: "Hải sản"   },
-  { key: "RAU",      label: "Rau xào"   },
-  { key: "LAU",      label: "Lẩu"       },
-  { key: "COM_MI",   label: "Cơm - Mì"  },
-  { key: "DRINK",    label: "Đồ uống"   },
-];
-// Dev: React chạy port 3001, server port 3000
-// Production Electron: cả 2 cùng port 3000
-const API_URL = process.env.REACT_APP_API_URL;
 
 // =============================================
 // HELPER FUNCTIONS
@@ -95,13 +84,6 @@ const calcTotal = (tableData = {}) =>
 const calcTotalQty = (tableData = {}) =>
   Object.values(tableData).reduce((s, i) => s + i.qty, 0);
 
-/** Trả về class màu theo status bàn */
-const tableColor = (status, isSelected) => {
-  if (isSelected) return "bg-blue-500 text-white";
-  if (status === "OPEN") return "bg-orange-500 text-white";
-  return "bg-slate-700 hover:bg-slate-600 text-white";
-};
-
 // =============================================
 // MAIN COMPONENT
 // =============================================
@@ -122,46 +104,8 @@ export default function App() {
   // ----- SIDEBAR STATE -----
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
-  // ----- DARK/LIGHT MODE -----
-  // ----- AUTH STATE -----
-  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem("pos_logged_in") === "true");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-  const [isLoadingLogin, setIsLoadingLogin] = useState(false);
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoadingLogin(true);
-    setLoginError("");
-    try {
-      const res = await fetch(`${API_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: loginPassword })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setIsLoggedIn(true);
-        localStorage.setItem("pos_logged_in", "true");
-        setLoginPassword("");
-      } else {
-        setLoginError(data.error || "Mật khẩu không đúng");
-      }
-    } catch {
-      setLoginError("Không thể kết nối máy chủ");
-    }
-    setIsLoadingLogin(false);
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?")) {
-      setIsLoggedIn(false);
-      localStorage.removeItem("pos_logged_in");
-    }
-  };
-
   // Trạng thái kết nối máy in: null | "online" | "offline"
-  const [printerStatus, setPrinterStatus] = useState(null);
+  const { printerStatus } = usePrinterStatus();
 
   // Danh sách máy in Windows
   const [windowsPrinters, setWindowsPrinters] = useState([]);
@@ -174,12 +118,12 @@ export default function App() {
 
   // Settings
   const [settings, setSettings]     = useState({
-    admin_password: "123456",
-    printer_ip:    "192.168.1.100",
-    printer_type:  "EPSON",
-    store_name:    "Tiệm Nướng Đà Lạt Và Em",
-    store_address: "24 đường 3 tháng 4, Đà Lạt",
-    store_phone:   "081 366 5665",
+    printer_ip:    "",
+    printer_type:  "",
+    store_name:    "",
+    store_address: "",
+    store_phone:   "",
+    cashier_name:  "",
     total_tables:  "20",
     bill_css_override: "",
   });
@@ -194,37 +138,14 @@ export default function App() {
 
   // Load settings từ server khi khởi động
   useEffect(() => {
-    fetch(`${API_URL}/settings`)
-      .then(r => r.json())
-      .then(d => setSettings(prev => ({ ...prev, ...d })))
+    fetchSettings()
+      .then((d) => setSettings((prev) => ({ ...prev, ...d })))
       .catch(() => {});
   }, []);
 
-  // Kiểm tra máy in khi app khởi động và mỗi 30 giây
-  useEffect(() => {
-    const checkPrinter = () => {
-      fetch(`${API_URL}/print/status`)
-        .then(r => r.json())
-        .then(d => setPrinterStatus(d.connected ? "online" : "offline"))
-        .catch(() => setPrinterStatus("offline"));
-    };
-    checkPrinter();
-    const interval = setInterval(checkPrinter, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Lưu 1 setting lên server
-  const saveSetting = async (key, value) => {
-    await fetch(`${API_URL}/settings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value }),
-    });
-  };
-
   // Lưu toàn bộ settings
   const saveAllSettings = async () => {
-    await Promise.all(Object.entries(settings).map(([k, v]) => saveSetting(k, v)));
+    await saveAllSettingsRequest(settings);
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 2000);
   };
@@ -233,8 +154,7 @@ export default function App() {
   const fetchWindowsPrinters = useCallback(async () => {
     setLoadingPrinters(true);
     try {
-      const res  = await fetch(`${API_URL}/printers`);
-      const data = await res.json();
+      const data = await fetchWindowsPrintersRequest();
       setWindowsPrinters(data);
     } catch {
       setWindowsPrinters([]);
@@ -246,8 +166,7 @@ export default function App() {
   const fetchDbPrinters = useCallback(async () => {
     setLoadingDbPrinters(true);
     try {
-      const res = await fetch(`${API_URL}/windows_printers`);
-      const data = await res.json();
+      const data = await fetchDbPrintersRequest();
       setDbPrinters(data);
     } catch (e) {
       console.error(e);
@@ -258,10 +177,7 @@ export default function App() {
   const addDbPrinter = async () => {
     if (!newPrinter.name) return alert("Vui lòng chọn tên máy in");
     try {
-      await fetch(`${API_URL}/windows_printers`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newPrinter),
-      });
+      await addDbPrinterRequest(newPrinter);
       setNewPrinter({ name: "", type: "ALL", paper_size: 80, is_enabled: 1 });
       fetchDbPrinters();
     } catch (e) {
@@ -964,83 +880,10 @@ export default function App() {
   // RENDER HELPERS
   // =============================================
 
-  /** Citrus Sidebar NavItem */
-  const SidebarItem = ({ icon, label, view }) => {
-    const isActive = sidebarView === view;
-    return (
-      <button 
-        onClick={() => setSidebarView(view)} 
-        title={!isSidebarExpanded ? label : undefined}
-        className={`flex items-center transition-all duration-300 font-manrope font-semibold uppercase tracking-wider overflow-hidden
-          ${isSidebarExpanded ? "w-full gap-3 px-4 py-3 rounded-xl" : "w-12 h-12 justify-center rounded-[1.2rem] mx-auto"}
-          ${isActive 
-            ? "bg-primary text-white shadow-md shadow-primary/30" 
-            : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface"}`}
-      >
-        <span className="material-symbols-outlined text-[24px] shrink-0">{icon}</span>
-        {isSidebarExpanded && <span className="text-xs whitespace-nowrap">{label}</span>}
-      </button>
-    );
-  };
-
   // =============================================
   // RENDER
   // =============================================
   
-  if (!isLoggedIn) {
-    return (
-      <div className={`flex h-screen items-center justify-center font-sans ${bg} ${text} overflow-hidden`}>
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-black bg-opacity-70 z-10"></div>
-          <img src="https://images.unsplash.com/photo-1544025162-811114215449?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" alt="BBQ POS background" className="w-full h-full object-cover blur-[4px] opacity-80" />
-        </div>
-        <div className="relative z-20 w-fit sm:w-[460px] bg-slate-900/40 backdrop-blur-2xl border border-white/10 p-10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center">
-          <div className="w-24 h-24 bg-gradient-to-br from-orange-400 to-red-600 rounded-[2rem] flex items-center justify-center shadow-[0_10px_40px_rgba(249,115,22,0.4)] mb-8 transform -rotate-6">
-            <i className="fa-solid fa-fire text-5xl text-white transform rotate-6 drop-shadow-lg"></i>
-          </div>
-          <h1 className="text-4xl font-extrabold text-white mb-2 tracking-wider">BBQ POS</h1>
-          <p className="text-orange-300 mb-10 text-sm font-semibold uppercase tracking-[0.2em]">Hệ thống quản lý</p>
-
-          <form onSubmit={handleLogin} className="w-full flex flex-col gap-5">
-            <div>
-              <div className="relative group">
-                <i className="fa-solid fa-lock absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-400 transition-colors"></i>
-                <input 
-                  type="password" 
-                  value={loginPassword}
-                  onChange={e => setLoginPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu truy cập..." 
-                  className="w-full bg-slate-950/50 border border-slate-700/50 text-white rounded-2xl py-4 pl-14 pr-4 outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all font-medium placeholder-slate-500 text-lg shadow-inner"
-                  autoFocus
-                />
-              </div>
-              {loginError && (
-                <div className="flex items-center gap-2 text-red-400 text-sm mt-3 ml-2 animate-pulse bg-red-500/10 w-fit px-3 py-1 rounded-lg border border-red-500/20">
-                  <i className="fa-solid fa-circle-exclamation"></i>
-                  <p className="font-semibold">{loginError}</p>
-                </div>
-              )}
-            </div>
-            
-            
-            <button 
-              type="submit" 
-              disabled={isLoadingLogin || !loginPassword}
-              className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white font-bold py-4 rounded-2xl shadow-[0_10px_30px_rgba(249,115,22,0.3)] hover:shadow-[0_15px_40px_rgba(249,115,22,0.5)] transition-all transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none flex items-center justify-center gap-3 text-lg mt-4 border border-white/10"
-            >
-              {isLoadingLogin ? <i className="fa-solid fa-spinner fa-spin text-xl"></i> : <i className="fa-solid fa-arrow-right-to-bracket text-xl"></i>}
-              ĐĂNG NHẬP
-            </button>
-          </form>
-          
-          <div className="mt-10 text-slate-500 text-xs font-semibold tracking-wide">
-            &copy; {new Date().getFullYear()} TIỆM NƯỚNG ĐÀ LẠT VÀ EM
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-screen bg-surface-container text-on-surface flex overflow-hidden font-body">
 
@@ -1150,12 +993,12 @@ export default function App() {
         </div>
 
         <nav className={`flex-1 flex flex-col gap-2 ${isSidebarExpanded ? "px-4" : "px-0"}`}>
-          <SidebarItem icon="grid_view" label="Sơ đồ bàn" view="tables" />
-          <SidebarItem icon="restaurant_menu" label="Menu Order" view="order" />
-          <SidebarItem icon="format_list_bulleted" label="Quản lý Thực Đơn" view="manage" />
-          <SidebarItem icon="receipt_long" label="Lịch sử Hóa đơn" view="history" />
-          <SidebarItem icon="trending_up" label="Thống kê Báo cáo" view="stats" />
-          <SidebarItem icon="settings" label="Cài đặt Hệ thống" view="settings" />
+          <SidebarItem icon="grid_view" label="Sơ đồ bàn" view="tables" isActive={sidebarView === "tables"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("tables")} />
+          <SidebarItem icon="restaurant_menu" label="Menu Order" view="order" isActive={sidebarView === "order"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("order")} />
+          <SidebarItem icon="format_list_bulleted" label="Quản lý Thực Đơn" view="manage" isActive={sidebarView === "manage"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("manage")} />
+          <SidebarItem icon="receipt_long" label="Lịch sử Hóa đơn" view="history" isActive={sidebarView === "history"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("history")} />
+          <SidebarItem icon="trending_up" label="Thống kê Báo cáo" view="stats" isActive={sidebarView === "stats"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("stats")} />
+          <SidebarItem icon="settings" label="Cài đặt Hệ thống" view="settings" isActive={sidebarView === "settings"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("settings")} />
         </nav>
 
         <div className={`flex flex-col gap-4 mt-auto ${isSidebarExpanded ? "px-4" : "px-0 items-center"}`}>
@@ -1170,10 +1013,6 @@ export default function App() {
             </button>
           </div>
           
-          <button onClick={handleLogout} title={!isSidebarExpanded ? "Đăng xuất" : undefined} className={`bg-error-container text-error py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 active:scale-95 transition-transform ${isSidebarExpanded ? "w-full" : "w-12 h-12 rounded-[1.2rem] mx-auto"}`}>
-            <span className="material-symbols-outlined">logout</span>
-            {isSidebarExpanded && <span>Đăng xuất</span>}
-          </button>
         </div>
       </aside>
 
@@ -1185,109 +1024,16 @@ export default function App() {
       {/* ==================== CONTENT ROUTER ==================== */}
       <div className="flex-1 p-6 lg:p-10 flex flex-col overflow-hidden w-full max-w-[1600px] mx-auto">
 
-      {/* ==================== BẢN ĐỒ BÀN (TABLES VIEW) ==================== */}
       {sidebarView === "tables" && (
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
-            <div>
-              <span className="text-primary font-headline font-bold text-sm tracking-widest uppercase">Sơ đồ nhà hàng</span>
-              <h2 className="text-4xl lg:text-5xl font-black font-headline text-on-surface mt-2">Quản lý Bàn</h2>
-            </div>
-            <div className="flex flex-wrap gap-4 mb-2">
-              <div className="flex items-center gap-3 bg-surface-container-lowest px-5 py-2.5 rounded-2xl shadow-sm border border-outline-variant/30">
-                <span className="w-4 h-4 rounded-full bg-slate-200"></span>
-                <span className="text-sm font-bold text-on-surface-variant">Trống</span>
-              </div>
-              <div className="flex items-center gap-3 bg-gradient-to-br from-primary to-orange-500 px-5 py-2.5 rounded-2xl shadow-md border border-transparent shadow-orange-300/40">
-                <span className="w-4 h-4 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"></span>
-                <span className="text-sm font-bold text-white">Đang phục vụ</span>
-              </div>
-              <div className="flex items-center gap-3 bg-gradient-to-br from-purple-500 to-purple-600 px-5 py-2.5 rounded-2xl shadow-md border border-transparent shadow-purple-300/40">
-                <span className="w-4 h-4 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"></span>
-                <span className="text-sm font-bold text-white">Chờ dọn / Thanh toán</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 lg:gap-8 pb-12">
-            {tables.map(t => {
-              const status = tableStatus[t] || "PAID";
-              const qty    = calcTotalQty(tableOrders[t]);
-              const revenue = Object.values(tableOrders[t] || {}).reduce((sum, item) => sum + item.price * item.qty, 0);
-
-              const isOccupied = status === "OPEN" || status === "ORDERING";
-              const isPaying = status === "PAYING";
-
-              return (
-                <div
-                  key={t}
-                  onClick={() => {
-                    setCurrentTable(t);
-                    setSidebarView("order");
-                  }}
-                  className={`group relative rounded-2xl p-5 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden aspect-[4/5]
-                    ${isOccupied ? "bg-white border border-stone-100" : isPaying ? "bg-white border-2 border-purple-100" : "bg-surface-container-low border border-stone-200/50 hover:bg-white opacity-80 hover:opacity-100"}`}
-                >
-                  {isOccupied && <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-orange-600/5 rounded-full group-hover:scale-150 transition-transform duration-500"></div>}
-                  {isPaying && <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-purple-600/5 rounded-full"></div>}
-
-                  <div className="flex justify-between items-start z-10">
-                    <div className="flex flex-col">
-                      <span className={`text-3xl font-black transition-colors ${isOccupied ? "text-stone-900 group-hover:text-primary" : isPaying ? "text-stone-900" : "text-stone-400 group-hover:text-stone-600"}`}>{t}</span>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${isOccupied ? "text-primary" : isPaying ? "text-purple-600" : "text-stone-400"}`}>
-                         {isOccupied ? "Đang phục vụ" : isPaying ? "Chờ Dọn" : "Trống"}
-                      </span>
-                    </div>
-                    {isOccupied ? (
-                      <div className="bg-primary text-white px-2 py-1 rounded-lg text-[10px] font-black">{qty} MÓN</div>
-                    ) : isPaying ? (
-                      <div className="bg-purple-600 text-white px-2 py-1 rounded-lg text-[10px] font-black uppercase">BILL IN</div>
-                    ) : (
-                      <div className="text-stone-300">
-                        <span className="material-symbols-outlined">event_seat</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {isOccupied || isPaying ? (
-                    <div className="flex flex-col gap-1 z-10 mt-auto">
-                      <div className="flex justify-between items-center text-stone-400">
-                        <span className="text-[11px] font-medium">{isOccupied ? "Tổng Bill" : "Khách thanh toán"}</span>
-                        <span className="text-xs font-bold text-stone-700">{qty} món</span>
-                      </div>
-                      <div className={`text-2xl font-black tracking-tight ${isOccupied ? "text-stone-900" : "text-purple-600"}`}>
-                        {formatMoney(revenue)}
-                      </div>
-                      
-                      <div className="flex items-center gap-2 mt-2 z-10 w-full">
-                        {isOccupied ? (
-                          <>
-                            <span className="text-[10px] text-stone-400 font-medium">Bàn Mở</span>
-                            <div className="flex-1 h-[2px] bg-stone-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-primary w-full"></div>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex w-full items-center justify-between">
-                            <span className="text-[10px] text-purple-400 font-bold uppercase italic">Bill Đã In</span>
-                            <span className="material-symbols-outlined text-purple-600 text-sm">print</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-auto flex flex-col gap-1">
-                      <span className="text-[11px] font-medium text-stone-400 italic">Chưa có khách</span>
-                      <div className="h-10 border-2 border-dashed border-stone-200/50 rounded-xl flex items-center justify-center text-[10px] font-bold text-stone-400 uppercase group-hover:border-primary/50 group-hover:text-primary transition-colors">
-                          Chạm Mở Bàn
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <TablesView
+          tables={tables}
+          tableStatus={tableStatus}
+          tableOrders={tableOrders}
+          calcTotalQty={calcTotalQty}
+          formatMoney={formatMoney}
+          setCurrentTable={setCurrentTable}
+          setSidebarView={setSidebarView}
+        />
       )}
 
         {/* ===== ORDER VIEW ===== */}
@@ -1741,133 +1487,17 @@ export default function App() {
           </div>
         )}
 
-        {/* ===== HISTORY VIEW ===== */}
         {sidebarView === "history" && (
-          <section className="flex flex-1 overflow-hidden p-2 md:p-6 gap-4 md:gap-8 w-full max-w-7xl mx-auto h-full">
-            {/* Left Column: Invoice List */}
-            <div className="w-full md:w-2/5 flex flex-col gap-6 h-full">
-              {/* Filters Section */}
-              <div className="bg-surface-container-lowest rounded-xl p-5 flex flex-col gap-4 shrink-0 shadow-sm border border-outline-variant/30">
-                <div className="flex items-center justify-between">
-                  <span className="font-headline font-bold text-on-surface">Bộ lọc ngày</span>
-                  <div className="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded-lg text-sm font-medium text-on-surface-variant relative cursor-pointer hover:bg-surface-container-high transition-colors">
-                    <span className="material-symbols-outlined text-base">calendar_today</span>
-                    <input type="date" value={historyDate}
-                      onChange={e => { setHistoryDate(e.target.value); setSelectedBill(null); }}
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full" />
-                    <span>{new Date(historyDate).toLocaleDateString('vi-VN', {day: '2-digit', month:'2-digit', year:'numeric'})}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Scrollable List */}
-              <div className="flex-1 overflow-y-auto pr-2 pb-8 space-y-4">
-                {bills.length === 0 ? (
-                   <div className="text-center py-12 text-on-surface-variant/50 flex flex-col items-center">
-                      <span className="material-symbols-outlined text-4xl mb-2">receipt_long</span>
-                      <p>Không có hóa đơn nào</p>
-                   </div>
-                ) : bills.map(b => (
-                  <div key={b.id} onClick={() => fetchBillDetail(b.id)}
-                    className={`p-5 rounded-xl transition-all cursor-pointer group ${selectedBill?.id === b.id ? 'bg-surface-container-lowest border-l-8 border-primary ring-1 ring-primary-container/20 shadow-md' : 'bg-surface-container hover:bg-surface-container-lowest border border-transparent hover:border-outline-variant/30'}`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className={`font-headline font-bold transition-colors ${selectedBill?.id === b.id ? 'text-on-surface font-extrabold text-lg' : 'text-on-surface group-hover:text-primary'}`}>#HD-{b.id}</h3>
-                        <p className="text-xs text-on-surface-variant font-medium">Bàn {b.table_num} • {new Date(b.created_at).toLocaleTimeString("vi-VN", {hour: '2-digit', minute:'2-digit'})}</p>
-                      </div>
-                      <span className={`font-bold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-tighter ${selectedBill?.id === b.id ? 'bg-primary-container/20 text-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
-                        Đã thanh toán
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-end mt-4">
-                      <span className="text-xs text-on-surface-variant font-medium truncate max-w-[150px]">{b.items_summary || "Không có tóm tắt"}</span>
-                      <span className={`font-headline text-lg font-bold ${selectedBill?.id === b.id ? 'text-on-surface font-black' : 'text-on-surface-variant'}`}>
-                        {formatMoney(b.total)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right Column: Detail Panel */}
-            <div className="hidden md:flex w-3/5 flex-col bg-surface-container-lowest rounded-[2rem] shadow-sm border border-outline-variant/30 overflow-hidden h-full">
-              {selectedBill ? (
-                <>
-                  {/* Header of Detail */}
-                  <div className="p-8 border-b border-surface-container bg-surface-bright shrink-0">
-                    <div className="flex justify-between items-start mb-6">
-                      <div>
-                        <span className="font-headline text-xs font-bold text-primary uppercase tracking-widest block mb-1">Chi tiết hóa đơn</span>
-                        <h2 className="font-headline text-3xl font-black text-on-surface">Mã HD: #{selectedBill.id}</h2>
-                        <p className="text-sm text-on-surface-variant font-medium mt-1">Bàn {selectedBill.table_num} • {new Date(selectedBill.created_at).toLocaleString("vi-VN")}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Table Content */}
-                  <div className="flex-1 overflow-y-auto px-8 py-6">
-                    <table className="w-full text-left">
-                      <thead className="bg-surface-container-lowest">
-                        <tr className="text-[11px] font-black text-on-surface-variant uppercase tracking-[0.15em] border-b border-surface-container-highest">
-                          <th className="pb-4 pt-2 font-black">Tên món</th>
-                          <th className="pb-4 pt-2 text-center w-16 font-black">SL</th>
-                          <th className="pb-4 pt-2 text-right w-24 font-black">Đơn giá</th>
-                          <th className="pb-4 pt-2 text-right w-28 font-black">Thành tiền</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-surface-container-low">
-                        {(selectedBill.items || []).map((item, i) => (
-                          <tr key={i} className="group hover:bg-surface-container-low/50 transition-colors">
-                            <td className="py-4">
-                              <span className="font-bold text-on-surface block">{item.name}</span>
-                            </td>
-                            <td className="py-4 text-center font-bold text-on-surface-variant">{item.qty < 10 ? `0${item.qty}` : item.qty}</td>
-                            <td className="py-4 text-right font-medium text-on-surface-variant">{formatMoney(item.price)}</td>
-                            <td className="py-4 text-right font-headline font-bold text-on-surface">{formatMoney(item.price * item.qty)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Footer Summary & Actions */}
-                  <div className="p-8 bg-surface-container shrink-0 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] mt-auto border-t border-outline-variant/20">
-                    <div className="flex flex-col gap-3 mb-6">
-                      <div className="flex justify-between items-center text-sm font-medium text-on-surface-variant">
-                        <span>Tạm tính</span>
-                        <span>{formatMoney(selectedBill.total)}</span>
-                      </div>
-                      <div className="h-[1px] bg-outline-variant/30 my-2"></div>
-                      <div className="flex justify-between items-baseline">
-                        <span className="font-headline text-lg font-bold text-on-surface">Tổng cộng</span>
-                        <span className="font-headline text-4xl font-black text-primary">{formatMoney(selectedBill.total)}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <button onClick={async () => {
-                          try {
-                            await callPrintApi(`/print/bill/${selectedBill.id}`, {});
-                          } catch (err) {
-                            alert(err.message || "Không thể in lại hóa đơn");
-                          }
-                        }}
-                        className="w-full bg-gradient-to-br from-primary to-primary-container hover:from-orange-600 hover:to-orange-500 text-on-primary py-4 rounded-xl font-headline font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all">
-                        <span className="material-symbols-outlined text-[20px]">print</span>
-                        In lại hóa đơn
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant/50 p-8">
-                   <span className="material-symbols-outlined text-6xl mb-4 opacity-20">receipt_long</span>
-                   <p className="text-lg font-medium">Chọn một hóa đơn để xem chi tiết</p>
-                </div>
-              )}
-            </div>
-          </section>
+          <HistoryView
+            historyDate={historyDate}
+            setHistoryDate={setHistoryDate}
+            setSelectedBill={setSelectedBill}
+            bills={bills}
+            selectedBill={selectedBill}
+            fetchBillDetail={fetchBillDetail}
+            formatMoney={formatMoney}
+            callPrintApi={callPrintApi}
+          />
         )}
 
         {/* ===== SETTINGS VIEW ===== */}
@@ -1926,25 +1556,24 @@ export default function App() {
                   </div>
                 </section>
 
-                {/* 2. Bảo mật */}
                 <section className="bg-surface-container-lowest p-6 rounded-[2rem] space-y-6 border border-outline-variant/30 shadow-sm shrink-0">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-error-container/20 text-error rounded-xl flex items-center justify-center">
-                      <span className="material-symbols-outlined">security</span>
+                    <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center">
+                      <span className="material-symbols-outlined">badge</span>
                     </div>
-                    <div>
-                       <h4 className="font-bold text-lg font-headline text-on-surface">Bảo mật hệ thống</h4>
-                    </div>
+                    <h4 className="font-bold text-lg font-headline text-on-surface">Nhân viên thu ngân</h4>
                   </div>
-                  <div className="space-y-4">
-                    <p className="text-sm text-on-surface-variant font-medium">Thay đổi mật khẩu quản trị viên để bảo vệ dữ liệu.</p>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Mật khẩu mới</label>
-                      <div className="relative">
-                         <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">lock</span>
-                         <input className="w-full bg-surface-container border-none rounded-xl pl-11 pr-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none" type="password" 
-                            value={settings.admin_password || ""} onChange={e => setSettings(s => ({ ...s, admin_password: e.target.value }))} placeholder="Mật khẩu admin" />
-                      </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Tên hiển thị trên bill</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">person</span>
+                      <input
+                        className="w-full bg-surface-container border-none rounded-xl pl-11 pr-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none"
+                        type="text"
+                        value={settings.cashier_name || ""}
+                        onChange={(e) => setSettings((s) => ({ ...s, cashier_name: e.target.value }))}
+                        placeholder="VD: Thu ngân A"
+                      />
                     </div>
                   </div>
                 </section>
@@ -2122,234 +1751,23 @@ export default function App() {
           </div>
         )}
 
-        {/* ===== STATS VIEW ===== */}
-        {sidebarView === "stats" && (() => {
-          const fmt = formatMoney;
-          const BarChart = ({ data, labelKey, valueKey }) => {
-            const max = Math.max(...data.map(d => d[valueKey]), 1);
-            return (
-              <div className="h-64 flex items-end justify-between gap-4 md:gap-8 px-2 mt-4">
-                {data.map((d, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-3 group relative h-full">
-                    <div className="w-full bg-surface-container-high rounded-t-xl relative h-full flex flex-col justify-end group">
-                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block z-20">
-                        <div className="bg-inverse-surface text-inverse-on-surface text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-xl font-bold">
-                          <div className="text-primary-fixed-dim">{fmt(d[valueKey])}</div>
-                          <div className="text-on-surface-variant font-medium text-[11px]">{d.bill_count} Hóa đơn</div>
-                        </div>
-                      </div>
-                      <div className="w-full bg-primary-container rounded-t-xl chart-bar group-hover:bg-primary transition-all cursor-pointer"
-                        style={{ height: `${Math.max((d[valueKey]/max)*100, 2)}%` }}/>
-                    </div>
-                    <span className="text-xs font-bold text-on-surface-variant group-hover:text-primary transition-colors">{d[labelKey]}</span>
-                  </div>
-                ))}
-              </div>
-            );
-          };
-
-          const KPI = ({ title, value, subtext, icon, trendColor, iconColor, bgColor }) => (
-            <div className={`${bgColor || 'bg-surface-container-lowest'} p-6 rounded-[2rem] shadow-sm border border-outline-variant/20 relative group overflow-hidden`}>
-              <div className="relative z-10">
-                <p className={`${bgColor ? 'text-orange-100' : 'text-on-surface-variant'} font-headline font-bold text-xs uppercase tracking-widest`}>{title}</p>
-                <h4 className={`text-4xl font-headline font-black mt-2 ${bgColor ? 'text-white' : 'text-on-surface'}`}>{value}</h4>
-                <div className={`mt-4 flex items-center gap-2 ${bgColor ? 'bg-white/20 text-white w-fit px-3 py-1 rounded-full' : trendColor} font-bold text-xs`}>
-                  <span className="material-symbols-outlined text-sm">{subtext?.includes('+') ? 'trending_up' : subtext?.includes('-') ? 'trending_down' : 'horizontal_rule'}</span>
-                  {subtext || "Không có dữ liệu"}
-                </div>
-              </div>
-              <div className={`absolute top-6 right-6 w-12 h-12 rounded-2xl flex items-center justify-center ${iconColor || 'bg-surface-container-high text-on-surface'}`}>
-                <span className="material-symbols-outlined text-[24px]">{icon}</span>
-              </div>
-              {bgColor && <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-white/10 text-9xl rotate-12 opacity-50">{icon}</span>}
-            </div>
-          );
-
-          const TopItems = ({ items, label }) => (
-            <div className="bg-surface-container-lowest p-6 rounded-[2.5rem] shadow-sm border border-outline-variant/30 mt-6 lg:mt-0 lg:ml-6 flex-1 flex flex-col h-full">
-              <div className="flex items-center justify-between mb-8 shrink-0">
-                <h5 className="font-headline font-extrabold text-xl">{label}</h5>
-              </div>
-              <div className="flex flex-col gap-6 flex-1 overflow-y-auto pr-2">
-                {!items?.length ? (
-                  <div className="text-sm text-on-surface-variant text-center py-12 flex flex-col items-center">
-                    <span className="material-symbols-outlined text-4xl mb-3 opacity-20">inventory_2</span>
-                    Chưa có dữ liệu giao dịch
-                  </div>
-                ) : items.map((item, i) => {
-                  const maxQ = items[0].total_qty;
-                  return (
-                    <div key={i} className="flex items-center gap-4 group">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm shrink-0
-                        ${i===0 ? "bg-primary text-white" : i===1 ? "bg-primary-container text-on-primary-container" : i===2 ? "bg-secondary-container text-on-secondary-container" : "bg-surface-container-high text-on-surface-variant"}`}>
-                        #{i+1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-baseline mb-1">
-                           <h6 className="font-headline font-bold text-on-surface truncate text-base">{item.name}</h6>
-                           <span className="text-primary font-bold text-sm ml-2">{fmt(item.total_revenue)}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-2 bg-surface-container-high rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full" style={{width:`${(item.total_qty/maxQ)*100}%`}}/>
-                          </div>
-                          <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{item.total_qty} phần</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-
-          const DataTable = ({ rows, cols }) => (
-            <div className="bg-surface-container-lowest rounded-3xl p-6 mt-6 border border-outline-variant/30 shadow-sm overflow-hidden flex flex-col">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-surface-container-lowest">
-                    <tr className="border-b border-surface-container-highest">
-                      {cols.map(c => <th key={c.key} className={`py-3 px-2 font-bold text-[11px] text-on-surface-variant uppercase tracking-widest text-${c.align||"left"}`}>{c.label}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-surface-container-high">
-                    {rows.length===0
-                      ? <tr><td colSpan={cols.length} className="py-8 text-center text-on-surface-variant font-medium">Chưa có dữ liệu thống kê</td></tr>
-                      : rows.map((r,i) => (
-                          <tr key={i} className="hover:bg-surface-bright transition-colors group">
-                            {cols.map(c => <td key={c.key} className={`py-4 px-2 font-medium text-on-surface text-${c.align||"left"} ${c.cls||""}`}>{c.render?c.render(r):r[c.key]}</td>)}
-                          </tr>
-                        ))
-                    }
-                  </tbody>
-                  {rows.length>0 && (
-                    <tfoot className="bg-surface-container-lowest sticky bottom-0">
-                      <tr className="border-t-2 border-outline-variant/50">
-                        {cols.map((c,i) => <td key={c.key} className={`py-4 px-2 font-bold text-${c.align||"left"} text-on-surface`}>{i===0?"Tổng Cộng":c.footer?c.footer(rows):""}</td>)}
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
-            </div>
-          );
-
-          return (
-            <div className="p-4 md:p-8 flex flex-col w-full max-w-7xl mx-auto h-full overflow-y-auto">
-              {/* Header Section */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 shrink-0">
-                <div>
-                  <span className="text-primary font-headline font-bold text-sm tracking-widest uppercase">Thống kê vận hành</span>
-                  <h3 className="text-3xl font-headline font-extrabold text-on-surface mt-1">Báo Cáo Doanh Thu</h3>
-                </div>
-                <div className="flex bg-surface-container-highest rounded-xl p-1 gap-1 items-center shadow-inner">
-                  {[["day","Hôm nay"],["month","Tháng"],["year","Năm"]].map(([v,l]) => (
-                    <button key={v} onClick={()=>setStatsTab(v)}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all
-                        ${statsTab===v ? "bg-white shadow-sm text-primary" : "text-on-surface-variant hover:text-on-surface"}`}>
-                      {l}
-                    </button>
-                  ))}
-                  {statsTab==="month" && (
-                    <input type="month" value={statsMonth}
-                      onChange={e=>{setStatsMonth(e.target.value);fetchStatsMonthly(e.target.value);fetchStatsDaily(e.target.value);}}
-                      className="ml-2 bg-transparent border-none text-sm font-bold text-on-surface-variant focus:ring-0 outline-none cursor-pointer hover:bg-white/50 px-2 py-1 rounded-lg transition-colors"/>
-                  )}
-                  {statsTab==="year" && (
-                    <select value={statsYear} onChange={e=>{setStatsYear(e.target.value);fetchStatsYearly(e.target.value);}}
-                      className="ml-2 bg-transparent border-none text-sm font-bold text-on-surface-variant focus:ring-0 outline-none cursor-pointer hover:bg-white/50 px-2 py-1 rounded-lg transition-colors appearance-none pr-6 font-mono">
-                      {Array.from({length:5},(_,i)=>(new Date().getFullYear()-i).toString()).map(y=><option key={y} value={y}>{y}</option>)}
-                    </select>
-                  )}
-                </div>
-              </div>
-
-              {/* Main Content Areas */}
-              <div className="flex-1 flex flex-col gap-6">
-                
-                {/* DAILY TAB */}
-                {statsTab==="day" && statsToday && (
-                  <div className="flex flex-col lg:flex-row h-full">
-                    <div className="flex-1 flex flex-col gap-6 lg:w-2/3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <KPI title="Doanh thu hôm nay" value={fmt(statsToday.revenue)} subtext="Dữ liệu trong ngày" icon="payments" bgColor="bg-gradient-to-br from-primary to-primary-container" />
-                        <KPI title="Tổng hóa đơn" value={statsToday.bill_count} subtext="Số lượng bill" icon="receipt_long" iconColor="bg-secondary-fixed text-on-secondary-container" trendColor="text-secondary" />
-                        <KPI title="Trung bình/HĐ" value={statsToday.bill_count ? fmt(Math.round(statsToday.revenue/statsToday.bill_count)) : "0đ"} subtext="Giá trị trung bình" icon="analytics" iconColor="bg-tertiary-fixed text-on-tertiary-container" trendColor="text-tertiary" />
-                      </div>
-                      <div className="flex-1 bg-surface-container-lowest p-8 rounded-[2.5rem] shadow-sm border border-outline-variant/30 flex flex-col items-center justify-center text-on-surface-variant min-h-[300px]">
-                         <span className="material-symbols-outlined text-6xl mb-4 opacity-20">insert_chart</span>
-                         <p className="font-medium text-lg">Biểu đồ chỉ khả dụng cho chế độ Tháng/Năm</p>
-                      </div>
-                    </div>
-                    <div className="lg:w-1/3 flex flex-col">
-                       <TopItems items={statsToday.top_items} label="Top món bán chạy hôm nay"/>
-                    </div>
-                  </div>
-                )}
-
-                {/* MONTHLY TAB */}
-                {statsTab==="month" && (
-                  <div className="flex flex-col lg:flex-row h-full">
-                    <div className="flex-1 flex flex-col gap-6 lg:w-2/3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <KPI title="Doanh thu tháng" value={fmt(statsMonthlyData?.revenue??0)} subtext={`Tháng ${statsMonth.split('-')[1]}/${statsMonth.split('-')[0]}`} icon="payments" bgColor="bg-gradient-to-br from-primary to-primary-container" />
-                        <KPI title="Hóa đơn tháng" value={statsMonthlyData?.bill_count??"0"} subtext="Tổng số bill" icon="receipt_long" iconColor="bg-secondary-fixed text-on-secondary-container" trendColor="text-secondary" />
-                        <KPI title="Trung bình ngày" value={statsMonthlyData?.days?.length ? fmt(Math.round(statsMonthlyData.revenue/statsMonthlyData.days.length)) : "0đ"} subtext="Mỗi ngày hoạt động" icon="analytics" iconColor="bg-tertiary-fixed text-on-tertiary-container" trendColor="text-tertiary" />
-                      </div>
-                      <div className="bg-surface-container-lowest p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-outline-variant/30">
-                        <h5 className="font-headline font-extrabold text-xl mb-4">Biểu đồ Theo ngày</h5>
-                        {statsMonthlyData?.days?.length
-                          ? <BarChart data={statsMonthlyData.days.map(d=>({...d,label:d.date.slice(8)}))} labelKey="label" valueKey="revenue"/>
-                          : <div className="text-sm border-2 border-dashed border-outline-variant/50 rounded-2xl p-12 text-center text-on-surface-variant font-medium mt-4">Chưa có dữ liệu doanh thu tháng này</div>}
-                      </div>
-                      <DataTable
-                        rows={(statsMonthlyData?.days||[]).map(d=>({...d,ngay:new Date(d.date+"T00:00:00").toLocaleDateString("vi-VN")}))}
-                        cols={[
-                          {key:"ngay", label:"Ngày giao dịch", cls:"font-bold"},
-                          {key:"bill_count", label:"Số Hóa Đơn", align:"center"},
-                          {key:"revenue", label:"Doanh thu", align:"right", cls:"text-primary font-black text-base",
-                            render:r=>fmt(r.revenue), footer:rows=><span className="text-primary font-black text-lg">{fmt(rows.reduce((s,r)=>s+r.revenue,0))}</span>},
-                        ]}/>
-                    </div>
-                    <div className="lg:w-1/3 flex flex-col mt-6 lg:mt-0 lg:h-auto">
-                       <TopItems items={statsMonthlyData?.top_items} label={`Top món bán chạy`}/>
-                    </div>
-                  </div>
-                )}
-
-                {/* YEARLY TAB */}
-                {statsTab==="year" && (
-                  <div className="flex flex-col lg:flex-row h-full">
-                    <div className="flex-1 flex flex-col gap-6 lg:w-2/3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <KPI title="Doanh thu năm" value={fmt(statsYearlyData?.revenue??0)} subtext={`Năm ${statsYear}`} icon="payments" bgColor="bg-gradient-to-br from-primary to-primary-container" />
-                        <KPI title="Hóa đơn cả năm" value={statsYearlyData?.bill_count??"0"} subtext="Tổng số bill" icon="receipt_long" iconColor="bg-secondary-fixed text-on-secondary-container" trendColor="text-secondary" />
-                        <KPI title="Trung bình tháng" value={statsYearlyData?.months?.length ? fmt(Math.round(statsYearlyData.revenue/statsYearlyData.months.length)) : "0đ"} subtext="Theo tháng có HĐ" icon="analytics" iconColor="bg-tertiary-fixed text-on-tertiary-container" trendColor="text-tertiary" />
-                      </div>
-                      <div className="bg-surface-container-lowest p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-outline-variant/30">
-                        <h5 className="font-headline font-extrabold text-xl mb-4">Biểu đồ Doanh thu năm</h5>
-                        {statsYearlyData?.months?.length
-                          ? <BarChart data={statsYearlyData.months.map(d=>({...d,label:"Th."+d.month.slice(5)}))} labelKey="label" valueKey="revenue"/>
-                          : <div className="text-sm border-2 border-dashed border-outline-variant/50 rounded-2xl p-12 text-center text-on-surface-variant font-medium mt-4">Chưa có dữ liệu doanh thu năm này</div>}
-                      </div>
-                      <DataTable
-                        rows={(statsYearlyData?.months||[]).map(d=>({...d,thang:`Tháng ${parseInt(d.month.slice(5))}`}))}
-                        cols={[
-                          {key:"thang", label:"Tháng", cls:"font-bold"},
-                          {key:"bill_count", label:"Số Hóa Đơn", align:"center"},
-                          {key:"revenue", label:"Doanh thu", align:"right", cls:"text-primary font-black text-base",
-                            render:r=>fmt(r.revenue), footer:rows=><span className="text-primary font-black text-lg">{fmt(rows.reduce((s,r)=>s+r.revenue,0))}</span>},
-                        ]}/>
-                    </div>
-                    <div className="lg:w-1/3 flex flex-col mt-6 lg:mt-0 lg:h-auto">
-                       <TopItems items={statsYearlyData?.top_items} label={`Top món năm ${statsYear}`}/>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })()}
+        {sidebarView === "stats" && (
+          <StatsView
+            formatMoney={formatMoney}
+            statsTab={statsTab}
+            setStatsTab={setStatsTab}
+            statsMonth={statsMonth}
+            setStatsMonth={setStatsMonth}
+            fetchStatsMonthly={fetchStatsMonthly}
+            fetchStatsDaily={fetchStatsDaily}
+            statsYear={statsYear}
+            setStatsYear={setStatsYear}
+            fetchStatsYearly={fetchStatsYearly}
+            statsToday={statsToday}
+            statsMonthlyData={statsMonthlyData}
+            statsYearlyData={statsYearlyData}
+          />
+        )}
 
       </div>
 

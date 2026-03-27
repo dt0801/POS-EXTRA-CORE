@@ -4,106 +4,28 @@ const multer  = require("multer");
 const path    = require("path");
 const fs      = require("fs");
 const { exec } = require("child_process");
-const { ThermalPrinter, PrinterTypes, CharacterSet } = require("node-thermal-printer");
+const { PrinterTypes, CharacterSet } = require("node-thermal-printer");
+const {
+  WindowsRawDriver,
+  createSafePrinter,
+  listWindowsPrinters,
+} = require("./server/printing/windowsPrinter");
 
-// DUMMY WINDOWS DRIVER ĐỂ IN RAW QUA WINDOWS SPOOLER KHÔNG DÙNG C++ (Bypass lỗi No driver set)
-class WindowsRawDriver {
-  getPrinters() { return []; }
-  getPrinter(name) { return { name, status: 'READY' }; }
-  printDirect({ data, printer, success, error }) {
-    try {
-      const psSuffix = Date.now() + Math.floor(Math.random() * 10000);
-      const tmpBin = path.join(require('os').tmpdir(), `print_${psSuffix}.bin`);
-      const tmpPsfile = path.join(require('os').tmpdir(), `print_${psSuffix}.ps1`);
-      
-      fs.writeFileSync(tmpBin, data);
-      
-      const psScript = `
-$code = @"
-using System;
-using System.Runtime.InteropServices;
-public class RawPrinterHelper {
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public class DOCINFOA {
-        [MarshalAs(UnmanagedType.LPStr)] public string pDocName;
-        [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
-        [MarshalAs(UnmanagedType.LPStr)] public string pDataType;
-    }
-    [DllImport("winspool.Drv", EntryPoint = "OpenPrinterA", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-    public static extern bool OpenPrinter([MarshalAs(UnmanagedType.LPStr)] string szPrinter, out IntPtr hPrinter, IntPtr pd);
-    [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-    public static extern bool ClosePrinter(IntPtr hPrinter);
-    [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterA", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-    public static extern bool StartDocPrinter(IntPtr hPrinter, int level, [In, MarshalAs(UnmanagedType.LPStruct)] DOCINFOA di);
-    [DllImport("winspool.Drv", EntryPoint = "EndDocPrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-    public static extern bool EndDocPrinter(IntPtr hPrinter);
-    [DllImport("winspool.Drv", EntryPoint = "StartPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-    public static extern bool StartPagePrinter(IntPtr hPrinter);
-    [DllImport("winspool.Drv", EntryPoint = "EndPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-    public static extern bool EndPagePrinter(IntPtr hPrinter);
-    [DllImport("winspool.Drv", EntryPoint = "WritePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-    public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
-
-    public static bool SendBytesToPrinter(string szPrinterName, IntPtr pBytes, int dwCount) {
-        IntPtr hPrinter = new IntPtr(0);
-        DOCINFOA di = new DOCINFOA();
-        bool bSuccess = false;
-        di.pDocName = "RAW POS Print";
-        di.pDataType = "RAW";
-        if (OpenPrinter(szPrinterName.Normalize(), out hPrinter, IntPtr.Zero)) {
-            if (StartDocPrinter(hPrinter, 1, di)) {
-                if (StartPagePrinter(hPrinter)) {
-                    int dwWritten = 0;
-                    bSuccess = WritePrinter(hPrinter, pBytes, dwCount, out dwWritten);
-                    EndPagePrinter(hPrinter);
-                }
-                EndDocPrinter(hPrinter);
-            }
-            ClosePrinter(hPrinter);
-        }
-        return bSuccess;
-    }
-}
-"@
-Add-Type -TypeDefinition $code -Language CSharp
-$bytes = [System.IO.File]::ReadAllBytes('${tmpBin.replace(/\\/g, '\\\\')}')
-$hGlobal = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
-[System.Runtime.InteropServices.Marshal]::Copy($bytes, 0, $hGlobal, $bytes.Length)
-[RawPrinterHelper]::SendBytesToPrinter('${printer}', $hGlobal, $bytes.Length)
-[System.Runtime.InteropServices.Marshal]::FreeHGlobal($hGlobal)
-Remove-Item -Path '${tmpBin.replace(/\\/g, '\\\\')}' -ErrorAction SilentlyContinue
-`;
-      fs.writeFileSync(tmpPsfile, psScript);
-      require('child_process').exec(`powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "${tmpPsfile}"`, (err, stdout, stderr) => {
-        try { fs.unlinkSync(tmpPsfile); } catch(e){}
-        if (err) return error(err);
-        success();
-      });
-    } catch(e) {
-      error(e);
-    }
-  }
-}
 const customDriver = new WindowsRawDriver();
-
-function createSafePrinter(config) {
-  const printer = new ThermalPrinter(config);
-  return printer;
-}
 
 
 // ── sql.js (pure JavaScript SQLite – không cần compile native) ────
 const initSqlJs = require("sql.js");
 
-// ── Đường dẫn lưu dữ liệu: ưu tiên userData để bền vững sau khi tắt/mở app ──
-const RESOURCES_DIR = process.resourcesPath ? path.join(process.resourcesPath) : path.join(__dirname);
-const USER_DATA_DIR = process.env.ELECTRON_USER_DATA ? path.join(process.env.ELECTRON_USER_DATA) : "";
-const BASE_DIR = USER_DATA_DIR || RESOURCES_DIR;
+// ── Đường dẫn lưu dữ liệu cho web runtime ──
+const BASE_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.join(__dirname, "data");
 
 if (!fs.existsSync(BASE_DIR)) fs.mkdirSync(BASE_DIR, { recursive: true });
 
 const DB_PATH = path.join(BASE_DIR, "pos.db");
-const LEGACY_DB_PATH = path.join(RESOURCES_DIR, "pos.db");
+const LEGACY_DB_PATH = path.join(__dirname, "pos.db");
 if (!fs.existsSync(DB_PATH) && fs.existsSync(LEGACY_DB_PATH)) {
   try {
     fs.copyFileSync(LEGACY_DB_PATH, DB_PATH);
@@ -114,7 +36,7 @@ if (!fs.existsSync(DB_PATH) && fs.existsSync(LEGACY_DB_PATH)) {
 }
 
 const UPLOADS_DIR = path.join(BASE_DIR, "uploads");
-const LEGACY_UPLOADS_DIR = path.join(RESOURCES_DIR, "uploads");
+const LEGACY_UPLOADS_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // React build luôn nằm cùng cấp server.js (trong asar hoặc dev)
@@ -308,12 +230,12 @@ async function initDb() {
 
   // Giá trị mặc định settings
   const defaultSettings = [
-    ["admin_password", "123456"],
-    ["printer_ip",    "192.168.1.100"],
-    ["printer_type",  "EPSON"],
-    ["store_name",    "Tiệm Nướng Đà Lạt Và Em"],
-    ["store_address", "24 đường 3 tháng 4, Đà Lạt"],
-    ["store_phone",   "081 366 5665"],
+    ["printer_ip",    ""],
+    ["printer_type",  ""],
+    ["store_name",    ""],
+    ["store_address", ""],
+    ["store_phone",   ""],
+    ["cashier_name",  ""],
     ["total_tables",  "20"],
     ["bill_css_override", ""],
   ];
@@ -608,7 +530,26 @@ function startServer() {
 
   function getPrinterIP() {
     const row = dbGet("SELECT value FROM settings WHERE key='printer_ip'");
-    return row?.value || "192.168.1.100";
+    return row?.value || "";
+  }
+
+  function getSetting(key, fallback = "") {
+    const row = dbGet("SELECT value FROM settings WHERE key=?", [key]);
+    const value = row?.value;
+    return value && String(value).trim() ? String(value).trim() : fallback;
+  }
+
+  function getStoreProfile() {
+    const storeName = getSetting("store_name", "POS STORE");
+    const storeAddress = getSetting("store_address", "");
+    const storePhone = getSetting("store_phone", "");
+    const cashierName = getSetting("cashier_name", "Nhân viên");
+    const subtitleParts = [storeAddress, storePhone ? `Hotline ${storePhone}` : ""].filter(Boolean);
+    return {
+      storeName,
+      storeSubtitle: subtitleParts.join(" - "),
+      cashierName,
+    };
   }
 
   async function createPrinter(ip) {
@@ -624,22 +565,9 @@ function startServer() {
   }
 
   // Danh sách máy in Windows
-  app.get("/printers", (req, res) => {
-    const cmd = `powershell -command "Get-Printer | Select-Object Name, PortName, PrinterStatus | ConvertTo-Json"`;
-    exec(cmd, { timeout: 5000 }, (err, stdout) => {
-      if (err) return res.json([]);
-      try {
-        let printers = JSON.parse(stdout.trim());
-        if (!Array.isArray(printers)) printers = [printers];
-        res.json(printers.map(p => ({
-          name:   p.Name,
-          port:   p.PortName,
-          status: p.PrinterStatus === 0 ? "Ready" : "Unknown",
-        })));
-      } catch {
-        res.json([]);
-      }
-    });
+  app.get("/printers", async (req, res) => {
+    const printers = await listWindowsPrinters();
+    res.json(printers);
   });
 
   // =============================================
@@ -698,21 +626,6 @@ function startServer() {
     const settings = {};
     rows.forEach(r => { settings[r.key] = r.value; });
     res.json(settings);
-  });
-
-  // =============================================
-  // AUTH (LOGIN) API
-  // =============================================
-  app.post("/login", (req, res) => {
-    const { password } = req.body;
-    const row = dbGet("SELECT value FROM settings WHERE key='admin_password'");
-    const currentPassword = row ? row.value : "123456";
-    
-    if (password === currentPassword) {
-      res.json({ success: true });
-    } else {
-      res.status(401).json({ error: "Mật khẩu không chính xác!" });
-    }
   });
 
   app.post("/settings", (req, res) => {
@@ -1112,7 +1025,7 @@ function startServer() {
       <div class="meta-line"><span>Số HĐ</span><b>${escapeHtml(billNo || "--")}</b></div>
       <div class="meta-line"><span>${escapeHtml(timeLabel || "Thoi gian")}</span><b>${escapeHtml(timeValue)}</b></div>
       <div class="meta-line"><span>Bàn</span><b>${escapeHtml(tableNum)}</b></div>
-      <div class="meta-line"><span>Thu ngân</span><b>${escapeHtml(cashier || "ADMIN")}</b></div>
+      <div class="meta-line"><span>Thu ngân</span><b>${escapeHtml(cashier || getStoreProfile().cashierName)}</b></div>
       <div class="meta-line"><span>Khách hàng</span><b>${escapeHtml(customer || "")}</b></div>
     </div>
     <div class="divider"></div>
@@ -1211,8 +1124,9 @@ function startServer() {
     }
 
     try {
+      const store = getStoreProfile();
       const sent = dispatchReceiptToType("TAMTINH", {
-        title: "TẠM TÍNH",
+        title: store.storeName || "TẠM TÍNH",
         tableNum: table_num,
         timeLabel: "Giờ",
         timeValue: new Date().toLocaleString("vi-VN"),
@@ -1220,7 +1134,7 @@ function startServer() {
         totalLabel: "TẠM TÍNH",
         totalValue: total,
         billNo: "--",
-        cashier: "ADMIN",
+        cashier: store.cashierName,
         footer: "(Chưa thanh toán chính thức)",
         groupItemsByType: true,
       });
@@ -1238,9 +1152,10 @@ function startServer() {
     }
 
     try {
+      const store = getStoreProfile();
       const sent = dispatchReceiptToType("BILL", {
-        title: "TIEM NUONG DA LAT VA EM",
-        subtitle: "24 duong 3 thang 4, Da Lat - Hotline 081 366 5665",
+        title: store.storeName,
+        subtitle: store.storeSubtitle,
         tableNum: table_num,
         timeLabel: "Ngày",
         timeValue: new Date().toLocaleString("vi-VN"),
@@ -1248,7 +1163,7 @@ function startServer() {
         totalLabel: "THÀNH TIỀN",
         totalValue: total,
         billNo: "--",
-        cashier: "ADMIN",
+        cashier: store.cashierName,
         footer: "Cảm ơn quý khách - Hẹn gặp lại!",
         groupItemsByType: true,
       });
@@ -1267,9 +1182,10 @@ function startServer() {
 
     const items = dbAll("SELECT * FROM bill_items WHERE bill_id=?", [id]);
     try {
+      const store = getStoreProfile();
       const sent = dispatchReceiptToType("BILL", {
-        title: "TIEM NUONG DA LAT VA EM",
-        subtitle: "24 duong 3 thang 4, Da Lat - Hotline 081 366 5665",
+        title: store.storeName,
+        subtitle: store.storeSubtitle,
         tableNum: bill.table_num,
         timeLabel: "Ngày",
         timeValue: new Date(bill.created_at).toLocaleString("vi-VN"),
@@ -1277,7 +1193,7 @@ function startServer() {
         totalLabel: "THÀNH TIỀN",
         totalValue: bill.total,
         billNo: bill.id,
-        cashier: "ADMIN",
+        cashier: store.cashierName,
         footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
         groupItemsByType: true,
       });
@@ -1363,8 +1279,9 @@ function startServer() {
   // =============================================
   app.listen(3000, () => {
     console.log("✅ Server đang chạy tại http://localhost:3000");
-    console.log(`🖨️  Máy ian POS: tcp://${getPrinterIP()}`);
-    console.log("   → Đổi IP máy in qua giao diện Settings trong app");
+    const printerIp = getPrinterIP();
+    console.log(`🖨️  Máy in POS: ${printerIp ? `tcp://${printerIp}` : "chưa cấu hình"}`);
+    console.log("   → Cấu hình IP máy in qua giao diện Settings");
   });
 }
 
@@ -1372,10 +1289,4 @@ function startServer() {
 initDb().catch(err => {
   console.error("❌ Không thể khởi tạo DB:", err);
   process.exit(1);
-});
-app.get("/menu", (req, res) => {
-  res.json([
-    { id: 1, name: "Trà sữa", price: 30000 },
-    { id: 2, name: "Cà phê", price: 25000 }
-  ]);
 });

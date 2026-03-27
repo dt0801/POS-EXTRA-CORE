@@ -16,9 +16,6 @@ const { menuSeedItems } = require("./server/seed/menuSeed");
 const customDriver = new WindowsRawDriver();
 
 
-// ── sql.js (pure JavaScript SQLite – không cần compile native) ────
-const initSqlJs = require("sql.js");
-
 // ── Đường dẫn lưu dữ liệu cho web runtime ──
 const BASE_DIR = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
@@ -82,6 +79,8 @@ let mongoClient = null;
 let mongoDb = null;
 let mongoReady = false;
 let mongoConnectPromise = null;
+let settingsCache = {};
+let printersCache = [];
 
 function saveDb(immediate = false) {
   const writeNow = () => {
@@ -117,7 +116,7 @@ function flushDbBeforeExit() {
 async function connectMongoIfConfigured() {
   const uri = (process.env.MONGODB_URI || "").trim();
   if (!uri) {
-    console.log("ℹ️  MongoDB chưa cấu hình, chạy với sql.js local");
+    console.log("ℹ️  Chưa cấu hình MONGODB_URI (Mongo-only).");
     return;
   }
   mongoClient = new MongoClient(uri, {
@@ -155,6 +154,40 @@ async function ensureMongoReady() {
 
   await mongoConnectPromise;
   return mongoReady;
+}
+
+async function loadSettingsCache() {
+  const docs = await mongoDb.collection("settings").find({}).toArray();
+  const next = {};
+  docs.forEach((d) => {
+    next[d.key] = d.value;
+  });
+  settingsCache = next;
+}
+
+async function refreshPrintersCache() {
+  const docs = await mongoDb.collection("windows_printers").find({}).toArray();
+  printersCache = docs.map((d) => ({
+    id: Number(d.sqlite_id ?? d.id ?? 0),
+    name: d.name,
+    type: d.type || "ALL",
+    paper_size: Number(d.paper_size || 80),
+    is_enabled: d.is_enabled !== undefined ? Number(d.is_enabled) : 1,
+  }));
+}
+
+async function getNextMongoId(collectionName) {
+  const col = mongoDb.collection(collectionName);
+  const docs = await col
+    .find({})
+    .project({ sqlite_id: 1, id: 1 })
+    .sort({ sqlite_id: -1 })
+    .limit(1)
+    .toArray();
+  const maxVal = docs[0]
+    ? Number(docs[0].sqlite_id ?? docs[0].id ?? 0)
+    : 0;
+  return maxVal + 1;
 }
 
 async function seedMongoMenuIfEmpty() {
@@ -412,127 +445,55 @@ async function mirrorWriteToMongo(sql, params, result) {
   }
 }
 
-function seedMenuIfEmpty() {
-  const row = dbGet("SELECT COUNT(*) AS total FROM menu");
-  const total = Number(row?.total || 0);
-  if (total > 0) {
-    console.log(`ℹ️  Menu seed skipped: đã có ${total} món`);
-    return;
-  }
-  menuSeedItems.forEach((item) => {
-    dbRun(
-      "INSERT INTO menu (name, price, type, image) VALUES (?, ?, ?, ?)",
-      [item.name, Number(item.price), item.type, ""]
-    );
-  });
-  saveDb(true);
-  console.log(`🌱 Menu seed executed: đã nạp ${menuSeedItems.length} món mặc định`);
-}
-
 /**
- * Khởi tạo sql.js, load file DB nếu đã có, rồi khởi động Express
+ * Mongo-only boot:
+ * - connect Mongo
+ * - seed menu (nếu collection rỗng)
+ * - đảm bảo settings & order_session có doc mặc định
+ * - start Express
  */
-async function initDb() {
-  const SQL = await initSqlJs();
-
-  if (fs.existsSync(DB_PATH)) {
-    const fileBuffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(fileBuffer);
-    console.log("✅ Đã load DB từ file:", DB_PATH);
-  } else {
-    db = new SQL.Database();
-    console.log("✅ Tạo DB mới:", DB_PATH);
+async function initMongoOnly() {
+  await connectMongoIfConfigured();
+  if (!mongoReady) {
+    console.error("❌ Chưa có MONGODB_URI/MONGODB_DB (bỏ SQLite), dừng server.");
+    process.exit(1);
   }
 
-  // Tạo bảng nếu chưa có
-  db.run(`
-    CREATE TABLE IF NOT EXISTS menu (
-      id    INTEGER PRIMARY KEY AUTOINCREMENT,
-      name  TEXT,
-      price INTEGER,
-      type  TEXT,
-      image TEXT
-    )
-  `);
-  db.run(`
-    CREATE TABLE IF NOT EXISTS bills (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      table_num  INTEGER,
-      total      INTEGER,
-      created_at TEXT DEFAULT (datetime('now','localtime'))
-    )
-  `);
-  db.run(`
-    CREATE TABLE IF NOT EXISTS bill_items (
-      id       INTEGER PRIMARY KEY AUTOINCREMENT,
-      bill_id  INTEGER,
-      name     TEXT,
-      price    INTEGER,
-      qty      INTEGER,
-      FOREIGN KEY (bill_id) REFERENCES bills(id)
-    )
-  `);
-  try {
-    db.run("ALTER TABLE bill_items ADD COLUMN item_type TEXT");
-  } catch {
-    /* đã có cột */
-  }
-  db.run(`
-    CREATE TABLE IF NOT EXISTS tables (
-      table_num  INTEGER PRIMARY KEY,
-      status     TEXT DEFAULT 'PAID'
-    )
-  `);
-  db.run(`
-    CREATE TABLE IF NOT EXISTS settings (
-      key   TEXT PRIMARY KEY,
-      value TEXT
-    )
-  `);
-  db.run(`
-    CREATE TABLE IF NOT EXISTS windows_printers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      type TEXT,
-      paper_size INTEGER,
-      is_enabled INTEGER DEFAULT 1
-    )
-  `);
+  await seedMongoMenuIfEmpty();
 
-  // Đơn đang gọi (chưa reset bàn) — khôi phục sau khi tắt mở app
-  db.run(`
-    CREATE TABLE IF NOT EXISTS order_session (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      payload TEXT NOT NULL DEFAULT '{}'
-    )
-  `);
-  if (!dbGet("SELECT id FROM order_session WHERE id=1")) {
-    db.run("INSERT INTO order_session (id, payload) VALUES (1, '{}')");
-  }
-
-  // Giá trị mặc định settings
+  // Default settings để UI không bị undefined
   const defaultSettings = [
-    ["printer_ip",    ""],
-    ["printer_type",  ""],
-    ["store_name",    ""],
+    ["printer_ip", ""],
+    ["printer_type", ""],
+    ["store_name", ""],
     ["store_address", ""],
-    ["store_phone",   ""],
-    ["cashier_name",  ""],
-    ["total_tables",  "20"],
+    ["store_phone", ""],
+    ["cashier_name", ""],
+    ["total_tables", "20"],
     ["bill_css_override", ""],
   ];
-  defaultSettings.forEach(([k, v]) => {
-    db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [k, v]);
-  });
+  const settingsCol = mongoDb.collection("settings");
+  await Promise.all(
+    defaultSettings.map(([key, value]) =>
+      settingsCol.updateOne({ key }, { $set: { key, value } }, { upsert: true })
+    )
+  );
 
-  await connectMongoIfConfigured();
-  if (mongoReady) {
-    await seedMongoMenuIfEmpty();
-    await syncMongoToSqliteCache();
-  } else {
-    seedMenuIfEmpty();
-  }
-  saveDb();
+  // order_session mặc định
+  await mongoDb.collection("order_session").updateOne(
+    { id: 1 },
+    {
+      $set: {
+        id: 1,
+        payload: JSON.stringify({ tableOrders: {}, itemNotes: {}, kitchenSent: {} }),
+      },
+    },
+    { upsert: true }
+  );
+
+  await loadSettingsCache();
+  await refreshPrintersCache();
+
   startServer();
 }
 
@@ -543,101 +504,81 @@ async function initDb() {
 function startServer() {
 
   // Lấy toàn bộ menu
-  app.get("/menu", (req, res) => {
-    res.json(dbAll("SELECT * FROM menu"));
+  app.get("/menu", async (req, res) => {
+    try {
+      const docs = await mongoDb.collection("menu").find({}).sort({ sqlite_id: 1 }).toArray();
+      res.json(
+        docs.map((d) => ({
+          id: Number(d.sqlite_id ?? d.id ?? 0),
+          name: d.name || "",
+          price: Number(d.price || 0),
+          type: d.type || "FOOD",
+          image: d.image || "",
+        }))
+      );
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Thêm món mới
   app.post("/menu", upload.single("image"), async (req, res) => {
     const { name, price, type } = req.body;
     const image = req.file ? req.file.filename : "";
-    const result = dbRun(
-      "INSERT INTO menu (name, price, type, image) VALUES (?, ?, ?, ?)",
-      [name, Number(price), type, image],
-      { skipMirror: mongoReady }
-    );
-    let mongoSaved = false;
-    let mongoError = null;
-    const mongoOk = await ensureMongoReady();
-    if (mongoOk) {
-      try {
-        await mongoDb.collection("menu").insertOne({
-          sqlite_id: Number(result.lastInsertRowid),
-          name,
-          price: Number(price || 0),
-          type,
-          image: image || "",
-        });
-        mongoSaved = true;
-      } catch (e) {
-        mongoError = e.message || String(e);
-      }
+    try {
+      const nextId = await getNextMongoId("menu");
+      await mongoDb.collection("menu").insertOne({
+        sqlite_id: nextId,
+        name: name || "",
+        price: Number(price || 0),
+        type: type || "FOOD",
+        image: image || "",
+      });
+      res.json({ added: true, mongoSaved: true, mongoError: null });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
     }
-    saveDb();
-    res.json({ added: true, mongoSaved, mongoError });
   });
 
   // Cập nhật món
   app.put("/menu/:id", upload.single("image"), async (req, res) => {
     const { name, price, type } = req.body;
     const { id } = req.params;
-    if (req.file) {
-      dbRun(
-        "UPDATE menu SET name=?, price=?, type=?, image=? WHERE id=?",
-        [name, Number(price), type, req.file.filename, id],
-        { skipMirror: mongoReady }
+    try {
+      const patch = {
+        name: name || "",
+        price: Number(price || 0),
+        type: type || "FOOD",
+      };
+      if (req.file) patch.image = req.file.filename;
+      const result = await mongoDb.collection("menu").updateOne(
+        { sqlite_id: Number(id) },
+        { $set: patch }
       );
-    } else {
-      dbRun(
-        "UPDATE menu SET name=?, price=?, type=? WHERE id=?",
-        [name, Number(price), type, id],
-        { skipMirror: mongoReady }
-      );
+      if (result.matchedCount === 0) return res.status(404).json({ error: "Không tìm thấy món" });
+      res.json({ updated: true, mongoSaved: true, mongoError: null });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
     }
-    let mongoSaved = false;
-    let mongoError = null;
-    const mongoOk = await ensureMongoReady();
-    if (mongoOk) {
-      try {
-        const patch = { name, price: Number(price || 0), type };
-        if (req.file) patch.image = req.file.filename;
-        await mongoDb.collection("menu").updateOne(
-          { sqlite_id: Number(id) },
-          { $set: patch }
-        );
-        mongoSaved = true;
-      } catch (e) {
-        mongoError = e.message || String(e);
-      }
-    }
-    saveDb();
-    res.json({ updated: true, mongoSaved, mongoError });
   });
 
   // Xóa món
   app.delete("/menu/:id", async (req, res) => {
-    dbRun("DELETE FROM menu WHERE id=?", [req.params.id], { skipMirror: mongoReady });
-    let mongoSaved = false;
-    let mongoError = null;
-    const mongoOk = await ensureMongoReady();
-    if (mongoOk) {
-      try {
-        await mongoDb.collection("menu").deleteOne({ sqlite_id: Number(req.params.id) });
-        mongoSaved = true;
-      } catch (e) {
-        mongoError = e.message || String(e);
-      }
+    try {
+      const result = await mongoDb.collection("menu").deleteOne({ sqlite_id: Number(req.params.id) });
+      if (result.deletedCount === 0) return res.status(404).json({ error: "Không tìm thấy món" });
+      res.json({ deleted: true, mongoSaved: true, mongoError: null });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
     }
-    saveDb();
-    res.json({ deleted: true, mongoSaved, mongoError });
   });
 
   // =============================================
   // ORDER SESSION (đơn đang order — lưu DB)
   // =============================================
 
-  app.get("/order-session", (req, res) => {
-    const row = dbGet("SELECT payload FROM order_session WHERE id=1");
+  app.get("/order-session", async (req, res) => {
+    const row = await mongoDb.collection("order_session").findOne({ id: 1 });
     const empty = { tableOrders: {}, itemNotes: {}, kitchenSent: {} };
     if (!row?.payload) return res.json(empty);
     try {
@@ -652,11 +593,14 @@ function startServer() {
     }
   });
 
-  app.put("/order-session", (req, res) => {
+  app.put("/order-session", async (req, res) => {
     const { tableOrders = {}, itemNotes = {}, kitchenSent = {} } = req.body || {};
     const payload = JSON.stringify({ tableOrders, itemNotes, kitchenSent });
-    dbRun("INSERT OR REPLACE INTO order_session (id, payload) VALUES (1, ?)", [payload]);
-    saveDb();
+    await mongoDb.collection("order_session").updateOne(
+      { id: 1 },
+      { $set: { id: 1, payload } },
+      { upsert: true }
+    );
     res.json({ ok: true });
   });
 
@@ -665,61 +609,85 @@ function startServer() {
   // =============================================
 
   // Lấy trạng thái tất cả bàn
-  app.get("/tables", (req, res) => {
-    res.json(dbAll("SELECT * FROM tables"));
+  app.get("/tables", async (req, res) => {
+    try {
+      const docs = await mongoDb.collection("tables").find({}).sort({ table_num: 1 }).toArray();
+      res.json(
+        docs.map((d) => ({
+          table_num: Number(d.table_num),
+          status: d.status || "PAID",
+        }))
+      );
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Cập nhật trạng thái bàn
-  app.post("/tables/:num/status", (req, res) => {
+  app.post("/tables/:num/status", async (req, res) => {
     const { num } = req.params;
     const { status } = req.body;
-    dbRun(
-      "INSERT OR REPLACE INTO tables (table_num, status) VALUES (?, ?)",
-      [Number(num), status]
-    );
-    saveDb();
-    res.json({ updated: true });
+    try {
+      await mongoDb.collection("tables").updateOne(
+        { table_num: Number(num) },
+        { $set: { table_num: Number(num), status: status || "PAID" } },
+        { upsert: true }
+      );
+      res.json({ updated: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Thêm bàn mới
-  app.post("/tables", (req, res) => {
+  app.post("/tables", async (req, res) => {
     const { table_num } = req.body;
     if (!table_num) return res.status(400).json({ error: "Thiếu số bàn" });
 
-    const existing = dbGet("SELECT * FROM tables WHERE table_num=?", [Number(table_num)]);
-    if (existing) return res.status(409).json({ error: "Bàn đã tồn tại" });
-
-    dbRun("INSERT INTO tables (table_num, status) VALUES (?, 'PAID')", [Number(table_num)]);
-    saveDb();
-    res.json({ added: true, table_num: Number(table_num) });
+    try {
+      const existing = await mongoDb.collection("tables").findOne({ table_num: Number(table_num) });
+      if (existing) return res.status(409).json({ error: "Bàn đã tồn tại" });
+      await mongoDb.collection("tables").insertOne({ table_num: Number(table_num), status: "PAID" });
+      res.json({ added: true, table_num: Number(table_num) });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Đổi số bàn
-  app.put("/tables/:num", (req, res) => {
+  app.put("/tables/:num", async (req, res) => {
     const oldNum = Number(req.params.num);
     const { new_num } = req.body;
     if (!new_num) return res.status(400).json({ error: "Thiếu số bàn mới" });
 
-    const existing = dbGet("SELECT * FROM tables WHERE table_num=?", [Number(new_num)]);
-    if (existing) return res.status(409).json({ error: `Bàn ${new_num} đã tồn tại` });
-
     try {
-      dbRun("UPDATE tables SET table_num=? WHERE table_num=?", [Number(new_num), oldNum]);
-      saveDb();
+      const existing = await mongoDb.collection("tables").findOne({ table_num: Number(new_num) });
+      if (existing) return res.status(409).json({ error: `Bàn ${new_num} đã tồn tại` });
+
+      const result = await mongoDb.collection("tables").updateMany(
+        { table_num: oldNum },
+        { $set: { table_num: Number(new_num) } }
+      );
+
+      if (result.matchedCount === 0) return res.status(404).json({ error: "Không tìm thấy bàn" });
       res.json({ updated: true });
     } catch (e) {
-      res.status(500).json({ error: e.message });
+      res.status(500).json({ error: e.message || String(e) });
     }
   });
 
   // Xóa bàn
-  app.delete("/tables/:num", (req, res) => {
+  app.delete("/tables/:num", async (req, res) => {
     const num = Number(req.params.num);
-    const busy = dbGet("SELECT * FROM tables WHERE table_num=? AND status='OPEN'", [num]);
-    if (busy) return res.status(400).json({ error: "Bàn đang có khách, không thể xóa" });
-    dbRun("DELETE FROM tables WHERE table_num=?", [num]);
-    saveDb();
-    res.json({ deleted: true });
+    try {
+      const busy = await mongoDb.collection("tables").findOne({ table_num: num, status: "OPEN" });
+      if (busy) return res.status(400).json({ error: "Bàn đang có khách, không thể xóa" });
+      const result = await mongoDb.collection("tables").deleteOne({ table_num: num });
+      if (result.deletedCount === 0) return res.status(404).json({ error: "Không tìm thấy bàn" });
+      res.json({ deleted: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // =============================================
@@ -727,60 +695,118 @@ function startServer() {
   // =============================================
 
   // Tạo hóa đơn mới
-  app.post("/bills", (req, res) => {
-    const { table_num, total, items } = req.body;
+  app.post("/bills", async (req, res) => {
+    const { table_num, total, items } = req.body || {};
+    if (!table_num) return res.status(400).json({ error: "Thiếu table_num" });
+    if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: "Danh sách món không hợp lệ" });
 
-    // Chèn bill header – sql.js không hỗ trợ DEFAULT datetime khi run(),
-    // nên ta tự truyền thời gian vào
     const now = new Date().toLocaleString("sv-SE").replace("T", " "); // "YYYY-MM-DD HH:MM:SS"
-    dbRun(
-      "INSERT INTO bills (table_num, total, created_at) VALUES (?, ?, ?)",
-      [table_num, total, now]
-    );
-    const billId = dbGet("SELECT last_insert_rowid() AS id")?.id;
+    try {
+      const billId = await getNextMongoId("bills");
+      await mongoDb.collection("bills").insertOne({
+        sqlite_id: billId,
+        table_num: Number(table_num),
+        total: Number(total || 0),
+        created_at: now,
+      });
 
-    // Chèn từng item
-    items.forEach(item => {
-      dbRun(
-        "INSERT INTO bill_items (bill_id, name, price, qty, item_type) VALUES (?, ?, ?, ?, ?)",
-        [billId, item.name, item.price, item.qty, item.type || null]
+      // bill_items
+      const nextItemId = await getNextMongoId("bill_items");
+      const billItems = items.map((item, idx) => ({
+        sqlite_id: nextItemId + idx,
+        bill_id: billId,
+        name: item.name || "",
+        price: Number(item.price || 0),
+        qty: Number(item.qty || 0),
+        item_type: item.type || null,
+      }));
+      if (billItems.length) {
+        await mongoDb.collection("bill_items").insertMany(billItems);
+      }
+
+      // Đánh dấu bàn PAID
+      await mongoDb.collection("tables").updateOne(
+        { table_num: Number(table_num) },
+        { $set: { table_num: Number(table_num), status: "PAID" } },
+        { upsert: true }
       );
-    });
 
-    // Đánh dấu bàn PAID
-    dbRun(
-      "INSERT OR REPLACE INTO tables (table_num, status) VALUES (?, 'PAID')",
-      [table_num]
-    );
-
-    // Hóa đơn vừa thanh toán cần bền vững ngay cả khi người dùng tắt app liền
-    saveDb(true);
-    res.json({ bill_id: billId });
+      res.json({ bill_id: billId });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Lịch sử hóa đơn theo ngày
-  app.get("/bills", (req, res) => {
+  app.get("/bills", async (req, res) => {
     const date = req.query.date || new Date().toISOString().split("T")[0];
-    const rows = dbAll(
-      `SELECT b.id, b.table_num, b.total, b.created_at,
-              GROUP_CONCAT(bi.name || ' x' || bi.qty, ', ') AS items_summary
-       FROM bills b
-       LEFT JOIN bill_items bi ON bi.bill_id = b.id
-       WHERE DATE(b.created_at) = ?
-       GROUP BY b.id
-       ORDER BY b.created_at DESC`,
-      [date]
-    );
-    res.json(rows);
+    try {
+      const bills = await mongoDb.collection("bills")
+        .find({ created_at: { $regex: `^${date}` } })
+        .sort({ created_at: -1 })
+        .toArray();
+
+      if (!bills.length) return res.json([]);
+
+      const billIds = bills.map((b) => Number(b.sqlite_id ?? b.id ?? 0)).filter(Boolean);
+      const itemsDocs = await mongoDb.collection("bill_items")
+        .find({ bill_id: { $in: billIds } })
+        .sort({ sqlite_id: 1 })
+        .toArray();
+
+      const map = {};
+      itemsDocs.forEach((it) => {
+        const bid = Number(it.bill_id);
+        if (!map[bid]) map[bid] = [];
+        map[bid].push(`${it.name || ""} x${Number(it.qty || 0)}`);
+      });
+
+      const rows = bills.map((b) => {
+        const id = Number(b.sqlite_id ?? b.id ?? 0);
+        return {
+          id,
+          table_num: Number(b.table_num || 0),
+          total: Number(b.total || 0),
+          created_at: b.created_at || "",
+          items_summary: (map[id] || []).join(", "),
+        };
+      });
+
+      res.json(rows);
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Chi tiết 1 hóa đơn
-  app.get("/bills/:id", (req, res) => {
+  app.get("/bills/:id", async (req, res) => {
     const { id } = req.params;
-    const bill = dbGet("SELECT * FROM bills WHERE id=?", [id]);
-    if (!bill) return res.status(404).json({ error: "Not found" });
-    const items = dbAll("SELECT * FROM bill_items WHERE bill_id=?", [id]);
-    res.json({ ...bill, items });
+    const billId = Number(id);
+    try {
+      const bill = await mongoDb.collection("bills").findOne({ sqlite_id: billId });
+      if (!bill) return res.status(404).json({ error: "Not found" });
+      const items = await mongoDb.collection("bill_items")
+        .find({ bill_id: billId })
+        .sort({ sqlite_id: 1 })
+        .toArray();
+
+      res.json({
+        id: Number(bill.sqlite_id ?? bill.id ?? billId),
+        table_num: Number(bill.table_num || 0),
+        total: Number(bill.total || 0),
+        created_at: bill.created_at || "",
+        items: items.map((it) => ({
+          id: Number(it.sqlite_id ?? it.id ?? 0),
+          bill_id: Number(it.bill_id || 0),
+          name: it.name || "",
+          price: Number(it.price || 0),
+          qty: Number(it.qty || 0),
+          item_type: it.item_type ?? null,
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // =============================================
@@ -788,76 +814,168 @@ function startServer() {
   // =============================================
 
   // Doanh thu theo ngày trong tháng
-  app.get("/stats/daily", (req, res) => {
+  app.get("/stats/daily", async (req, res) => {
     const month = req.query.month || new Date().toISOString().slice(0, 7);
-    const rows = dbAll(
-      `SELECT DATE(created_at) AS date,
-              COUNT(*)         AS bill_count,
-              SUM(total)       AS revenue
-       FROM bills
-       WHERE strftime('%Y-%m', created_at) = ?
-       GROUP BY DATE(created_at)
-       ORDER BY date ASC`,
-      [month]
-    );
-    res.json(rows);
+    try {
+      const bills = await mongoDb.collection("bills")
+        .find({ created_at: { $regex: `^${month}-` } })
+        .sort({ created_at: 1 })
+        .toArray();
+
+      const map = {};
+      bills.forEach((b) => {
+        const day = (b.created_at || "").slice(0, 10);
+        if (!day) return;
+        if (!map[day]) map[day] = { date: day, bill_count: 0, revenue: 0 };
+        map[day].bill_count += 1;
+        map[day].revenue += Number(b.total || 0);
+      });
+
+      const rows = Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
+      res.json(rows);
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Stats theo tháng (gộp theo ngày trong tháng đó)
-  app.get("/stats/monthly", (req, res) => {
+  app.get("/stats/monthly", async (req, res) => {
     const month = req.query.month || new Date().toISOString().slice(0, 7);
-    const rows = dbAll(
-      `SELECT DATE(created_at) AS date, COUNT(*) AS bill_count, COALESCE(SUM(total),0) AS revenue
-       FROM bills WHERE strftime('%Y-%m', created_at) = ?
-       GROUP BY DATE(created_at) ORDER BY date ASC`, [month]);
-    const summary = dbGet(
-      `SELECT COUNT(*) AS bill_count, COALESCE(SUM(total),0) AS revenue
-       FROM bills WHERE strftime('%Y-%m', created_at) = ?`, [month]);
-    const topItems = dbAll(
-      `SELECT bi.name, SUM(bi.qty) AS total_qty, SUM(bi.price*bi.qty) AS total_revenue
-       FROM bill_items bi JOIN bills b ON b.id=bi.bill_id
-       WHERE strftime('%Y-%m', b.created_at) = ?
-       GROUP BY bi.name ORDER BY total_qty DESC LIMIT 5`, [month]);
-    res.json({ ...summary, days: rows, top_items: topItems });
+    try {
+      const bills = await mongoDb.collection("bills")
+        .find({ created_at: { $regex: `^${month}-` } })
+        .sort({ created_at: 1 })
+        .toArray();
+
+      const dayMap = {};
+      let revenue = 0;
+      bills.forEach((b) => {
+        const day = (b.created_at || "").slice(0, 10);
+        if (!day) return;
+        if (!dayMap[day]) dayMap[day] = { date: day, bill_count: 0, revenue: 0 };
+        dayMap[day].bill_count += 1;
+        dayMap[day].revenue += Number(b.total || 0);
+        revenue += Number(b.total || 0);
+      });
+
+      const days = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
+
+      const billIds = bills.map((b) => Number(b.sqlite_id ?? b.id ?? 0)).filter(Boolean);
+      let topItems = [];
+      if (billIds.length) {
+        const items = await mongoDb.collection("bill_items")
+          .find({ bill_id: { $in: billIds } })
+          .toArray();
+
+        const itemMap = {};
+        items.forEach((it) => {
+          const name = it.name || "";
+          if (!itemMap[name]) itemMap[name] = { name, total_qty: 0, total_revenue: 0 };
+          itemMap[name].total_qty += Number(it.qty || 0);
+          itemMap[name].total_revenue += Number(it.price || 0) * Number(it.qty || 0);
+        });
+        topItems = Object.values(itemMap)
+          .sort((a, b) => b.total_qty - a.total_qty)
+          .slice(0, 5);
+      }
+
+      res.json({
+        bill_count: bills.length,
+        revenue,
+        days,
+        top_items: topItems,
+      });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Stats theo năm (gộp theo tháng)
-  app.get("/stats/yearly", (req, res) => {
+  app.get("/stats/yearly", async (req, res) => {
     const year = req.query.year || new Date().getFullYear().toString();
-    const rows = dbAll(
-      `SELECT strftime('%Y-%m', created_at) AS month, COUNT(*) AS bill_count, COALESCE(SUM(total),0) AS revenue
-       FROM bills WHERE strftime('%Y', created_at) = ?
-       GROUP BY strftime('%Y-%m', created_at) ORDER BY month ASC`, [year]);
-    const summary = dbGet(
-      `SELECT COUNT(*) AS bill_count, COALESCE(SUM(total),0) AS revenue
-       FROM bills WHERE strftime('%Y', created_at) = ?`, [year]);
-    const topItems = dbAll(
-      `SELECT bi.name, SUM(bi.qty) AS total_qty, SUM(bi.price*bi.qty) AS total_revenue
-       FROM bill_items bi JOIN bills b ON b.id=bi.bill_id
-       WHERE strftime('%Y', b.created_at) = ?
-       GROUP BY bi.name ORDER BY total_qty DESC LIMIT 5`, [year]);
-    res.json({ ...summary, months: rows, top_items: topItems });
+    try {
+      const bills = await mongoDb.collection("bills")
+        .find({ created_at: { $regex: `^${year}-` } })
+        .sort({ created_at: 1 })
+        .toArray();
+
+      const monthMap = {};
+      let revenue = 0;
+      bills.forEach((b) => {
+        const ym = (b.created_at || "").slice(0, 7);
+        if (!ym) return;
+        if (!monthMap[ym]) monthMap[ym] = { month: ym, bill_count: 0, revenue: 0 };
+        monthMap[ym].bill_count += 1;
+        monthMap[ym].revenue += Number(b.total || 0);
+        revenue += Number(b.total || 0);
+      });
+
+      const months = Object.values(monthMap).sort((a, b) => a.month.localeCompare(b.month));
+
+      const billIds = bills.map((b) => Number(b.sqlite_id ?? b.id ?? 0)).filter(Boolean);
+      let topItems = [];
+      if (billIds.length) {
+        const items = await mongoDb.collection("bill_items")
+          .find({ bill_id: { $in: billIds } })
+          .toArray();
+
+        const itemMap = {};
+        items.forEach((it) => {
+          const name = it.name || "";
+          if (!itemMap[name]) itemMap[name] = { name, total_qty: 0, total_revenue: 0 };
+          itemMap[name].total_qty += Number(it.qty || 0);
+          itemMap[name].total_revenue += Number(it.price || 0) * Number(it.qty || 0);
+        });
+        topItems = Object.values(itemMap)
+          .sort((a, b) => b.total_qty - a.total_qty)
+          .slice(0, 5);
+      }
+
+      res.json({
+        bill_count: bills.length,
+        revenue,
+        months,
+        top_items: topItems,
+      });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Tổng quan hôm nay
-  app.get("/stats/today", (req, res) => {
+  app.get("/stats/today", async (req, res) => {
     const today = new Date().toISOString().split("T")[0];
-    const summary = dbGet(
-      `SELECT COUNT(*) AS bill_count, COALESCE(SUM(total),0) AS revenue
-       FROM bills WHERE DATE(created_at) = ?`,
-      [today]
-    );
-    const topItems = dbAll(
-      `SELECT bi.name, SUM(bi.qty) AS total_qty, SUM(bi.price * bi.qty) AS total_revenue
-       FROM bill_items bi
-       JOIN bills b ON b.id = bi.bill_id
-       WHERE DATE(b.created_at) = ?
-       GROUP BY bi.name
-       ORDER BY total_qty DESC
-       LIMIT 5`,
-      [today]
-    );
-    res.json({ ...summary, top_items: topItems });
+    try {
+      const bills = await mongoDb.collection("bills")
+        .find({ created_at: { $regex: `^${today}` } })
+        .toArray();
+
+      const bill_count = bills.length;
+      const revenue = bills.reduce((s, b) => s + Number(b.total || 0), 0);
+
+      const billIds = bills.map((b) => Number(b.sqlite_id ?? b.id ?? 0)).filter(Boolean);
+      let topItems = [];
+      if (billIds.length) {
+        const items = await mongoDb.collection("bill_items")
+          .find({ bill_id: { $in: billIds } })
+          .toArray();
+
+        const itemMap = {};
+        items.forEach((it) => {
+          const name = it.name || "";
+          if (!itemMap[name]) itemMap[name] = { name, total_qty: 0, total_revenue: 0 };
+          itemMap[name].total_qty += Number(it.qty || 0);
+          itemMap[name].total_revenue += Number(it.price || 0) * Number(it.qty || 0);
+        });
+        topItems = Object.values(itemMap)
+          .sort((a, b) => b.total_qty - a.total_qty)
+          .slice(0, 5);
+      }
+
+      res.json({ bill_count, revenue, top_items: topItems });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // =============================================
@@ -865,13 +983,12 @@ function startServer() {
   // =============================================
 
   function getPrinterIP() {
-    const row = dbGet("SELECT value FROM settings WHERE key='printer_ip'");
-    return row?.value || "";
+    const v = settingsCache.printer_ip;
+    return v && String(v).trim() ? String(v).trim() : "";
   }
 
   function getSetting(key, fallback = "") {
-    const row = dbGet("SELECT value FROM settings WHERE key=?", [key]);
-    const value = row?.value;
+    const value = settingsCache[key];
     return value && String(value).trim() ? String(value).trim() : fallback;
   }
 
@@ -914,68 +1031,95 @@ function startServer() {
   // WINDOWS PRINTERS APIs
   // =============================================
 
-  app.get("/windows_printers", (req, res) => {
-    res.json(dbAll("SELECT * FROM windows_printers"));
+  app.get("/windows_printers", async (req, res) => {
+    try {
+      const docs = await mongoDb.collection("windows_printers").find({}).sort({ sqlite_id: 1 }).toArray();
+      res.json(
+        docs.map((d) => ({
+          id: Number(d.sqlite_id ?? d.id ?? 0),
+          name: d.name,
+          type: d.type || "ALL",
+          paper_size: Number(d.paper_size || 80),
+          is_enabled: d.is_enabled !== undefined ? Number(d.is_enabled) : 1,
+        }))
+      );
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
-  app.post("/windows_printers", (req, res) => {
-    const { name, type, paper_size, is_enabled } = req.body;
+  app.post("/windows_printers", async (req, res) => {
+    const { name, type, paper_size, is_enabled } = req.body || {};
     if (!name) return res.status(400).json({ error: "Thiếu tên máy in" });
     try {
-      dbRun(
-        "INSERT INTO windows_printers (name, type, paper_size, is_enabled) VALUES (?, ?, ?, ?)",
-        [name, type || "ALL", Number(paper_size) || 80, is_enabled !== undefined ? is_enabled : 1]
-      );
-      saveDb();
+      const nextId = await getNextMongoId("windows_printers");
+      await mongoDb.collection("windows_printers").insertOne({
+        sqlite_id: nextId,
+        name,
+        type: type || "ALL",
+        paper_size: Number(paper_size) || 80,
+        is_enabled: is_enabled !== undefined ? Number(is_enabled) : 1,
+      });
+      await refreshPrintersCache();
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: e.message });
+      res.status(500).json({ error: e.message || String(e) });
     }
   });
 
-  app.put("/windows_printers/:id", (req, res) => {
-    const { name, type, paper_size, is_enabled } = req.body;
+  app.put("/windows_printers/:id", async (req, res) => {
+    const { name, type, paper_size, is_enabled } = req.body || {};
+    const id = Number(req.params.id);
     try {
-      dbRun(
-        "UPDATE windows_printers SET name=?, type=?, paper_size=?, is_enabled=? WHERE id=?",
-        [name, type, Number(paper_size), is_enabled, req.params.id]
+      const result = await mongoDb.collection("windows_printers").updateOne(
+        { sqlite_id: id },
+        {
+          $set: {
+            name,
+            type: type || "ALL",
+            paper_size: Number(paper_size) || 80,
+            is_enabled: is_enabled !== undefined ? Number(is_enabled) : 1,
+          },
+        }
       );
-      saveDb();
+      if (result.matchedCount === 0) return res.status(404).json({ error: "Không tìm thấy máy in" });
+      await refreshPrintersCache();
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: e.message });
+      res.status(500).json({ error: e.message || String(e) });
     }
   });
 
-  app.delete("/windows_printers/:id", (req, res) => {
+  app.delete("/windows_printers/:id", async (req, res) => {
+    const id = Number(req.params.id);
     try {
-      dbRun("DELETE FROM windows_printers WHERE id=?", [req.params.id]);
-      saveDb();
+      const result = await mongoDb.collection("windows_printers").deleteOne({ sqlite_id: id });
+      if (result.deletedCount === 0) return res.status(404).json({ error: "Không tìm thấy máy in" });
+      await refreshPrintersCache();
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: e.message });
+      res.status(500).json({ error: e.message || String(e) });
     }
   });
 
   app.get("/settings", (req, res) => {
-    const rows = dbAll("SELECT key, value FROM settings");
-    const settings = {};
-    rows.forEach(r => { settings[r.key] = r.value; });
-    res.json(settings);
+    res.json(settingsCache);
   });
 
-  app.post("/settings", (req, res) => {
-    const { key, value } = req.body;
+  app.post("/settings", async (req, res) => {
+    const { key, value } = req.body || {};
     if (!key) return res.status(400).json({ error: "Missing key" });
     try {
-      dbRun(
-        "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-        [key, value]
+      await mongoDb.collection("settings").updateOne(
+        { key },
+        { $set: { key, value: value } },
+        { upsert: true }
       );
-      saveDb();
+      // update cache ngay để in/preview không bị trễ
+      settingsCache[key] = value;
       res.json({ success: true, key, value });
     } catch (e) {
-      res.status(500).json({ error: e.message });
+      res.status(500).json({ error: e.message || String(e) });
     }
   });
 
@@ -1071,15 +1215,14 @@ function startServer() {
   }
 
   function getEnabledPrintersByType(type) {
-    return dbAll(
-      "SELECT * FROM windows_printers WHERE is_enabled=1 AND (type=? OR type='ALL')",
-      [type]
+    return printersCache.filter(
+      (p) => Number(p.is_enabled) === 1 && (p.type === type || p.type === "ALL")
     );
   }
 
   function getBillCssOverride() {
-    const row = dbGet("SELECT value FROM settings WHERE key='bill_css_override'");
-    return row?.value || "";
+    const v = settingsCache.bill_css_override;
+    return v && String(v).trim() ? String(v).trim() : "";
   }
 
   function buildReceiptHtml({
@@ -1513,22 +1656,27 @@ function startServer() {
   // In lại hóa đơn từ lịch sử
   app.post("/print/bill/:id", async (req, res) => {
     const { id } = req.params;
-    const bill = dbGet("SELECT * FROM bills WHERE id=?", [id]);
-    if (!bill) return res.status(404).json({ error: "Không tìm thấy hóa đơn" });
+    const billId = Number(id);
+    try {
+      const bill = await mongoDb.collection("bills").findOne({ sqlite_id: billId });
+      if (!bill) return res.status(404).json({ error: "Không tìm thấy hóa đơn" });
 
-    const items = dbAll("SELECT * FROM bill_items WHERE bill_id=?", [id]);
+      const items = await mongoDb.collection("bill_items")
+        .find({ bill_id: billId })
+        .sort({ sqlite_id: 1 })
+        .toArray();
     try {
       const store = getStoreProfile();
       const sent = dispatchReceiptToType("BILL", {
         title: store.storeName,
         subtitle: store.storeSubtitle,
-        tableNum: bill.table_num,
+        tableNum: Number(bill.table_num || 0),
         timeLabel: "Ngày",
         timeValue: new Date(bill.created_at).toLocaleString("vi-VN"),
         items,
         totalLabel: "THÀNH TIỀN",
-        totalValue: bill.total,
-        billNo: bill.id,
+        totalValue: Number(bill.total || 0),
+        billNo: Number(bill.sqlite_id ?? bill.id ?? billId),
         cashier: store.cashierName,
         footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
         groupItemsByType: true,
@@ -1537,11 +1685,14 @@ function startServer() {
     } catch (err) {
       res.status(err.statusCode || 500).json({ error: err.message });
     }
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // Kiểm tra kết nối máy in
   app.get("/print/status", async (req, res) => {
-    const printers = dbAll("SELECT name FROM windows_printers WHERE is_enabled=1");
+    const printers = printersCache.filter((p) => Number(p.is_enabled) === 1);
     if (printers.length === 0) return res.json({ connected: false });
     
     let allConnected = false;
@@ -1593,7 +1744,9 @@ function startServer() {
       return res.status(503).json({ error: "Không hỗ trợ in ngầm ngoài môi trường Electron" });
     }
 
-    const printers = dbAll("SELECT name, paper_size FROM windows_printers WHERE is_enabled=1 AND (type=? OR type='ALL')", [type]);
+    const printers = printersCache.filter(
+      (p) => Number(p.is_enabled) === 1 && (p.type === type || p.type === "ALL")
+    );
     if (printers.length === 0) return res.status(404).json({ error: `Chưa có cấu hình máy in cho ${type}` });
 
     for (const p of printers) {
@@ -1622,7 +1775,7 @@ function startServer() {
 }
 
 // Khởi động
-initDb().catch(err => {
+initMongoOnly().catch(err => {
   console.error("❌ Không thể khởi tạo DB:", err);
   process.exit(1);
 });

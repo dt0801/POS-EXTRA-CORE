@@ -81,6 +81,7 @@ let saveTimeout = null;
 let mongoClient = null;
 let mongoDb = null;
 let mongoReady = false;
+let mongoConnectPromise = null;
 
 function saveDb(immediate = false) {
   const writeNow = () => {
@@ -131,6 +132,29 @@ async function connectMongoIfConfigured() {
   mongoDb = mongoClient.db(dbName);
   mongoReady = true;
   console.log(`✅ MongoDB connected: ${dbName}`);
+}
+
+async function ensureMongoReady() {
+  if (mongoReady) return true;
+  // Nếu đang connect thì chờ cho xong.
+  if (mongoConnectPromise) {
+    await mongoConnectPromise;
+    return mongoReady;
+  }
+  const uri = (process.env.MONGODB_URI || "").trim();
+  if (!uri) return false;
+
+  mongoConnectPromise = connectMongoIfConfigured()
+    .catch((e) => {
+      console.error("❌ Mongo connect failed:", e.message);
+      return false;
+    })
+    .finally(() => {
+      mongoConnectPromise = null;
+    });
+
+  await mongoConnectPromise;
+  return mongoReady;
 }
 
 async function seedMongoMenuIfEmpty() {
@@ -532,7 +556,10 @@ function startServer() {
       [name, Number(price), type, image],
       { skipMirror: mongoReady }
     );
-    if (mongoReady) {
+    let mongoSaved = false;
+    let mongoError = null;
+    const mongoOk = await ensureMongoReady();
+    if (mongoOk) {
       try {
         await mongoDb.collection("menu").insertOne({
           sqlite_id: Number(result.lastInsertRowid),
@@ -541,12 +568,13 @@ function startServer() {
           type,
           image: image || "",
         });
+        mongoSaved = true;
       } catch (e) {
-        return res.status(500).json({ error: `Mongo save failed: ${e.message}` });
+        mongoError = e.message || String(e);
       }
     }
     saveDb();
-    res.json({ added: true });
+    res.json({ added: true, mongoSaved, mongoError });
   });
 
   // Cập nhật món
@@ -566,7 +594,10 @@ function startServer() {
         { skipMirror: mongoReady }
       );
     }
-    if (mongoReady) {
+    let mongoSaved = false;
+    let mongoError = null;
+    const mongoOk = await ensureMongoReady();
+    if (mongoOk) {
       try {
         const patch = { name, price: Number(price || 0), type };
         if (req.file) patch.image = req.file.filename;
@@ -574,26 +605,31 @@ function startServer() {
           { sqlite_id: Number(id) },
           { $set: patch }
         );
+        mongoSaved = true;
       } catch (e) {
-        return res.status(500).json({ error: `Mongo update failed: ${e.message}` });
+        mongoError = e.message || String(e);
       }
     }
     saveDb();
-    res.json({ updated: true });
+    res.json({ updated: true, mongoSaved, mongoError });
   });
 
   // Xóa món
   app.delete("/menu/:id", async (req, res) => {
     dbRun("DELETE FROM menu WHERE id=?", [req.params.id], { skipMirror: mongoReady });
-    if (mongoReady) {
+    let mongoSaved = false;
+    let mongoError = null;
+    const mongoOk = await ensureMongoReady();
+    if (mongoOk) {
       try {
         await mongoDb.collection("menu").deleteOne({ sqlite_id: Number(req.params.id) });
+        mongoSaved = true;
       } catch (e) {
-        return res.status(500).json({ error: `Mongo delete failed: ${e.message}` });
+        mongoError = e.message || String(e);
       }
     }
     saveDb();
-    res.json({ deleted: true });
+    res.json({ deleted: true, mongoSaved, mongoError });
   });
 
   // =============================================

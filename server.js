@@ -23,17 +23,6 @@ const BASE_DIR = process.env.DATA_DIR
 
 if (!fs.existsSync(BASE_DIR)) fs.mkdirSync(BASE_DIR, { recursive: true });
 
-const DB_PATH = path.join(BASE_DIR, "pos.db");
-const LEGACY_DB_PATH = path.join(__dirname, "pos.db");
-if (!fs.existsSync(DB_PATH) && fs.existsSync(LEGACY_DB_PATH)) {
-  try {
-    fs.copyFileSync(LEGACY_DB_PATH, DB_PATH);
-    console.log("✅ Đã migrate pos.db sang userData:", DB_PATH);
-  } catch (e) {
-    console.error("⚠️  Không thể migrate pos.db:", e.message);
-  }
-}
-
 const UPLOADS_DIR = path.join(BASE_DIR, "uploads");
 const LEGACY_UPLOADS_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -89,16 +78,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// =============================================
-// SQL.JS – Khởi tạo DB (load từ file hoặc tạo mới)
-// =============================================
-
-/**
- * sql.js hoạt động in-memory. Sau mỗi thay đổi (write),
- * ta gọi saveDb() để ghi xuống file .db trên disk.
- */
-let db;
-let saveTimeout = null;
 let mongoClient = null;
 let mongoDb = null;
 let mongoReady = false;
@@ -106,53 +85,10 @@ let mongoConnectPromise = null;
 let settingsCache = {};
 let printersCache = [];
 
-function saveDb(immediate = false) {
-  const writeNow = () => {
-    try {
-      const data = db.export(); // Uint8Array
-      fs.writeFileSync(DB_PATH, Buffer.from(data));
-    } catch (e) {
-      console.error("Lỗi lưu DB:", e.message);
-    }
-  };
-
-  if (immediate) {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-      saveTimeout = null;
-    }
-    writeNow();
-    return;
-  }
-
-  if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    saveTimeout = null;
-    writeNow();
-  }, 500); // Tối ưu: gom lệnh (debounce) lưu file trong 500ms
-}
-
-function flushDbBeforeExit() {
-  if (!db) return;
-  saveDb(true);
-}
-
 async function connectMongoIfConfigured() {
   const uri = (process.env.MONGODB_URI || process.env.MONGO_URL || "").trim();
-  const uriSource = (process.env.MONGODB_URI || "").trim() ? "MONGODB_URI" : ((process.env.MONGO_URL || "").trim() ? "MONGO_URL" : "none");
-  console.log(`🔐 Mongo env source: ${uriSource}`);
-  console.log(`🔐 Mongo db candidate: ${(process.env.MONGODB_DB || process.env.MONGO_DB_NAME || "posextra").trim()}`);
-  // #region agent log
-  fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'auth-debug',hypothesisId:'Hauth1',location:'server.js:117',message:'Mongo env chosen (masked)',data:{uriSource,hasMONGODB_URI:Boolean((process.env.MONGODB_URI||'').trim()),hasMONGO_URL:Boolean((process.env.MONGO_URL||'').trim()),dbNameCandidate:(process.env.MONGODB_DB||process.env.MONGO_DB_NAME||'posextra').trim()},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-  // #region agent log
-  fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H1',location:'server.js:116',message:'connectMongoIfConfigured env snapshot',data:{hasMongoUri:Boolean(uri),mongoDb:(process.env.MONGODB_DB||'').trim(),nodeEnv:process.env.NODE_ENV||''},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   if (!uri) {
     console.log("ℹ️  Chưa cấu hình MONGODB_URI/MONGO_URL (Mongo-only).");
-    // #region agent log
-    fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H1',location:'server.js:120',message:'Mongo URI missing branch triggered',data:{reason:'MONGODB_URI_EMPTY'},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     return;
   }
   mongoClient = new MongoClient(uri, {
@@ -166,9 +102,6 @@ async function connectMongoIfConfigured() {
   const dbName = (process.env.MONGODB_DB || process.env.MONGO_DB_NAME || "posextra").trim();
   mongoDb = mongoClient.db(dbName);
   mongoReady = true;
-  // #region agent log
-  fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H2',location:'server.js:133',message:'Mongo connected successfully',data:{dbName,mongoReady},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   console.log(`✅ MongoDB connected: ${dbName}`);
 }
 
@@ -246,244 +179,6 @@ async function seedMongoMenuIfEmpty() {
   console.log(`🌱 Mongo menu seed executed: ${menuSeedItems.length} món`);
 }
 
-async function syncMongoToSqliteCache() {
-  if (!mongoReady) return;
-  const collections = [
-    ["menu", ["name", "price", "type", "image"]],
-    ["tables", ["table_num", "status"]],
-    ["bills", ["table_num", "total", "created_at"]],
-    ["bill_items", ["bill_id", "name", "price", "qty", "item_type"]],
-    ["settings", ["key", "value"]],
-    ["windows_printers", ["name", "type", "paper_size", "is_enabled"]],
-    ["order_session", ["payload"]],
-  ];
-  for (const [name] of collections) {
-    db.run(`DELETE FROM ${name}`);
-  }
-
-  const menuDocs = await mongoDb.collection("menu").find({}).sort({ sqlite_id: 1 }).toArray();
-  menuDocs.forEach((d) => {
-    db.run("INSERT INTO menu (id,name,price,type,image) VALUES (?,?,?,?,?)", [
-      Number(d.sqlite_id || d.id || 0),
-      d.name || "",
-      Number(d.price || 0),
-      d.type || "FOOD",
-      d.image || "",
-    ]);
-  });
-
-  const tableDocs = await mongoDb.collection("tables").find({}).sort({ table_num: 1 }).toArray();
-  tableDocs.forEach((d) => {
-    db.run("INSERT INTO tables (table_num,status) VALUES (?,?)", [Number(d.table_num), d.status || "PAID"]);
-  });
-
-  const billDocs = await mongoDb.collection("bills").find({}).sort({ sqlite_id: 1 }).toArray();
-  billDocs.forEach((d) => {
-    db.run("INSERT INTO bills (id,table_num,total,created_at) VALUES (?,?,?,?)", [
-      Number(d.sqlite_id || d.id || 0),
-      Number(d.table_num || 0),
-      Number(d.total || 0),
-      d.created_at || "",
-    ]);
-  });
-
-  const billItemDocs = await mongoDb.collection("bill_items").find({}).sort({ sqlite_id: 1 }).toArray();
-  billItemDocs.forEach((d) => {
-    db.run("INSERT INTO bill_items (id,bill_id,name,price,qty,item_type) VALUES (?,?,?,?,?,?)", [
-      Number(d.sqlite_id || d.id || 0),
-      Number(d.bill_id || 0),
-      d.name || "",
-      Number(d.price || 0),
-      Number(d.qty || 0),
-      d.item_type || null,
-    ]);
-  });
-
-  const settingDocs = await mongoDb.collection("settings").find({}).toArray();
-  settingDocs.forEach((d) => db.run("INSERT INTO settings (key,value) VALUES (?,?)", [d.key, d.value]));
-
-  const printerDocs = await mongoDb.collection("windows_printers").find({}).sort({ sqlite_id: 1 }).toArray();
-  printerDocs.forEach((d) => {
-    db.run("INSERT INTO windows_printers (id,name,type,paper_size,is_enabled) VALUES (?,?,?,?,?)", [
-      Number(d.sqlite_id || d.id || 0),
-      d.name || "",
-      d.type || "ALL",
-      Number(d.paper_size || 80),
-      Number(d.is_enabled ?? 1),
-    ]);
-  });
-
-  const session = await mongoDb.collection("order_session").findOne({ id: 1 });
-  db.run("INSERT OR REPLACE INTO order_session (id,payload) VALUES (1,?)", [session?.payload || "{}"]);
-  saveDb(true);
-  console.log("🔄 Mongo -> SQL cache synced");
-}
-
-process.on("beforeExit", flushDbBeforeExit);
-process.on("exit", flushDbBeforeExit);
-process.on("SIGINT", () => { flushDbBeforeExit(); process.exit(0); });
-process.on("SIGTERM", () => { flushDbBeforeExit(); process.exit(0); });
-
-/**
- * Chạy câu lệnh SELECT, trả về array of objects
- */
-function dbAll(sql, params = []) {
-  const stmt = db.prepare(sql);
-  stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return rows;
-}
-
-/**
- * Chạy câu lệnh SELECT, trả về 1 row object hoặc undefined
- */
-function dbGet(sql, params = []) {
-  const rows = dbAll(sql, params);
-  return rows[0];
-}
-
-/**
- * Chạy câu lệnh INSERT / UPDATE / DELETE
- * Trả về { changes, lastInsertRowid }
- */
-function dbRun(sql, params = [], options = {}) {
-  const { skipMirror = false } = options;
-  db.run(sql, params);
-  const result = {
-    changes:         db.getRowsModified(),
-    lastInsertRowid: dbGet("SELECT last_insert_rowid() AS id")?.id,
-  };
-  if (mongoReady && !skipMirror) {
-    mirrorWriteToMongo(sql, params, result).catch((e) => {
-      console.error("⚠️  Mongo mirror write lỗi:", e.message);
-    });
-  }
-  return result;
-}
-
-async function mirrorWriteToMongo(sql, params, result) {
-  if (!mongoReady) return;
-  const q = sql.replace(/\s+/g, " ").trim().toUpperCase();
-
-  if (q.startsWith("INSERT INTO MENU")) {
-    await mongoDb.collection("menu").insertOne({
-      sqlite_id: Number(result.lastInsertRowid),
-      name: params[0],
-      price: Number(params[1] || 0),
-      type: params[2],
-      image: params[3] || "",
-    });
-    return;
-  }
-  if (q.startsWith("UPDATE MENU SET NAME=?, PRICE=?, TYPE=?, IMAGE=? WHERE ID=?")) {
-    await mongoDb.collection("menu").updateOne(
-      { sqlite_id: Number(params[4]) },
-      { $set: { name: params[0], price: Number(params[1] || 0), type: params[2], image: params[3] || "" } }
-    );
-    return;
-  }
-  if (q.startsWith("UPDATE MENU SET NAME=?, PRICE=?, TYPE=? WHERE ID=?")) {
-    await mongoDb.collection("menu").updateOne(
-      { sqlite_id: Number(params[3]) },
-      { $set: { name: params[0], price: Number(params[1] || 0), type: params[2] } }
-    );
-    return;
-  }
-  if (q.startsWith("DELETE FROM MENU WHERE ID=?")) {
-    await mongoDb.collection("menu").deleteOne({ sqlite_id: Number(params[0]) });
-    return;
-  }
-
-  if (q.startsWith("INSERT OR REPLACE INTO ORDER_SESSION")) {
-    await mongoDb.collection("order_session").updateOne(
-      { id: 1 },
-      { $set: { id: 1, payload: params[0] || "{}" } },
-      { upsert: true }
-    );
-    return;
-  }
-
-  if (q.startsWith("INSERT OR REPLACE INTO TABLES")) {
-    await mongoDb.collection("tables").updateOne(
-      { table_num: Number(params[0]) },
-      { $set: { table_num: Number(params[0]), status: params[1] } },
-      { upsert: true }
-    );
-    return;
-  }
-  if (q.startsWith("INSERT INTO TABLES")) {
-    await mongoDb.collection("tables").updateOne(
-      { table_num: Number(params[0]) },
-      { $set: { table_num: Number(params[0]), status: "PAID" } },
-      { upsert: true }
-    );
-    return;
-  }
-  if (q.startsWith("UPDATE TABLES SET TABLE_NUM=? WHERE TABLE_NUM=?")) {
-    await mongoDb.collection("tables").updateOne({ table_num: Number(params[1]) }, { $set: { table_num: Number(params[0]) } });
-    return;
-  }
-  if (q.startsWith("DELETE FROM TABLES WHERE TABLE_NUM=?")) {
-    await mongoDb.collection("tables").deleteOne({ table_num: Number(params[0]) });
-    return;
-  }
-
-  if (q.startsWith("INSERT INTO BILLS")) {
-    await mongoDb.collection("bills").insertOne({
-      sqlite_id: Number(result.lastInsertRowid),
-      table_num: Number(params[0]),
-      total: Number(params[1] || 0),
-      created_at: params[2],
-    });
-    return;
-  }
-  if (q.startsWith("INSERT INTO BILL_ITEMS")) {
-    await mongoDb.collection("bill_items").insertOne({
-      sqlite_id: Number(result.lastInsertRowid),
-      bill_id: Number(params[0]),
-      name: params[1],
-      price: Number(params[2] || 0),
-      qty: Number(params[3] || 0),
-      item_type: params[4] || null,
-    });
-    return;
-  }
-
-  if (q.startsWith("INSERT INTO WINDOWS_PRINTERS")) {
-    await mongoDb.collection("windows_printers").insertOne({
-      sqlite_id: Number(result.lastInsertRowid),
-      name: params[0],
-      type: params[1] || "ALL",
-      paper_size: Number(params[2] || 80),
-      is_enabled: Number(params[3] ?? 1),
-    });
-    return;
-  }
-  if (q.startsWith("UPDATE WINDOWS_PRINTERS SET")) {
-    await mongoDb.collection("windows_printers").updateOne(
-      { sqlite_id: Number(params[4]) },
-      { $set: { name: params[0], type: params[1], paper_size: Number(params[2] || 80), is_enabled: Number(params[3] ?? 1) } }
-    );
-    return;
-  }
-  if (q.startsWith("DELETE FROM WINDOWS_PRINTERS WHERE ID=?")) {
-    await mongoDb.collection("windows_printers").deleteOne({ sqlite_id: Number(params[0]) });
-    return;
-  }
-
-  if (q.startsWith("INSERT INTO SETTINGS")) {
-    await mongoDb.collection("settings").updateOne(
-      { key: params[0] },
-      { $set: { key: params[0], value: params[1] } },
-      { upsert: true }
-    );
-  }
-}
-
 /**
  * Mongo-only boot:
  * - connect Mongo
@@ -492,26 +187,8 @@ async function mirrorWriteToMongo(sql, params, result) {
  * - start Express
  */
 async function initMongoOnly() {
-  // #region agent log
-  fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H3',location:'server.js:451',message:'initMongoOnly started',data:{pid:process.pid},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   await connectMongoIfConfigured();
   if (!mongoReady) {
-    // #region agent log
-    console.error("❌ Mongo env check:", {
-      hasMONGODB_URI: Boolean((process.env.MONGODB_URI || "").trim()),
-      hasMONGO_URL: Boolean((process.env.MONGO_URL || "").trim()),
-      hasMONGODB_DB: Boolean((process.env.MONGODB_DB || "").trim()),
-      hasMONGO_DB_NAME: Boolean((process.env.MONGO_DB_NAME || "").trim()),
-      dbCandidates: {
-        MONGODB_DB: (process.env.MONGODB_DB || "").trim(),
-        MONGO_DB_NAME: (process.env.MONGO_DB_NAME || "").trim(),
-      },
-    });
-    // #endregion
-    // #region agent log
-    fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H4',location:'server.js:454',message:'initMongoOnly exiting because mongoReady=false',data:{mongoReady},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     console.error("❌ Chưa có MONGODB_URI/MONGODB_DB (bỏ SQLite), dừng server.");
     process.exit(1);
   }

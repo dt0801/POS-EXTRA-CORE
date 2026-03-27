@@ -5,7 +5,7 @@ const sameOriginApiUrl = typeof window !== "undefined" ? window.location.origin 
 
 // Ưu tiên ENV; nếu không có thì dùng same-origin (khi frontend + server.js deploy chung),
 // cuối cùng mới fallback về backend Render.
-export const API_URL = (envApiUrl || sameOriginApiUrl || FALLBACK_API_URL).replace(/\/+$/, "");
+export const API_URL = "https://pos-extra-core.onrender.com";
 
 export function buildApiUrl(path) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;

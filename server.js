@@ -61,7 +61,18 @@ if (fs.existsSync(UI_BUILD)) {
 // =============================================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename:    (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+  filename: (req, file, cb) => {
+    const original = String(file?.originalname || "image");
+    const ext = path.extname(original).toLowerCase() || ".jpg";
+    // Sanitize để tránh lỗi URL/serve do ký tự lạ trong tên file.
+    const safeBase = path
+      .basename(original, path.extname(original))
+      .replace(/[^a-zA-Z0-9._-]+/g, "_")
+      .slice(0, 80);
+    const finalExt = ext && ext.length <= 10 ? ext : ".jpg";
+    const name = `${Date.now()}-${safeBase}${finalExt}`;
+    cb(null, name);
+  },
 });
 const upload = multer({ storage });
 
@@ -557,17 +568,23 @@ function startServer() {
   // Thêm món mới
   app.post("/menu", upload.single("image"), async (req, res) => {
     const { name, price, type } = req.body;
-    const image = req.file ? req.file.filename : "";
     try {
       const nextId = await getNextMongoId("menu");
-      await mongoDb.collection("menu").insertOne({
+      const doc = {
         sqlite_id: nextId,
         name: name || "",
         price: Number(price || 0),
         type: type || "FOOD",
-        image: image || "",
+      };
+      if (req.file?.filename) doc.image = req.file.filename;
+      await mongoDb.collection("menu").insertOne(doc);
+      res.json({
+        added: true,
+        mongoSaved: true,
+        mongoError: null,
+        imageProvided: Boolean(req.file?.filename),
+        imageFilename: req.file?.filename || null,
       });
-      res.json({ added: true, mongoSaved: true, mongoError: null });
     } catch (e) {
       res.status(500).json({ error: e.message || String(e) });
     }
@@ -583,13 +600,19 @@ function startServer() {
         price: Number(price || 0),
         type: type || "FOOD",
       };
-      if (req.file) patch.image = req.file.filename;
+      if (req.file?.filename) patch.image = req.file.filename;
       const result = await mongoDb.collection("menu").updateOne(
         { sqlite_id: Number(id) },
         { $set: patch }
       );
       if (result.matchedCount === 0) return res.status(404).json({ error: "Không tìm thấy món" });
-      res.json({ updated: true, mongoSaved: true, mongoError: null });
+      res.json({
+        updated: true,
+        mongoSaved: true,
+        mongoError: null,
+        imageProvided: Boolean(req.file?.filename),
+        imageFilename: req.file?.filename || null,
+      });
     } catch (e) {
       res.status(500).json({ error: e.message || String(e) });
     }

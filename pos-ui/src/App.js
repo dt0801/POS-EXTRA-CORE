@@ -1070,42 +1070,49 @@ export default function App() {
 
                {/* Bento Grid Menu */}
                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12">
-                   {filteredMenu.map(m => {
-                     const qty = tableOrders[currentTable]?.[m.id]?.qty || 0;
-                     return (
-                       <div key={m.id} className="group bg-surface-container-lowest rounded-[2rem] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-md border border-outline-variant/30">
-                         <div className="h-32 relative overflow-hidden bg-surface-container-high cursor-pointer" onClick={() => addItem(m)}>
-                           {m.image ? (
-                             <img src={`${API_URL}/uploads/${m.image}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={m.name} />
-                           ) : (
-                             <div className="w-full h-full flex items-center justify-center text-on-surface-variant"><span className="material-symbols-outlined text-4xl opacity-50">restaurant</span></div>
-                           )}
-                           {/* badge */}
-                           <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2.5 py-0.5 rounded-full text-[10px] font-bold text-primary shadow-sm">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</div>
-                         </div>
-                         <div className="p-3.5 flex flex-col flex-1">
-                           <h3 className="font-headline font-bold text-stone-900 line-clamp-2 leading-tight mb-1 text-sm">{m.name}</h3>
-                           <p className="text-[11px] font-semibold text-stone-500 mb-3">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</p>
-                           <div className="mt-auto flex items-center justify-between">
-                             <span className="font-headline font-black text-base text-primary">{formatMoney(m.price)}</span>
-                             {qty > 0 ? (
-                               <div className="flex items-center bg-primary-container/20 rounded-xl p-1 gap-1.5 shadow-sm border border-primary/10">
-                                 <button onClick={() => updateQty(m.id, "dec")} className="w-7 h-7 rounded-[0.5rem] bg-white text-primary flex items-center justify-center shadow-sm hover:bg-white/80 transition-colors"><span className="material-symbols-outlined text-[16px]">remove</span></button>
-                                 <span className="font-extrabold text-primary w-4 text-center text-sm">{qty}</span>
-                                 <button onClick={() => updateQty(m.id, "inc")} className="w-7 h-7 rounded-[0.5rem] bg-primary text-white flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"><span className="material-symbols-outlined text-[16px]">add</span></button>
-                               </div>
-                             ) : (
-                               <button onClick={() => addItem(m)} className="w-9 h-9 rounded-[1rem] bg-orange-50 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm">
-                                 <span className="material-symbols-outlined text-[20px]">add</span>
-                               </button>
-                             )}
-                           </div>
-                         </div>
-                       </div>
-                     );
-                   })}
-                 </div>
+                {menu.length === 0 ? (
+                  <div className="h-full min-h-[320px] flex flex-col items-center justify-center text-on-surface-variant border-2 border-dashed border-outline-variant/40 rounded-3xl bg-surface-container-lowest">
+                    <span className="material-symbols-outlined text-5xl mb-3 opacity-40">restaurant_menu</span>
+                    <p className="font-bold text-base">Chưa có dữ liệu menu</p>
+                    <p className="text-sm mt-1">Vui lòng seed menu ở backend hoặc kiểm tra API `/menu`.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12">
+                    {filteredMenu.map(m => {
+                      const qty = tableOrders[currentTable]?.[m.id]?.qty || 0;
+                      return (
+                        <div key={m.id} className="group bg-surface-container-lowest rounded-[2rem] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-md border border-outline-variant/30">
+                          <div className="h-32 relative overflow-hidden bg-surface-container-high cursor-pointer" onClick={() => addItem(m)}>
+                            {m.image ? (
+                              <img src={`${API_URL}/uploads/${m.image}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={m.name} />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-on-surface-variant"><span className="material-symbols-outlined text-4xl opacity-50">restaurant</span></div>
+                            )}
+                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2.5 py-0.5 rounded-full text-[10px] font-bold text-primary shadow-sm">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</div>
+                          </div>
+                          <div className="p-3.5 flex flex-col flex-1">
+                            <h3 className="font-headline font-bold text-stone-900 line-clamp-2 leading-tight mb-1 text-sm">{m.name}</h3>
+                            <p className="text-[11px] font-semibold text-stone-500 mb-3">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</p>
+                            <div className="mt-auto flex items-center justify-between">
+                              <span className="font-headline font-black text-base text-primary">{formatMoney(m.price)}</span>
+                              {qty > 0 ? (
+                                <div className="flex items-center bg-primary-container/20 rounded-xl p-1 gap-1.5 shadow-sm border border-primary/10">
+                                  <button onClick={() => updateQty(m.id, "dec")} className="w-7 h-7 rounded-[0.5rem] bg-white text-primary flex items-center justify-center shadow-sm hover:bg-white/80 transition-colors"><span className="material-symbols-outlined text-[16px]">remove</span></button>
+                                  <span className="font-extrabold text-primary w-4 text-center text-sm">{qty}</span>
+                                  <button onClick={() => updateQty(m.id, "inc")} className="w-7 h-7 rounded-[0.5rem] bg-primary text-white flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"><span className="material-symbols-outlined text-[16px]">add</span></button>
+                                </div>
+                              ) : (
+                                <button onClick={() => addItem(m)} className="w-9 h-9 rounded-[1rem] bg-orange-50 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm">
+                                  <span className="material-symbols-outlined text-[20px]">add</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                </div>
             </div>
 

@@ -10,6 +10,7 @@ const {
   createSafePrinter,
   listWindowsPrinters,
 } = require("./server/printing/windowsPrinter");
+const { menuSeedItems } = require("./server/seed/menuSeed");
 
 const customDriver = new WindowsRawDriver();
 
@@ -147,6 +148,23 @@ function dbRun(sql, params = []) {
   };
 }
 
+function seedMenuIfEmpty() {
+  const row = dbGet("SELECT COUNT(*) AS total FROM menu");
+  const total = Number(row?.total || 0);
+  if (total > 0) {
+    console.log(`ℹ️  Menu seed skipped: đã có ${total} món`);
+    return;
+  }
+  menuSeedItems.forEach((item) => {
+    dbRun(
+      "INSERT INTO menu (name, price, type, image) VALUES (?, ?, ?, ?)",
+      [item.name, Number(item.price), item.type, ""]
+    );
+  });
+  saveDb(true);
+  console.log(`🌱 Menu seed executed: đã nạp ${menuSeedItems.length} món mặc định`);
+}
+
 /**
  * Khởi tạo sql.js, load file DB nếu đã có, rồi khởi động Express
  */
@@ -243,6 +261,7 @@ async function initDb() {
     db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [k, v]);
   });
 
+  seedMenuIfEmpty();
   saveDb();
   startServer();
 }

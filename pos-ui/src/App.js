@@ -28,7 +28,7 @@ const FILTERS = [
 ];
 // Dev: React chạy port 3001, server port 3000
 // Production Electron: cả 2 cùng port 3000
-const API_URL = "http://localhost:3000";
+const API_URL = process.env.REACT_APP_API_URL;
 
 // =============================================
 // HELPER FUNCTIONS

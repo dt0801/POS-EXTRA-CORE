@@ -5,6 +5,7 @@ const path    = require("path");
 const fs      = require("fs");
 const { exec } = require("child_process");
 const { PrinterTypes, CharacterSet } = require("node-thermal-printer");
+const { MongoClient, ServerApiVersion } = require("mongodb");
 const {
   WindowsRawDriver,
   createSafePrinter,
@@ -77,6 +78,9 @@ const upload = multer({ storage });
  */
 let db;
 let saveTimeout = null;
+let mongoClient = null;
+let mongoDb = null;
+let mongoReady = false;
 
 function saveDb(immediate = false) {
   const writeNow = () => {
@@ -107,6 +111,116 @@ function saveDb(immediate = false) {
 function flushDbBeforeExit() {
   if (!db) return;
   saveDb(true);
+}
+
+async function connectMongoIfConfigured() {
+  const uri = (process.env.MONGODB_URI || "").trim();
+  if (!uri) {
+    console.log("ℹ️  MongoDB chưa cấu hình, chạy với sql.js local");
+    return;
+  }
+  mongoClient = new MongoClient(uri, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    },
+  });
+  await mongoClient.connect();
+  const dbName = (process.env.MONGODB_DB || "posextra").trim();
+  mongoDb = mongoClient.db(dbName);
+  mongoReady = true;
+  console.log(`✅ MongoDB connected: ${dbName}`);
+}
+
+async function seedMongoMenuIfEmpty() {
+  if (!mongoReady) return;
+  const col = mongoDb.collection("menu");
+  const count = await col.countDocuments();
+  if (count > 0) return;
+  await col.insertMany(
+    menuSeedItems.map((item, idx) => ({
+      sqlite_id: idx + 1,
+      name: item.name,
+      price: Number(item.price),
+      type: item.type,
+      image: "",
+    }))
+  );
+  console.log(`🌱 Mongo menu seed executed: ${menuSeedItems.length} món`);
+}
+
+async function syncMongoToSqliteCache() {
+  if (!mongoReady) return;
+  const collections = [
+    ["menu", ["name", "price", "type", "image"]],
+    ["tables", ["table_num", "status"]],
+    ["bills", ["table_num", "total", "created_at"]],
+    ["bill_items", ["bill_id", "name", "price", "qty", "item_type"]],
+    ["settings", ["key", "value"]],
+    ["windows_printers", ["name", "type", "paper_size", "is_enabled"]],
+    ["order_session", ["payload"]],
+  ];
+  for (const [name] of collections) {
+    db.run(`DELETE FROM ${name}`);
+  }
+
+  const menuDocs = await mongoDb.collection("menu").find({}).sort({ sqlite_id: 1 }).toArray();
+  menuDocs.forEach((d) => {
+    db.run("INSERT INTO menu (id,name,price,type,image) VALUES (?,?,?,?,?)", [
+      Number(d.sqlite_id || d.id || 0),
+      d.name || "",
+      Number(d.price || 0),
+      d.type || "FOOD",
+      d.image || "",
+    ]);
+  });
+
+  const tableDocs = await mongoDb.collection("tables").find({}).sort({ table_num: 1 }).toArray();
+  tableDocs.forEach((d) => {
+    db.run("INSERT INTO tables (table_num,status) VALUES (?,?)", [Number(d.table_num), d.status || "PAID"]);
+  });
+
+  const billDocs = await mongoDb.collection("bills").find({}).sort({ sqlite_id: 1 }).toArray();
+  billDocs.forEach((d) => {
+    db.run("INSERT INTO bills (id,table_num,total,created_at) VALUES (?,?,?,?)", [
+      Number(d.sqlite_id || d.id || 0),
+      Number(d.table_num || 0),
+      Number(d.total || 0),
+      d.created_at || "",
+    ]);
+  });
+
+  const billItemDocs = await mongoDb.collection("bill_items").find({}).sort({ sqlite_id: 1 }).toArray();
+  billItemDocs.forEach((d) => {
+    db.run("INSERT INTO bill_items (id,bill_id,name,price,qty,item_type) VALUES (?,?,?,?,?,?)", [
+      Number(d.sqlite_id || d.id || 0),
+      Number(d.bill_id || 0),
+      d.name || "",
+      Number(d.price || 0),
+      Number(d.qty || 0),
+      d.item_type || null,
+    ]);
+  });
+
+  const settingDocs = await mongoDb.collection("settings").find({}).toArray();
+  settingDocs.forEach((d) => db.run("INSERT INTO settings (key,value) VALUES (?,?)", [d.key, d.value]));
+
+  const printerDocs = await mongoDb.collection("windows_printers").find({}).sort({ sqlite_id: 1 }).toArray();
+  printerDocs.forEach((d) => {
+    db.run("INSERT INTO windows_printers (id,name,type,paper_size,is_enabled) VALUES (?,?,?,?,?)", [
+      Number(d.sqlite_id || d.id || 0),
+      d.name || "",
+      d.type || "ALL",
+      Number(d.paper_size || 80),
+      Number(d.is_enabled ?? 1),
+    ]);
+  });
+
+  const session = await mongoDb.collection("order_session").findOne({ id: 1 });
+  db.run("INSERT OR REPLACE INTO order_session (id,payload) VALUES (1,?)", [session?.payload || "{}"]);
+  saveDb(true);
+  console.log("🔄 Mongo -> SQL cache synced");
 }
 
 process.on("beforeExit", flushDbBeforeExit);
@@ -140,12 +254,138 @@ function dbGet(sql, params = []) {
  * Chạy câu lệnh INSERT / UPDATE / DELETE
  * Trả về { changes, lastInsertRowid }
  */
-function dbRun(sql, params = []) {
+function dbRun(sql, params = [], options = {}) {
+  const { skipMirror = false } = options;
   db.run(sql, params);
-  return {
+  const result = {
     changes:         db.getRowsModified(),
     lastInsertRowid: dbGet("SELECT last_insert_rowid() AS id")?.id,
   };
+  if (mongoReady && !skipMirror) {
+    mirrorWriteToMongo(sql, params, result).catch((e) => {
+      console.error("⚠️  Mongo mirror write lỗi:", e.message);
+    });
+  }
+  return result;
+}
+
+async function mirrorWriteToMongo(sql, params, result) {
+  if (!mongoReady) return;
+  const q = sql.replace(/\s+/g, " ").trim().toUpperCase();
+
+  if (q.startsWith("INSERT INTO MENU")) {
+    await mongoDb.collection("menu").insertOne({
+      sqlite_id: Number(result.lastInsertRowid),
+      name: params[0],
+      price: Number(params[1] || 0),
+      type: params[2],
+      image: params[3] || "",
+    });
+    return;
+  }
+  if (q.startsWith("UPDATE MENU SET NAME=?, PRICE=?, TYPE=?, IMAGE=? WHERE ID=?")) {
+    await mongoDb.collection("menu").updateOne(
+      { sqlite_id: Number(params[4]) },
+      { $set: { name: params[0], price: Number(params[1] || 0), type: params[2], image: params[3] || "" } }
+    );
+    return;
+  }
+  if (q.startsWith("UPDATE MENU SET NAME=?, PRICE=?, TYPE=? WHERE ID=?")) {
+    await mongoDb.collection("menu").updateOne(
+      { sqlite_id: Number(params[3]) },
+      { $set: { name: params[0], price: Number(params[1] || 0), type: params[2] } }
+    );
+    return;
+  }
+  if (q.startsWith("DELETE FROM MENU WHERE ID=?")) {
+    await mongoDb.collection("menu").deleteOne({ sqlite_id: Number(params[0]) });
+    return;
+  }
+
+  if (q.startsWith("INSERT OR REPLACE INTO ORDER_SESSION")) {
+    await mongoDb.collection("order_session").updateOne(
+      { id: 1 },
+      { $set: { id: 1, payload: params[0] || "{}" } },
+      { upsert: true }
+    );
+    return;
+  }
+
+  if (q.startsWith("INSERT OR REPLACE INTO TABLES")) {
+    await mongoDb.collection("tables").updateOne(
+      { table_num: Number(params[0]) },
+      { $set: { table_num: Number(params[0]), status: params[1] } },
+      { upsert: true }
+    );
+    return;
+  }
+  if (q.startsWith("INSERT INTO TABLES")) {
+    await mongoDb.collection("tables").updateOne(
+      { table_num: Number(params[0]) },
+      { $set: { table_num: Number(params[0]), status: "PAID" } },
+      { upsert: true }
+    );
+    return;
+  }
+  if (q.startsWith("UPDATE TABLES SET TABLE_NUM=? WHERE TABLE_NUM=?")) {
+    await mongoDb.collection("tables").updateOne({ table_num: Number(params[1]) }, { $set: { table_num: Number(params[0]) } });
+    return;
+  }
+  if (q.startsWith("DELETE FROM TABLES WHERE TABLE_NUM=?")) {
+    await mongoDb.collection("tables").deleteOne({ table_num: Number(params[0]) });
+    return;
+  }
+
+  if (q.startsWith("INSERT INTO BILLS")) {
+    await mongoDb.collection("bills").insertOne({
+      sqlite_id: Number(result.lastInsertRowid),
+      table_num: Number(params[0]),
+      total: Number(params[1] || 0),
+      created_at: params[2],
+    });
+    return;
+  }
+  if (q.startsWith("INSERT INTO BILL_ITEMS")) {
+    await mongoDb.collection("bill_items").insertOne({
+      sqlite_id: Number(result.lastInsertRowid),
+      bill_id: Number(params[0]),
+      name: params[1],
+      price: Number(params[2] || 0),
+      qty: Number(params[3] || 0),
+      item_type: params[4] || null,
+    });
+    return;
+  }
+
+  if (q.startsWith("INSERT INTO WINDOWS_PRINTERS")) {
+    await mongoDb.collection("windows_printers").insertOne({
+      sqlite_id: Number(result.lastInsertRowid),
+      name: params[0],
+      type: params[1] || "ALL",
+      paper_size: Number(params[2] || 80),
+      is_enabled: Number(params[3] ?? 1),
+    });
+    return;
+  }
+  if (q.startsWith("UPDATE WINDOWS_PRINTERS SET")) {
+    await mongoDb.collection("windows_printers").updateOne(
+      { sqlite_id: Number(params[4]) },
+      { $set: { name: params[0], type: params[1], paper_size: Number(params[2] || 80), is_enabled: Number(params[3] ?? 1) } }
+    );
+    return;
+  }
+  if (q.startsWith("DELETE FROM WINDOWS_PRINTERS WHERE ID=?")) {
+    await mongoDb.collection("windows_printers").deleteOne({ sqlite_id: Number(params[0]) });
+    return;
+  }
+
+  if (q.startsWith("INSERT INTO SETTINGS")) {
+    await mongoDb.collection("settings").updateOne(
+      { key: params[0] },
+      { $set: { key: params[0], value: params[1] } },
+      { upsert: true }
+    );
+  }
 }
 
 function seedMenuIfEmpty() {
@@ -261,7 +501,13 @@ async function initDb() {
     db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [k, v]);
   });
 
-  seedMenuIfEmpty();
+  await connectMongoIfConfigured();
+  if (mongoReady) {
+    await seedMongoMenuIfEmpty();
+    await syncMongoToSqliteCache();
+  } else {
+    seedMenuIfEmpty();
+  }
   saveDb();
   startServer();
 }
@@ -278,39 +524,74 @@ function startServer() {
   });
 
   // Thêm món mới
-  app.post("/menu", upload.single("image"), (req, res) => {
+  app.post("/menu", upload.single("image"), async (req, res) => {
     const { name, price, type } = req.body;
     const image = req.file ? req.file.filename : "";
-    dbRun(
+    const result = dbRun(
       "INSERT INTO menu (name, price, type, image) VALUES (?, ?, ?, ?)",
-      [name, Number(price), type, image]
+      [name, Number(price), type, image],
+      { skipMirror: mongoReady }
     );
+    if (mongoReady) {
+      try {
+        await mongoDb.collection("menu").insertOne({
+          sqlite_id: Number(result.lastInsertRowid),
+          name,
+          price: Number(price || 0),
+          type,
+          image: image || "",
+        });
+      } catch (e) {
+        return res.status(500).json({ error: `Mongo save failed: ${e.message}` });
+      }
+    }
     saveDb();
     res.json({ added: true });
   });
 
   // Cập nhật món
-  app.put("/menu/:id", upload.single("image"), (req, res) => {
+  app.put("/menu/:id", upload.single("image"), async (req, res) => {
     const { name, price, type } = req.body;
     const { id } = req.params;
     if (req.file) {
       dbRun(
         "UPDATE menu SET name=?, price=?, type=?, image=? WHERE id=?",
-        [name, Number(price), type, req.file.filename, id]
+        [name, Number(price), type, req.file.filename, id],
+        { skipMirror: mongoReady }
       );
     } else {
       dbRun(
         "UPDATE menu SET name=?, price=?, type=? WHERE id=?",
-        [name, Number(price), type, id]
+        [name, Number(price), type, id],
+        { skipMirror: mongoReady }
       );
+    }
+    if (mongoReady) {
+      try {
+        const patch = { name, price: Number(price || 0), type };
+        if (req.file) patch.image = req.file.filename;
+        await mongoDb.collection("menu").updateOne(
+          { sqlite_id: Number(id) },
+          { $set: patch }
+        );
+      } catch (e) {
+        return res.status(500).json({ error: `Mongo update failed: ${e.message}` });
+      }
     }
     saveDb();
     res.json({ updated: true });
   });
 
   // Xóa món
-  app.delete("/menu/:id", (req, res) => {
-    dbRun("DELETE FROM menu WHERE id=?", [req.params.id]);
+  app.delete("/menu/:id", async (req, res) => {
+    dbRun("DELETE FROM menu WHERE id=?", [req.params.id], { skipMirror: mongoReady });
+    if (mongoReady) {
+      try {
+        await mongoDb.collection("menu").deleteOne({ sqlite_id: Number(req.params.id) });
+      } catch (e) {
+        return res.status(500).json({ error: `Mongo delete failed: ${e.message}` });
+      }
+    }
     saveDb();
     res.json({ deleted: true });
   });

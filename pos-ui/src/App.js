@@ -276,9 +276,27 @@ export default function App() {
   // DATA FETCHING
   // =============================================
 
-  const fetchMenu = useCallback(() => {
-    fetch(`${API_URL}/menu`).then(r => r.json()).then(setMenu)
-      .catch(e => console.error("Lỗi fetch menu:", e));
+  const fetchMenu = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/menu`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const normalized = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.menu)
+        ? data.menu
+        : Array.isArray(data?.data)
+        ? data.data
+        : [];
+      setMenu(normalized);
+    } catch (e) {
+      console.error("Lỗi fetch menu:", e);
+      setMenu([]);
+    }
   }, []);
 
   /** Fetch trạng thái tất cả bàn từ server */

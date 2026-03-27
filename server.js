@@ -136,7 +136,7 @@ if (fs.existsSync(UI_BUILD)) {
 }
 
 // =============================================
-// MULTER – Upload ảnh món ăn
+// MULTER – Upload ảnh món ăn hehehea
 // =============================================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
@@ -1372,4 +1372,10 @@ function startServer() {
 initDb().catch(err => {
   console.error("❌ Không thể khởi tạo DB:", err);
   process.exit(1);
+});
+app.get("/menu", (req, res) => {
+  res.json([
+    { id: 1, name: "Trà sữa", price: 30000 },
+    { id: 2, name: "Cà phê", price: 25000 }
+  ]);
 });

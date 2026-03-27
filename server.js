@@ -115,8 +115,14 @@ function flushDbBeforeExit() {
 
 async function connectMongoIfConfigured() {
   const uri = (process.env.MONGODB_URI || "").trim();
+  // #region agent log
+  fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H1',location:'server.js:116',message:'connectMongoIfConfigured env snapshot',data:{hasMongoUri:Boolean(uri),mongoDb:(process.env.MONGODB_DB||'').trim(),nodeEnv:process.env.NODE_ENV||''},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   if (!uri) {
     console.log("ℹ️  Chưa cấu hình MONGODB_URI (Mongo-only).");
+    // #region agent log
+    fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H1',location:'server.js:120',message:'Mongo URI missing branch triggered',data:{reason:'MONGODB_URI_EMPTY'},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     return;
   }
   mongoClient = new MongoClient(uri, {
@@ -130,6 +136,9 @@ async function connectMongoIfConfigured() {
   const dbName = (process.env.MONGODB_DB || "posextra").trim();
   mongoDb = mongoClient.db(dbName);
   mongoReady = true;
+  // #region agent log
+  fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H2',location:'server.js:133',message:'Mongo connected successfully',data:{dbName,mongoReady},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   console.log(`✅ MongoDB connected: ${dbName}`);
 }
 
@@ -453,8 +462,14 @@ async function mirrorWriteToMongo(sql, params, result) {
  * - start Express
  */
 async function initMongoOnly() {
+  // #region agent log
+  fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H3',location:'server.js:451',message:'initMongoOnly started',data:{pid:process.pid},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   await connectMongoIfConfigured();
   if (!mongoReady) {
+    // #region agent log
+    fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'render-startup',hypothesisId:'H4',location:'server.js:454',message:'initMongoOnly exiting because mongoReady=false',data:{mongoReady},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     console.error("❌ Chưa có MONGODB_URI/MONGODB_DB (bỏ SQLite), dừng server.");
     process.exit(1);
   }

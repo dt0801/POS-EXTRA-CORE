@@ -6,7 +6,7 @@ import "./App.css";
 // =============================================
 
 const TOTAL_TABLES = 20;
-// label hiển thị trên nút, key dùng để lọcaa menu
+// label hiển thị trên nút, key dùng để lọcaa meAnu
 const FILTERS = [
   { key: "ALL",      label: "Tất cả"    },
   { key: "COMBO",    label: "Combo"     },

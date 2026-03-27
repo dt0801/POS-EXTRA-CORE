@@ -1363,7 +1363,7 @@ function startServer() {
   // =============================================
   app.listen(3000, () => {
     console.log("✅ Server đang chạy tại http://localhost:3000");
-    console.log(`🖨️  Máy in POS: tcp://${getPrinterIP()}`);
+    console.log(`🖨️  Máy ian POS: tcp://${getPrinterIP()}`);
     console.log("   → Đổi IP máy in qua giao diện Settings trong app");
   });
 }

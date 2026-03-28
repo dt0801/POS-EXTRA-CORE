@@ -96,10 +96,6 @@ const calcTotalQty = (tableData = {}) =>
 // MAIN COMPONENT
 // =============================================
 export default function App() {
-  // #region agent log
-  fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'pre-fix',hypothesisId:'H2',location:'src/App.js:90',message:'App render started after refactor',data:{note:'runtime log active for debug mode'},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-
   // ----- CORE STATE -----
   const [menu, setMenu]               = useState([]);
   const [currentTable, setCurrentTable] = useState(null);
@@ -502,9 +498,6 @@ export default function App() {
   }), [settings.store_name, settings.store_address, settings.store_phone, settings.cashier_name]);
 
   const refreshSettingsBillPreview = useCallback(async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7797/ingest/3ea9e2a3-4474-4759-840c-d7923423d46f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a3885'},body:JSON.stringify({sessionId:'9a3885',runId:'pre-fix',hypothesisId:'H5',location:'src/App.js:495',message:'refreshSettingsBillPreview invoked',data:{sidebarView,settingsPreviewPaper,hasBuildSettingsPreviewPayload:typeof buildSettingsPreviewPayload==='function'},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (sidebarView !== "settings") return;
     setSettingsPreviewLoading(true);
     try {

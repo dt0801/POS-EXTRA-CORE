@@ -1,25 +1,16 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "POS Extra",
+  "name": "POS Extra",
   "icons": [
     {
-      "src": "/uploads/pancake-pos-icon-filled-256.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "/uploads/pancake-pos-icon-filled-256.ico",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/uploads/pancake-pos-icon-filled-256.ico",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
+  "theme_color": "#ea580c",
   "background_color": "#ffffff"
 }

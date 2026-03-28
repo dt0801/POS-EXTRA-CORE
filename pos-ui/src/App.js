@@ -26,6 +26,14 @@ const TOTAL_TABLES = 20;
 /** Format số tiền VND */
 const formatMoney = (n) => new Intl.NumberFormat("vi-VN").format(n * 1000) + "đ";
 
+/** Ảnh menu: URL đầy đủ (Cloudinary) hoặc file trong /uploads */
+const menuImageSrc = (image) => {
+  if (!image) return "";
+  const s = String(image).trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  return `${API_URL}/uploads/${s}`;
+};
+
 /** Bỏ dấu tiếng Việt để so sánh không bị lỗi encoding */
 const removeTones = (str) => {
   const map = {
@@ -1084,7 +1092,7 @@ export default function App() {
                         <div key={m.id} className="group bg-surface-container-lowest rounded-[2rem] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-md border border-outline-variant/30">
                           <div className="h-32 relative overflow-hidden bg-surface-container-high cursor-pointer" onClick={() => addItem(m)}>
                             {m.image ? (
-                              <img src={`${API_URL}/uploads/${m.image}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={m.name} />
+                              <img src={menuImageSrc(m.image)} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={m.name} />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-on-surface-variant"><span className="material-symbols-outlined text-4xl opacity-50">restaurant</span></div>
                             )}
@@ -1156,7 +1164,7 @@ export default function App() {
                         {/* Circular Thumbnail */}
                         <div className="w-11 h-11 rounded-full overflow-hidden bg-stone-100 shrink-0 shadow-sm border border-stone-200/50">
                           {item.image ? (
-                            <img src={`${API_URL}/uploads/${item.image}`} className="w-full h-full object-cover" alt={item.name}/>
+                            <img src={menuImageSrc(item.image)} className="w-full h-full object-cover" alt={item.name}/>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-stone-400"><span className="material-symbols-outlined text-lg">restaurant</span></div>
                           )}
@@ -1314,7 +1322,7 @@ export default function App() {
                     <div key={m.id} onClick={() => { setManageTab("edit"); setEditItem({...m}); setEditFile(null); }} className={`group relative overflow-hidden rounded-[2rem] bg-surface-container-lowest border ${editItem?.id === m.id ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/50'} shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer flex flex-col min-h-[280px]`}>
                       <div className="h-40 w-full overflow-hidden bg-surface-container-high relative">
                         {m.image ? (
-                           <img src={`${API_URL}/uploads/${m.image}`} alt={m.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                           <img src={menuImageSrc(m.image)} alt={m.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         ) : (
                            <div className="w-full h-full flex items-center justify-center text-on-surface-variant"><span className="material-symbols-outlined text-4xl opacity-50">restaurant</span></div>
                         )}
@@ -1384,7 +1392,7 @@ export default function App() {
                              
                              {((manageTab === "add" && file) || (editItem && (editFile || editItem.image))) && (
                                 <div className="mt-6 w-40 h-40 rounded-2xl overflow-hidden border-4 border-white shadow-lg relative group">
-                                   <img src={manageTab === "add" ? URL.createObjectURL(file) : (editFile ? URL.createObjectURL(editFile) : editItem.image ? `${API_URL}/uploads/${editItem.image}` : "")} alt="preview" 
+                                   <img src={manageTab === "add" ? URL.createObjectURL(file) : (editFile ? URL.createObjectURL(editFile) : editItem.image ? menuImageSrc(editItem.image) : "")} alt="preview" 
                                         className="w-full h-full object-cover" onError={e => e.target.style.display="none"} />
                                 </div>
                              )}

@@ -12,6 +12,7 @@ const {
   listWindowsPrinters,
 } = require("./server/printing/windowsPrinter");
 const { menuSeedItems } = require("./server/seed/menuSeed");
+const cloudinary = require("cloudinary").v2;
 
 const customDriver = new WindowsRawDriver();
 
@@ -59,24 +60,55 @@ if (fs.existsSync(UI_BUILD)) {
 }
 
 // =============================================
-// MULTER – Upload ảnh món ăn hehehea
+// MULTER – ảnh menu (memory → Cloudinary hoặc ghi disk)
 // =============================================
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => {
-    const original = String(file?.originalname || "image");
-    const ext = path.extname(original).toLowerCase() || ".jpg";
-    // Sanitize để tránh lỗi URL/serve do ký tự lạ trong tên file.
-    const safeBase = path
-      .basename(original, path.extname(original))
-      .replace(/[^a-zA-Z0-9._-]+/g, "_")
-      .slice(0, 80);
-    const finalExt = ext && ext.length <= 10 ? ext : ".jpg";
-    const name = `${Date.now()}-${safeBase}${finalExt}`;
-    cb(null, name);
-  },
+function isCloudinaryConfigured() {
+  const n = (process.env.CLOUDINARY_CLOUD_NAME || "").trim();
+  const k = (process.env.CLOUDINARY_API_KEY || "").trim();
+  const s = (process.env.CLOUDINARY_API_SECRET || "").trim();
+  return Boolean(n && k && s);
+}
+
+if (isCloudinaryConfigured()) {
+  cloudinary.config({
+    cloud_name: (process.env.CLOUDINARY_CLOUD_NAME || "").trim(),
+    api_key: (process.env.CLOUDINARY_API_KEY || "").trim(),
+    api_secret: (process.env.CLOUDINARY_API_SECRET || "").trim(),
+  });
+}
+
+function safeMenuImageFilename(originalName) {
+  const original = String(originalName || "image");
+  const ext = path.extname(original).toLowerCase() || ".jpg";
+  const safeBase = path
+    .basename(original, path.extname(original))
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .slice(0, 80);
+  const finalExt = ext && ext.length <= 10 ? ext : ".jpg";
+  return `${Date.now()}-${safeBase}${finalExt}`;
+}
+
+async function persistMenuImage(file) {
+  if (!file?.buffer || !Buffer.isBuffer(file.buffer)) return "";
+  if (isCloudinaryConfigured()) {
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: "posextra-menu", resource_type: "image" },
+        (err, r) => (err ? reject(err) : resolve(r))
+      );
+      stream.end(file.buffer);
+    });
+    return String(result.secure_url || result.url || "").trim();
+  }
+  const name = safeMenuImageFilename(file.originalname);
+  await fs.promises.writeFile(path.join(UPLOADS_DIR, name), file.buffer);
+  return name;
+}
+
+const menuUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
-const upload = multer({ storage });
 
 let mongoClient = null;
 let mongoDb = null;
@@ -230,6 +262,11 @@ async function initMongoOnly() {
 
   console.log("📁 BASE_DIR:", BASE_DIR);
   console.log("📁 UPLOADS_DIR:", UPLOADS_DIR);
+  console.log(
+    isCloudinaryConfigured()
+      ? "☁️  Ảnh menu: Cloudinary"
+      : "📂 Ảnh menu: lưu local (DATA_DIR/uploads)"
+  );
 
   startServer();
 }
@@ -259,9 +296,19 @@ function startServer() {
   });
 
   // Thêm món mới
-  app.post("/menu", upload.single("image"), async (req, res) => {
+  app.post("/menu", menuUpload.single("image"), async (req, res) => {
     const { name, price, type } = req.body;
     try {
+      let imageValue = "";
+      if (req.file?.buffer) {
+        try {
+          imageValue = await persistMenuImage(req.file);
+        } catch (upErr) {
+          return res.status(500).json({
+            error: upErr.message || String(upErr) || "Upload ảnh thất bại",
+          });
+        }
+      }
       const nextId = await getNextMongoId("menu");
       const doc = {
         sqlite_id: nextId,
@@ -269,14 +316,16 @@ function startServer() {
         price: Number(price || 0),
         type: type || "FOOD",
       };
-      if (req.file?.filename) doc.image = req.file.filename;
+      if (imageValue) doc.image = imageValue;
       await mongoDb.collection("menu").insertOne(doc);
+      const isUrl = /^https?:\/\//i.test(imageValue);
       res.json({
         added: true,
         mongoSaved: true,
         mongoError: null,
-        imageProvided: Boolean(req.file?.filename),
-        imageFilename: req.file?.filename || null,
+        imageProvided: Boolean(imageValue),
+        imageFilename: isUrl ? null : imageValue || null,
+        imageUrl: isUrl ? imageValue : null,
       });
     } catch (e) {
       res.status(500).json({ error: e.message || String(e) });
@@ -284,27 +333,39 @@ function startServer() {
   });
 
   // Cập nhật món
-  app.put("/menu/:id", upload.single("image"), async (req, res) => {
+  app.put("/menu/:id", menuUpload.single("image"), async (req, res) => {
     const { name, price, type } = req.body;
     const { id } = req.params;
     try {
+      let imageValue = "";
+      if (req.file?.buffer) {
+        try {
+          imageValue = await persistMenuImage(req.file);
+        } catch (upErr) {
+          return res.status(500).json({
+            error: upErr.message || String(upErr) || "Upload ảnh thất bại",
+          });
+        }
+      }
       const patch = {
         name: name || "",
         price: Number(price || 0),
         type: type || "FOOD",
       };
-      if (req.file?.filename) patch.image = req.file.filename;
+      if (imageValue) patch.image = imageValue;
       const result = await mongoDb.collection("menu").updateOne(
         { sqlite_id: Number(id) },
         { $set: patch }
       );
       if (result.matchedCount === 0) return res.status(404).json({ error: "Không tìm thấy món" });
+      const isUrl = /^https?:\/\//i.test(imageValue);
       res.json({
         updated: true,
         mongoSaved: true,
         mongoError: null,
-        imageProvided: Boolean(req.file?.filename),
-        imageFilename: req.file?.filename || null,
+        imageProvided: Boolean(imageValue),
+        imageFilename: isUrl ? null : imageValue || null,
+        imageUrl: isUrl ? imageValue : null,
       });
     } catch (e) {
       res.status(500).json({ error: e.message || String(e) });

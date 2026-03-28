@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
-const { exec } = require("child_process");
+const { exec, execFile } = require("child_process");
 const { ThermalPrinter } = require("node-thermal-printer");
 
 class WindowsRawDriver {
@@ -95,25 +95,57 @@ function createSafePrinter(config) {
   return new ThermalPrinter(config);
 }
 
+function powershellExePath() {
+  const root = process.env.SystemRoot || process.env.windir;
+  if (root) {
+    return path.join(root, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+  }
+  return "powershell.exe";
+}
+
 function listWindowsPrinters() {
   return new Promise((resolve) => {
-    const cmd = `powershell -command "Get-Printer | Select-Object Name, PortName, PrinterStatus | ConvertTo-Json"`;
-    exec(cmd, { timeout: 5000 }, (err, stdout) => {
-      if (err) return resolve([]);
-      try {
-        let printers = JSON.parse(stdout.trim());
-        if (!Array.isArray(printers)) printers = [printers];
-        resolve(
-          printers.map((p) => ({
-            name: p.Name,
-            port: p.PortName,
-            status: p.PrinterStatus === 0 ? "Ready" : "Unknown",
-          }))
-        );
-      } catch {
-        resolve([]);
+    if (process.platform !== "win32") {
+      return resolve([]);
+    }
+
+    const script =
+      "Get-Printer | Select-Object Name, PortName, PrinterStatus | ConvertTo-Json -Compress -Depth 3";
+    execFile(
+      powershellExePath(),
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+      { timeout: 15000, windowsHide: true, encoding: "utf8", maxBuffer: 2 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        if (err) {
+          console.error("listWindowsPrinters:", err.message, stderr ? String(stderr).slice(0, 400) : "");
+          return resolve([]);
+        }
+        const text = String(stdout || "")
+          .replace(/^\uFEFF/, "")
+          .trim();
+        if (!text) return resolve([]);
+        try {
+          let printers = JSON.parse(text);
+          if (!Array.isArray(printers)) printers = [printers];
+          const mapped = printers
+            .map((p) => {
+              const name = p.Name ?? p.name;
+              const port = p.PortName ?? p.portName;
+              const st = p.PrinterStatus ?? p.printerStatus;
+              return {
+                name: name != null ? String(name) : "",
+                port: port != null ? String(port) : "",
+                status: st === 0 || st === "Normal" ? "Ready" : "Unknown",
+              };
+            })
+            .filter((p) => p.name);
+          resolve(mapped);
+        } catch (e) {
+          console.error("listWindowsPrinters JSON:", e.message, text.slice(0, 200));
+          resolve([]);
+        }
       }
-    });
+    );
   });
 }
 

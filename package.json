@@ -8,6 +8,7 @@
     "server": "node server.js",
     "react": "cd pos-ui && npm start",
     "build": "cd pos-ui && npm run build",
+    "migrate:uploads-to-cloudinary": "node scripts/upload-local-images-to-cloudinary.js",
     "postinstall": "echo web-only mode"
   },
   "dependencies": {

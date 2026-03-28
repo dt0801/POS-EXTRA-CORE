@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import "./App.css";
 import { FILTERS } from "./constants/filters";
-import { API_URL } from "./config/api";
+import { API_URL, isLocalQuayOrigin } from "./config/api";
 import { usePrinterStatus } from "./hooks/usePrinterStatus";
 import SidebarItem from "./components/layout/SidebarItem";
 import TablesView from "./components/views/TablesView";
@@ -1609,6 +1609,21 @@ export default function App() {
                        Làm mới Windows API
                     </button>
                   </div>
+
+                  {!isLocalQuayOrigin() && (
+                    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                      <p className="font-bold mb-1">Tại sao không thấy máy in?</p>
+                      <p className="text-amber-900/90 leading-relaxed">
+                        Bạn đang mở POS trên trang <strong>cloud</strong> (vd: Vercel). Trình duyệt gọi API trên server xa (Linux) —{" "}
+                        <strong>không đọc được</strong> máy in cài trên Windows của quầy.
+                      </p>
+                      <p className="mt-2 text-amber-900/90 leading-relaxed">
+                        Để danh sách máy in hiện: trên <strong>máy Windows</strong> tại quầy, chạy backend (<code className="rounded bg-amber-100/80 px-1">npm run server</code>, đã{" "}
+                        <code className="rounded bg-amber-100/80 px-1">npm run build</code> UI), rồi mở{" "}
+                        <code className="rounded bg-amber-100/80 px-1">http://127.0.0.1:3000</code> — hoặc dùng <code className="rounded bg-amber-100/80 px-1">npm run electron</code>.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Form thêm máy in */}
                   <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/30 mb-8 shrink-0">

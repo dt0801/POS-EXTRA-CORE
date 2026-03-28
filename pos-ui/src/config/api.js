@@ -32,6 +32,13 @@ const effectiveApiUrl = browserLocalBase
 
 export const API_URL = effectiveApiUrl.replace(/\/+$/, "");
 
+/** Chỉ khi UI mở từ máy quầy (localhost) thì /printers mới có thể trả máy in Windows. */
+export function isLocalQuayOrigin() {
+  if (typeof window === "undefined") return false;
+  const h = window.location.hostname;
+  return h === "localhost" || h === "127.0.0.1";
+}
+
 export function buildApiUrl(path) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${API_URL}${normalizedPath}`;

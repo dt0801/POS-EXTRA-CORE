@@ -122,6 +122,7 @@ let mongoConnectPromise = null;
 let settingsCache = {};
 let printersCache = [];
 const PRINT_BRIDGE_SECRET = (process.env.PRINT_BRIDGE_SECRET || "bbq-pos-bridge-secret-2024").trim();
+const PRINT_DISPATCH_MODE = (process.env.PRINT_DISPATCH_MODE || "queue").trim().toLowerCase();
 const bridgeClients = new Set();
 
 // =============================================
@@ -1125,6 +1126,7 @@ function startServer() {
   }
 
   function useBridgeQueue() {
+    if (PRINT_DISPATCH_MODE === "queue") return true;
     return bridgeClients.size > 0 && typeof global.printHtmlToDevice !== "function";
   }
 

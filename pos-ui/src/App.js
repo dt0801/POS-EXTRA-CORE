@@ -167,6 +167,14 @@ export default function App() {
   const [statsMonthlyData, setStatsMonthlyData] = useState(null);
   const [statsYearlyData,  setStatsYearlyData]  = useState(null);
   const [statsYear,     setStatsYear]     = useState(new Date().getFullYear().toString());
+  const [users, setUsers] = useState([]);
+  const [userLoading, setUserLoading] = useState(false);
+  const [newUser, setNewUser] = useState({
+    username: "",
+    password: "",
+    full_name: "",
+    role: "staff",
+  });
 
   const isAdmin = (authUser?.role || "staff") === "admin";
 
@@ -331,6 +339,68 @@ export default function App() {
     }
   };
 
+  const fetchUsers = useCallback(async () => {
+    if (!isAdmin) return;
+    setUserLoading(true);
+    try {
+      const res = await authedFetch(`${API_URL}/users`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Không tải được user");
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setUsers([]);
+    }
+    setUserLoading(false);
+  }, [isAdmin, authedFetch]);
+
+  const createUser = async () => {
+    if (!newUser.username || !newUser.password) {
+      alert("Nhập username và password");
+      return;
+    }
+    try {
+      const res = await authedFetch(`${API_URL}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Không tạo được user");
+      setNewUser({ username: "", password: "", full_name: "", role: "staff" });
+      fetchUsers();
+    } catch (e) {
+      alert(e.message || "Không tạo được user");
+    }
+  };
+
+  const updateUser = async (u, patch) => {
+    try {
+      const res = await authedFetch(`${API_URL}/users/${u.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...patch }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Không cập nhật được user");
+      fetchUsers();
+    } catch (e) {
+      alert(e.message || "Không cập nhật được user");
+    }
+  };
+
+  const deleteUser = async (u) => {
+    if (!window.confirm(`Xóa user ${u.username}?`)) return;
+    try {
+      const res = await authedFetch(`${API_URL}/users/${u.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Không xóa được user");
+      fetchUsers();
+    } catch (e) {
+      alert(e.message || "Không xóa được user");
+    }
+  };
+
   // Fetch db printers khi vào tab settings
   useEffect(() => {
     if (sidebarView === "settings") {
@@ -338,6 +408,12 @@ export default function App() {
       fetchWindowsPrinters();
     }
   }, [sidebarView, fetchDbPrinters, fetchWindowsPrinters]);
+
+  useEffect(() => {
+    if (sidebarView === "users" && isAdmin) {
+      fetchUsers();
+    }
+  }, [sidebarView, isAdmin, fetchUsers]);
 
   /**
    * kitchenSent: lưu số lượng đã gửi bếp theo từng món
@@ -650,7 +726,7 @@ export default function App() {
 
   useEffect(() => {
     if (!authUser) return;
-    if (!isAdmin && ["manage", "history", "stats", "settings"].includes(sidebarView)) {
+    if (!isAdmin && ["manage", "history", "stats", "settings", "users"].includes(sidebarView)) {
       setSidebarView("order");
     }
   }, [authUser, isAdmin, sidebarView]);
@@ -1172,6 +1248,7 @@ export default function App() {
           {isAdmin && <SidebarItem icon="format_list_bulleted" label="Quản lý Thực Đơn" view="manage" isActive={sidebarView === "manage"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("manage")} />}
           {isAdmin && <SidebarItem icon="receipt_long" label="Lịch sử Hóa đơn" view="history" isActive={sidebarView === "history"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("history")} />}
           {isAdmin && <SidebarItem icon="trending_up" label="Thống kê Báo cáo" view="stats" isActive={sidebarView === "stats"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("stats")} />}
+          {isAdmin && <SidebarItem icon="group" label="Quản lý Nhân viên" view="users" isActive={sidebarView === "users"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("users")} />}
           {isAdmin && <SidebarItem icon="settings" label="Cài đặt Hệ thống" view="settings" isActive={sidebarView === "settings"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("settings")} />}
         </nav>
 
@@ -1208,6 +1285,11 @@ export default function App() {
 
       {/* ==================== CONTENT ROUTER ==================== */}
       <div className="flex-1 p-6 lg:p-10 flex flex-col overflow-hidden w-full max-w-[1600px] mx-auto">
+      {!isAdmin && (
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
+          Bạn đang ở <strong>màn hình nhân viên</strong>: chỉ được thao tác Order, gửi bếp và tạm tính.
+        </div>
+      )}
 
       {sidebarView === "tables" && (
         <TablesView
@@ -1954,6 +2036,104 @@ export default function App() {
                   </div>
                 </section>
               </div>
+            </div>
+          </div>
+        )}
+
+        {sidebarView === "users" && isAdmin && (
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <section className="xl:col-span-1 bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/30">
+                <h3 className="font-headline font-black text-xl mb-4">Thêm nhân viên</h3>
+                <div className="space-y-3">
+                  <input
+                    className="w-full rounded-xl border border-outline-variant/40 px-4 py-2.5 bg-surface-container"
+                    placeholder="Username"
+                    value={newUser.username}
+                    onChange={(e) => setNewUser((s) => ({ ...s, username: e.target.value }))}
+                  />
+                  <input
+                    type="password"
+                    className="w-full rounded-xl border border-outline-variant/40 px-4 py-2.5 bg-surface-container"
+                    placeholder="Mật khẩu"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser((s) => ({ ...s, password: e.target.value }))}
+                  />
+                  <input
+                    className="w-full rounded-xl border border-outline-variant/40 px-4 py-2.5 bg-surface-container"
+                    placeholder="Tên hiển thị"
+                    value={newUser.full_name}
+                    onChange={(e) => setNewUser((s) => ({ ...s, full_name: e.target.value }))}
+                  />
+                  <select
+                    className="w-full rounded-xl border border-outline-variant/40 px-4 py-2.5 bg-surface-container"
+                    value={newUser.role}
+                    onChange={(e) => setNewUser((s) => ({ ...s, role: e.target.value }))}
+                  >
+                    <option value="staff">Nhân viên</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <button
+                    onClick={createUser}
+                    className="w-full rounded-xl bg-primary text-white py-2.5 font-bold"
+                  >
+                    Tạo user
+                  </button>
+                </div>
+              </section>
+
+              <section className="xl:col-span-2 bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/30">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-headline font-black text-xl">Danh sách nhân viên</h3>
+                  <button onClick={fetchUsers} className="px-4 py-2 rounded-xl bg-surface-container-high font-semibold">
+                    Làm mới
+                  </button>
+                </div>
+                {userLoading ? (
+                  <div className="text-on-surface-variant">Đang tải...</div>
+                ) : (
+                  <div className="space-y-3">
+                    {users.map((u) => (
+                      <div key={u.id} className="p-4 rounded-2xl border border-outline-variant/30 bg-surface-container flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold truncate">{u.full_name || u.username}</div>
+                          <div className="text-xs text-on-surface-variant">{u.username}</div>
+                        </div>
+                        <select
+                          className="rounded-lg border border-outline-variant/40 px-2 py-1 bg-white text-sm"
+                          value={u.role}
+                          onChange={(e) => updateUser(u, { role: e.target.value })}
+                        >
+                          <option value="staff">staff</option>
+                          <option value="admin">admin</option>
+                        </select>
+                        <button
+                          onClick={() => updateUser(u, { is_active: Number(u.is_active) ? 0 : 1 })}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${Number(u.is_active) ? "bg-green-100 text-green-700" : "bg-stone-200 text-stone-700"}`}
+                        >
+                          {Number(u.is_active) ? "Đang bật" : "Đã khóa"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            const pw = window.prompt(`Đặt mật khẩu mới cho ${u.username}`);
+                            if (pw) updateUser(u, { password: pw });
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-bold"
+                        >
+                          Đổi mật khẩu
+                        </button>
+                        <button
+                          onClick={() => deleteUser(u)}
+                          className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-bold"
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                    ))}
+                    {!users.length && <div className="text-on-surface-variant">Chưa có user.</div>}
+                  </div>
+                )}
+              </section>
             </div>
           </div>
         )}

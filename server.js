@@ -544,8 +544,117 @@ function startServer() {
     }
   });
 
+  // =============================================
+  // USER MANAGEMENT APIs (admin)
+  // =============================================
+  app.get("/users", authMiddleware, requireRole("admin"), async (req, res) => {
+    try {
+      const rows = await mongoDb
+        .collection("users")
+        .find({})
+        .sort({ sqlite_id: 1 })
+        .project({
+          _id: 0,
+          id: "$sqlite_id",
+          username: 1,
+          role: 1,
+          full_name: 1,
+          is_active: 1,
+          created_at: 1,
+        })
+        .toArray();
+      res.json(rows);
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.post("/users", authMiddleware, requireRole("admin"), async (req, res) => {
+    try {
+      const { username, password, role, full_name } = req.body || {};
+      if (!username || !password) {
+        return res.status(400).json({ error: "Thiếu username/password" });
+      }
+      const safeRole = String(role || "staff").toLowerCase();
+      if (!["admin", "staff"].includes(safeRole)) {
+        return res.status(400).json({ error: "Role không hợp lệ" });
+      }
+      const exist = await mongoDb.collection("users").findOne({ username: String(username).trim() });
+      if (exist) return res.status(409).json({ error: "Username đã tồn tại" });
+      const nextId = await getNextMongoId("users");
+      const hash = await bcrypt.hash(String(password), 10);
+      await mongoDb.collection("users").insertOne({
+        sqlite_id: nextId,
+        username: String(username).trim(),
+        password_hash: hash,
+        role: safeRole,
+        full_name: String(full_name || username).trim(),
+        is_active: 1,
+        session_version: 0,
+        active_session_id: "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      res.json({ created: true, id: nextId });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.put("/users/:id", authMiddleware, requireRole("admin"), async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { full_name, role, is_active, password } = req.body || {};
+      const patch = { updated_at: new Date().toISOString() };
+      if (full_name !== undefined) patch.full_name = String(full_name || "").trim();
+      if (role !== undefined) {
+        const safeRole = String(role).toLowerCase();
+        if (!["admin", "staff"].includes(safeRole)) {
+          return res.status(400).json({ error: "Role không hợp lệ" });
+        }
+        patch.role = safeRole;
+      }
+      if (is_active !== undefined) patch.is_active = is_active ? 1 : 0;
+      if (password) patch.password_hash = await bcrypt.hash(String(password), 10);
+
+      const before = await mongoDb.collection("users").findOne({ sqlite_id: id });
+      if (!before) return res.status(404).json({ error: "Không tìm thấy user" });
+      const roleChanged = patch.role && patch.role !== before.role;
+      const disabled = patch.is_active === 0 && Number(before.is_active) !== 0;
+      const resetSession = Boolean(password) || roleChanged || disabled;
+      if (resetSession) {
+        patch.session_version = Number(before.session_version || 0) + 1;
+        patch.active_session_id = "";
+      }
+      await mongoDb.collection("users").updateOne({ sqlite_id: id }, { $set: patch });
+      if (resetSession) notifyForceLogout(id, "Tài khoản của bạn vừa được cập nhật bởi admin");
+      res.json({ updated: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.delete("/users/:id", authMiddleware, requireRole("admin"), async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (id === Number(req.user.id)) {
+        return res.status(400).json({ error: "Không thể xóa chính mình" });
+      }
+      const user = await mongoDb.collection("users").findOne({ sqlite_id: id });
+      if (!user) return res.status(404).json({ error: "Không tìm thấy user" });
+      if (String(user.username) === "admin" && String(req.user.username) !== "admin") {
+        return res.status(403).json({ error: "Không thể xóa tài khoản admin mặc định" });
+      }
+      await mongoDb.collection("users").deleteOne({ sqlite_id: id });
+      notifyForceLogout(id, "Tài khoản đã bị xóa");
+      res.json({ deleted: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
   // Lấy toàn bộ menu
-  app.get("/menu", async (req, res) => {
+  app.get("/menu", authMiddleware, async (req, res) => {
     try {
       const docs = await mongoDb.collection("menu").find({}).sort({ sqlite_id: 1 }).toArray();
       res.json(
@@ -654,7 +763,7 @@ function startServer() {
   // ORDER SESSION (đơn đang order — lưu DB)
   // =============================================
 
-  app.get("/order-session", async (req, res) => {
+  app.get("/order-session", authMiddleware, async (req, res) => {
     const row = await mongoDb.collection("order_session").findOne({ id: 1 });
     const empty = { tableOrders: {}, itemNotes: {}, kitchenSent: {} };
     if (!row?.payload) return res.json(empty);
@@ -670,7 +779,7 @@ function startServer() {
     }
   });
 
-  app.put("/order-session", async (req, res) => {
+  app.put("/order-session", authMiddleware, async (req, res) => {
     const { tableOrders = {}, itemNotes = {}, kitchenSent = {} } = req.body || {};
     const payload = JSON.stringify({ tableOrders, itemNotes, kitchenSent });
     await mongoDb.collection("order_session").updateOne(
@@ -686,7 +795,7 @@ function startServer() {
   // =============================================
 
   // Lấy trạng thái tất cả bàn
-  app.get("/tables", async (req, res) => {
+  app.get("/tables", authMiddleware, async (req, res) => {
     try {
       const docs = await mongoDb.collection("tables").find({}).sort({ table_num: 1 }).toArray();
       res.json(
@@ -701,7 +810,7 @@ function startServer() {
   });
 
   // Cập nhật trạng thái bàn
-  app.post("/tables/:num/status", async (req, res) => {
+  app.post("/tables/:num/status", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const { num } = req.params;
     const { status } = req.body;
     try {
@@ -717,7 +826,7 @@ function startServer() {
   });
 
   // Thêm bàn mới
-  app.post("/tables", async (req, res) => {
+  app.post("/tables", authMiddleware, requireRole("admin"), async (req, res) => {
     const { table_num } = req.body;
     if (!table_num) return res.status(400).json({ error: "Thiếu số bàn" });
 
@@ -732,7 +841,7 @@ function startServer() {
   });
 
   // Đổi số bàn
-  app.put("/tables/:num", async (req, res) => {
+  app.put("/tables/:num", authMiddleware, requireRole("admin"), async (req, res) => {
     const oldNum = Number(req.params.num);
     const { new_num } = req.body;
     if (!new_num) return res.status(400).json({ error: "Thiếu số bàn mới" });
@@ -754,7 +863,7 @@ function startServer() {
   });
 
   // Xóa bàn
-  app.delete("/tables/:num", async (req, res) => {
+  app.delete("/tables/:num", authMiddleware, requireRole("admin"), async (req, res) => {
     const num = Number(req.params.num);
     try {
       const busy = await mongoDb.collection("tables").findOne({ table_num: num, status: "OPEN" });

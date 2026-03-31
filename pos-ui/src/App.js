@@ -3,6 +3,14 @@ import "./App.css";
 import { FILTERS } from "./constants/filters";
 import { API_URL, isLocalQuayOrigin } from "./config/api";
 import { isPosElectron, printViaElectronRemote } from "./services/electronPrint";
+import {
+  clearAuthSession,
+  fetchMe,
+  getAuthToken,
+  getAuthUser,
+  login as loginRequest,
+  logout as logoutRequest,
+} from "./services/authService";
 import { usePrinterStatus } from "./hooks/usePrinterStatus";
 import SidebarItem from "./components/layout/SidebarItem";
 import TablesView from "./components/views/TablesView";
@@ -93,10 +101,27 @@ const calcTotal = (tableData = {}) =>
 const calcTotalQty = (tableData = {}) =>
   Object.values(tableData).reduce((s, i) => s + i.qty, 0);
 
+function apiToWsUrl(apiUrl) {
+  try {
+    const u = new URL(apiUrl);
+    const proto = u.protocol === "https:" ? "wss:" : "ws:";
+    return `${proto}//${u.host}/pos`;
+  } catch {
+    return "ws://127.0.0.1:3000/pos";
+  }
+}
+
 // =============================================
 // MAIN COMPONENT
 // =============================================
 export default function App() {
+  const [authReady, setAuthReady] = useState(false);
+  const [authToken, setAuthToken] = useState("");
+  const [authUser, setAuthUser] = useState(null);
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginError, setLoginError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
+
   // ----- CORE STATE -----
   const [menu, setMenu]               = useState([]);
   const [currentTable, setCurrentTable] = useState(null);
@@ -143,18 +168,112 @@ export default function App() {
   const [statsYearlyData,  setStatsYearlyData]  = useState(null);
   const [statsYear,     setStatsYear]     = useState(new Date().getFullYear().toString());
 
-  // Load settings từ server khi khởi động
+  const isAdmin = (authUser?.role || "staff") === "admin";
+
+  const forceLogout = useCallback((reason) => {
+    clearAuthSession();
+    setAuthToken("");
+    setAuthUser(null);
+    if (reason) alert(reason);
+  }, []);
+
+  const authedFetch = useCallback((url, options = {}) => {
+    const token = authToken || getAuthToken();
+    const headers = {
+      ...(options.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    return fetch(url, { ...options, headers }).then((res) => {
+      if (res.status === 401) {
+        forceLogout("Phiên đăng nhập đã hết hạn hoặc bị đăng nhập ở thiết bị khác.");
+      }
+      return res;
+    });
+  }, [authToken, forceLogout]);
+
   useEffect(() => {
+    const token = getAuthToken();
+    const cachedUser = getAuthUser();
+    if (!token || !cachedUser) {
+      setAuthReady(true);
+      return;
+    }
+    setAuthToken(token);
+    fetchMe(token)
+      .then((user) => {
+        setAuthUser(user);
+      })
+      .catch(() => {
+        clearAuthSession();
+        setAuthToken("");
+        setAuthUser(null);
+      })
+      .finally(() => setAuthReady(true));
+  }, []);
+
+  useEffect(() => {
+    if (!authToken || !authUser) return;
+    const wsUrl = `${apiToWsUrl(API_URL)}?token=${encodeURIComponent(authToken)}`;
+    let ws;
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch {
+      return undefined;
+    }
+    ws.onmessage = (evt) => {
+      try {
+        const payload = JSON.parse(evt.data);
+        if (payload?.event === "FORCE_LOGOUT") {
+          forceLogout(payload.reason || "Phiên đăng nhập đã bị thay thế.");
+        }
+      } catch {
+        // ignore malformed event
+      }
+    };
+    return () => {
+      try {
+        ws.close();
+      } catch {}
+    };
+  }, [authToken, authUser, forceLogout]);
+
+  // Load settings từ server khi đăng nhập thành công
+  useEffect(() => {
+    if (!authUser) return;
     fetchSettings()
       .then((d) => setSettings((prev) => ({ ...prev, ...d })))
       .catch(() => {});
-  }, []);
+  }, [authUser]);
 
   // Lưu toàn bộ settings
   const saveAllSettings = async () => {
     await saveAllSettingsRequest(settings);
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 2000);
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError("");
+    setLoggingIn(true);
+    try {
+      const data = await loginRequest(loginForm.username, loginForm.password);
+      setAuthToken(data.token);
+      setAuthUser(data.user);
+      setSidebarView("order");
+      setLoginForm({ username: "", password: "" });
+    } catch (err) {
+      setLoginError(err.message || "Đăng nhập thất bại");
+    }
+    setLoggingIn(false);
+  };
+
+  const handleLogout = async () => {
+    const token = authToken || getAuthToken();
+    await logoutRequest(token);
+    setAuthToken("");
+    setAuthUser(null);
+    setSidebarView("order");
   };
 
   // Lấy danh sách máy in từ Windows
@@ -192,7 +311,7 @@ export default function App() {
 
   const updateDbPrinter = async (p, updates) => {
     try {
-      await fetch(`${API_URL}/windows_printers/${p.id}`, {
+      await authedFetch(`${API_URL}/windows_printers/${p.id}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...p, ...updates }),
       });
@@ -205,7 +324,7 @@ export default function App() {
   const deleteDbPrinter = async (id) => {
     if (!window.confirm("Xóa cấu hình máy in này?")) return;
     try {
-      await fetch(`${API_URL}/windows_printers/${id}`, { method: "DELETE" });
+      await authedFetch(`${API_URL}/windows_printers/${id}`, { method: "DELETE" });
       fetchDbPrinters();
     } catch (e) {
       alert("Lỗi xóa máy in");
@@ -283,7 +402,7 @@ export default function App() {
 
   const fetchMenu = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/menu`, {
+      const res = await authedFetch(`${API_URL}/menu`, {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -302,32 +421,32 @@ export default function App() {
       console.error("Lỗi fetch menu:", e);
       setMenu([]);
     }
-  }, []);
+  }, [authedFetch]);
 
   /** Fetch trạng thái tất cả bàn từ server */
   const fetchTableStatus = useCallback(() => {
-    fetch(`${API_URL}/tables`).then(r => r.json()).then(rows => {
+    authedFetch(`${API_URL}/tables`).then(r => r.json()).then(rows => {
       const map = {};
       rows.forEach(r => { map[r.table_num] = r.status; });
       setTableStatus(map);
     }).catch(e => console.error("Lỗi fetch tables:", e));
-  }, []);
+  }, [authedFetch]);
 
   /** Fetch lịch sử hóa đơn theo ngày */
   const fetchBills = useCallback((date) => {
-    fetch(`${API_URL}/bills?date=${date}`).then(r => r.json()).then(setBills)
+    authedFetch(`${API_URL}/bills?date=${date}`).then(r => r.json()).then(setBills)
       .catch(e => console.error("Lỗi fetch bills:", e));
-  }, []);
+  }, [authedFetch]);
 
   /** Fetch thống kê hôm nay */
   const fetchStatsToday = useCallback(() => {
-    fetch(`${API_URL}/stats/today`).then(r => r.json()).then(setStatsToday)
+    authedFetch(`${API_URL}/stats/today`).then(r => r.json()).then(setStatsToday)
       .catch(e => console.error("Lỗi fetch stats today:", e));
-  }, []);
+  }, [authedFetch]);
 
   /** Fetch chi tiết 1 bill */
   const fetchBillDetail = async (id) => {
-    const data = await fetch(`${API_URL}/bills/${id}`).then(r => r.json());
+    const data = await authedFetch(`${API_URL}/bills/${id}`).then(r => r.json());
     setSelectedBill(data);
   };
 
@@ -337,8 +456,8 @@ export default function App() {
    */
   const fetchTableList = useCallback(() => {
     Promise.all([
-      fetch(`${API_URL}/tables`).then(r => r.json()),
-      fetch(`${API_URL}/settings`).then(r => r.json()),
+      authedFetch(`${API_URL}/tables`).then(r => r.json()),
+      authedFetch(`${API_URL}/settings`).then(r => r.json()),
     ]).then(([rows, cfg]) => {
       const settingTotal = Number(cfg.total_tables) || 20;
       // Lấy số bàn lớn nhất trong DB (phòng trường hợp có bàn vượt settings)
@@ -354,14 +473,14 @@ export default function App() {
       }));
       setTableList(full);
     }).catch(() => {});
-  }, []);
+  }, [authedFetch]);
 
   // Load menu, trạng thái bàn VÀ danh sách bàn đầy đủ ngay khi khởi động
   useEffect(() => { fetchMenu(); fetchTableStatus(); fetchTableList(); }, [fetchMenu, fetchTableStatus, fetchTableList]);
 
   // Khôi phục đơn đang gọi từ DB (tắt app / mở lại không mất)
   useEffect(() => {
-    fetch(`${API_URL}/order-session`)
+    authedFetch(`${API_URL}/order-session`)
       .then(r => r.json())
       .then((data) => {
         if (data.tableOrders && typeof data.tableOrders === "object") setTableOrders(data.tableOrders);
@@ -370,19 +489,19 @@ export default function App() {
       })
       .catch(() => {})
       .finally(() => setOrderSessionReady(true));
-  }, []);
+  }, [authedFetch]);
 
   useEffect(() => {
     if (!orderSessionReady) return;
     const t = setTimeout(() => {
-      fetch(`${API_URL}/order-session`, {
+      authedFetch(`${API_URL}/order-session`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tableOrders, itemNotes, kitchenSent }),
       }).catch(() => {});
     }, 700);
     return () => clearTimeout(t);
-  }, [tableOrders, itemNotes, kitchenSent, orderSessionReady]);
+  }, [tableOrders, itemNotes, kitchenSent, orderSessionReady, authedFetch]);
 
   // Khi vào tab manage → reload lại danh sách bàn cho chắc
   useEffect(() => {
@@ -395,11 +514,11 @@ export default function App() {
   }, [sidebarView, historyDate, fetchBills]);
 
   const fetchStatsMonthly = useCallback((month) => {
-    fetch(`${API_URL}/stats/monthly?month=${month}`).then(r=>r.json()).then(setStatsMonthlyData).catch(()=>{});
-  }, []);
+    authedFetch(`${API_URL}/stats/monthly?month=${month}`).then(r=>r.json()).then(setStatsMonthlyData).catch(()=>{});
+  }, [authedFetch]);
   const fetchStatsYearly = useCallback((year) => {
-    fetch(`${API_URL}/stats/yearly?year=${year}`).then(r=>r.json()).then(setStatsYearlyData).catch(()=>{});
-  }, []);
+    authedFetch(`${API_URL}/stats/yearly?year=${year}`).then(r=>r.json()).then(setStatsYearlyData).catch(()=>{});
+  }, [authedFetch]);
 
   useEffect(() => {
     if (sidebarView === "stats") {
@@ -414,7 +533,7 @@ export default function App() {
   // =============================================
 
   /** Thêm món vào bàn, tự động set bàn → OPEN */
-  const addItem = useCallback((item) => {
+  const addItem = (item) => {
     if (!orderSessionReady) return alert("Đang tải dữ liệu đơn, thử lại sau vài giây.");
     if (!currentTable) return alert("Vui lòng chọn bàn trước!");
 
@@ -434,7 +553,7 @@ export default function App() {
     if (!tableStatus[currentTable] || tableStatus[currentTable] === "PAID") {
       updateTableStatus(currentTable, "OPEN");
     }
-  }, [currentTable, tableStatus, orderSessionReady]);
+  };
 
   /** Tăng / giảm số lượng món */
   const updateQty = useCallback((itemId, action) => {
@@ -471,7 +590,7 @@ export default function App() {
     if (isPosElectron() && endpoint.startsWith("/print/")) {
       return printViaElectronRemote(API_URL, endpoint, payload);
     }
-    const res = await fetch(`${API_URL}${endpoint}`, {
+    const res = await authedFetch(`${API_URL}${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -505,7 +624,7 @@ export default function App() {
     if (sidebarView !== "settings") return;
     setSettingsPreviewLoading(true);
     try {
-      const res = await fetch(`${API_URL}/print/preview`, {
+      const res = await authedFetch(`${API_URL}/print/preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -521,7 +640,7 @@ export default function App() {
       console.error(err);
     }
     setSettingsPreviewLoading(false);
-  }, [sidebarView, settingsPreviewPaper, settings.bill_css_override, buildSettingsPreviewPayload]);
+  }, [sidebarView, settingsPreviewPaper, settings.bill_css_override, buildSettingsPreviewPayload, authedFetch]);
 
   useEffect(() => {
     if (sidebarView !== "settings") return;
@@ -529,10 +648,17 @@ export default function App() {
     return () => clearTimeout(t);
   }, [sidebarView, settings.bill_css_override, settingsPreviewPaper, settings.store_name, settings.store_address, settings.store_phone, refreshSettingsBillPreview]);
 
+  useEffect(() => {
+    if (!authUser) return;
+    if (!isAdmin && ["manage", "history", "stats", "settings"].includes(sidebarView)) {
+      setSidebarView("order");
+    }
+  }, [authUser, isAdmin, sidebarView]);
+
   /** Cập nhật trạng thái bàn lên server và local state */
   const updateTableStatus = async (tableNum, status) => {
     setTableStatus(prev => ({ ...prev, [tableNum]: status }));
-    await fetch(`${API_URL}/tables/${tableNum}/status`, {
+    await authedFetch(`${API_URL}/tables/${tableNum}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -592,6 +718,7 @@ export default function App() {
    * KHÔNG reset bàn ở đây, nhân viên reset thủ công ở bước 6
    */
   const handlePayment = async () => {
+    if (!isAdmin) return alert("Bạn không có quyền thanh toán.");
     if (!orderSessionReady) return;
     if (!currentTable) return;
     if (currentItems.length === 0) return alert("Bàn chưa có món!");
@@ -606,7 +733,7 @@ export default function App() {
     }));
 
     // 1. Lưu bill lên server
-    await fetch(`${API_URL}/bills`, {
+    await authedFetch(`${API_URL}/bills`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -786,7 +913,7 @@ export default function App() {
     formData.append("price", newItem.price);
     formData.append("type", newItem.type);
     if (file) formData.append("image", file);
-    await fetch(`${API_URL}/menu`, { method: "POST", body: formData });
+    await authedFetch(`${API_URL}/menu`, { method: "POST", body: formData });
     setNewItem({ name: "", price: "", type: "FOOD" });
     setFile(null);
     fetchMenu();
@@ -799,7 +926,7 @@ export default function App() {
     formData.append("price", editItem.price);
     formData.append("type", editItem.type);
     if (editFile) formData.append("image", editFile);
-    await fetch(`${API_URL}/menu/${editItem.id}`, { method: "PUT", body: formData });
+    await authedFetch(`${API_URL}/menu/${editItem.id}`, { method: "PUT", body: formData });
     setEditItem(null);
     setEditFile(null);
     fetchMenu();
@@ -807,7 +934,7 @@ export default function App() {
 
   const deleteMenu = async (id) => {
     if (!window.confirm("Xóa món này?")) return;
-    await fetch(`${API_URL}/menu/${id}`, { method: "DELETE" });
+    await authedFetch(`${API_URL}/menu/${id}`, { method: "DELETE" });
     fetchMenu();
   };
 
@@ -830,7 +957,7 @@ export default function App() {
     }
 
     // Lưu bàn mới vào DB
-    await fetch(`${API_URL}/tables`, {
+    await authedFetch(`${API_URL}/tables`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ table_num: num }),
@@ -839,7 +966,7 @@ export default function App() {
     // Cập nhật total_tables nếu bàn mới vượt quá tổng hiện tại
     const currentTotal = tableList.length;
     if (num > currentTotal) {
-      await fetch(`${API_URL}/settings`, {
+      await authedFetch(`${API_URL}/settings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: "total_tables", value: String(num) }),
@@ -857,7 +984,7 @@ export default function App() {
     const { table_num, new_num } = editingTable;
     if (!new_num || Number(new_num) < 1) return showTableMsg("err", "Số bàn không hợp lệ");
     if (Number(new_num) === table_num) { setEditingTable(null); return; }
-    const res  = await fetch(`${API_URL}/tables/${table_num}`, {
+    const res  = await authedFetch(`${API_URL}/tables/${table_num}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ new_num: Number(new_num) }),
@@ -875,7 +1002,7 @@ export default function App() {
     // Nếu bàn chưa có trong DB (chưa từng dùng) thì chỉ xóa khỏi settings total_tables
     const inDb = tableList.find(t => t.table_num === num);
     if (inDb) {
-      const res  = await fetch(`${API_URL}/tables/${num}`, { method: "DELETE" });
+      const res  = await authedFetch(`${API_URL}/tables/${num}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) return showTableMsg("err", data.error);
     }
@@ -892,6 +1019,44 @@ export default function App() {
   // =============================================
   // RENDER
   // =============================================
+  if (!authReady) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-surface-container text-on-surface">
+        Đang kiểm tra phiên đăng nhập...
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-surface-container p-6">
+        <form onSubmit={handleLogin} className="w-full max-w-sm bg-surface p-6 rounded-2xl border border-outline-variant/30 shadow-sm space-y-4">
+          <h1 className="text-xl font-bold text-on-surface">Đăng nhập POS</h1>
+          <input
+            className="w-full border border-outline-variant/40 rounded-xl px-4 py-2.5 bg-surface-container-lowest"
+            placeholder="Tên đăng nhập"
+            value={loginForm.username}
+            onChange={(e) => setLoginForm((s) => ({ ...s, username: e.target.value }))}
+          />
+          <input
+            type="password"
+            className="w-full border border-outline-variant/40 rounded-xl px-4 py-2.5 bg-surface-container-lowest"
+            placeholder="Mật khẩu"
+            value={loginForm.password}
+            onChange={(e) => setLoginForm((s) => ({ ...s, password: e.target.value }))}
+          />
+          {loginError ? <div className="text-sm text-error">{loginError}</div> : null}
+          <button
+            type="submit"
+            disabled={loggingIn || !loginForm.username || !loginForm.password}
+            className="w-full rounded-xl bg-primary text-white py-2.5 font-bold disabled:opacity-60"
+          >
+            {loggingIn ? "Đang đăng nhập..." : "Đăng nhập"}
+          </button>
+        </form>
+      </div>
+    );
+  }
   
   return (
     <div className="h-screen bg-surface-container text-on-surface flex overflow-hidden font-body">
@@ -1004,21 +1169,32 @@ export default function App() {
         <nav className={`flex-1 flex flex-col gap-2 ${isSidebarExpanded ? "px-4" : "px-0"}`}>
           <SidebarItem icon="grid_view" label="Sơ đồ bàn" view="tables" isActive={sidebarView === "tables"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("tables")} />
           <SidebarItem icon="restaurant_menu" label="Menu Order" view="order" isActive={sidebarView === "order"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("order")} />
-          <SidebarItem icon="format_list_bulleted" label="Quản lý Thực Đơn" view="manage" isActive={sidebarView === "manage"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("manage")} />
-          <SidebarItem icon="receipt_long" label="Lịch sử Hóa đơn" view="history" isActive={sidebarView === "history"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("history")} />
-          <SidebarItem icon="trending_up" label="Thống kê Báo cáo" view="stats" isActive={sidebarView === "stats"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("stats")} />
-          <SidebarItem icon="settings" label="Cài đặt Hệ thống" view="settings" isActive={sidebarView === "settings"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("settings")} />
+          {isAdmin && <SidebarItem icon="format_list_bulleted" label="Quản lý Thực Đơn" view="manage" isActive={sidebarView === "manage"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("manage")} />}
+          {isAdmin && <SidebarItem icon="receipt_long" label="Lịch sử Hóa đơn" view="history" isActive={sidebarView === "history"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("history")} />}
+          {isAdmin && <SidebarItem icon="trending_up" label="Thống kê Báo cáo" view="stats" isActive={sidebarView === "stats"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("stats")} />}
+          {isAdmin && <SidebarItem icon="settings" label="Cài đặt Hệ thống" view="settings" isActive={sidebarView === "settings"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("settings")} />}
         </nav>
 
         <div className={`flex flex-col gap-4 mt-auto ${isSidebarExpanded ? "px-4" : "px-0 items-center"}`}>
+          {isSidebarExpanded ? (
+            <div className="px-2 text-xs text-on-surface-variant">
+              <div className="font-semibold text-on-surface">{authUser.full_name || authUser.username}</div>
+              <div className="uppercase tracking-wider">{authUser.role}</div>
+            </div>
+          ) : null}
           {/* Status Icons */}
           <div className={`flex items-center ${isSidebarExpanded ? "justify-between px-2" : "flex-col gap-4"} text-on-surface-variant`}>
             <div title={printerStatus === "online" ? "Máy in: Online" : "Máy in: Offline"} className="flex flex-col items-center gap-1">
                <span className="material-symbols-outlined text-[20px]">print</span>
                <span className={`w-2 h-2 rounded-full ${printerStatus === "online" ? "bg-green-400" : printerStatus === "offline" ? "bg-error" : "bg-yellow-400 animate-pulse"}`}/>
             </div>
-            <button onClick={() => fetch(`${API_URL}/open-log`, { method: "POST" })} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2" title="Mở Log Server">
-              <span className="material-symbols-outlined text-[20px]">terminal</span>
+            {isAdmin ? (
+              <button onClick={() => authedFetch(`${API_URL}/open-log`, { method: "POST" })} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2" title="Mở Log Server">
+                <span className="material-symbols-outlined text-[20px]">terminal</span>
+              </button>
+            ) : null}
+            <button onClick={handleLogout} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2" title="Đăng xuất">
+              <span className="material-symbols-outlined text-[20px]">logout</span>
             </button>
           </div>
           
@@ -1871,6 +2047,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 

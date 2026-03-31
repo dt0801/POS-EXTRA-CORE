@@ -6,6 +6,8 @@ const path    = require("path");
 const fs      = require("fs");
 const { exec } = require("child_process");
 const { WebSocketServer, WebSocket } = require("ws");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const { PrinterTypes, CharacterSet } = require("node-thermal-printer");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const {
@@ -19,6 +21,7 @@ const { menuSeedItems } = require("./server/seed/menuSeed");
 const cloudinary = require("cloudinary").v2;
 
 const customDriver = new WindowsRawDriver();
+const JWT_SECRET = (process.env.JWT_SECRET || "bbq-pos-jwt-secret-2024").trim();
 
 
 // ── Đường dẫn lưu dữ liệu cho web runtime ──
@@ -124,6 +127,76 @@ let printersCache = [];
 const PRINT_BRIDGE_SECRET = (process.env.PRINT_BRIDGE_SECRET || "bbq-pos-bridge-secret-2024").trim();
 const PRINT_DISPATCH_MODE = (process.env.PRINT_DISPATCH_MODE || "queue").trim().toLowerCase();
 const bridgeClients = new Set();
+const posClients = new Map(); // userId => Set<WebSocket>
+
+function makeSessionId() {
+  return Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+}
+
+function addPosClient(userId, ws) {
+  const key = String(userId);
+  if (!posClients.has(key)) posClients.set(key, new Set());
+  posClients.get(key).add(ws);
+}
+
+function removePosClient(userId, ws) {
+  const key = String(userId);
+  const set = posClients.get(key);
+  if (!set) return;
+  set.delete(ws);
+  if (set.size === 0) posClients.delete(key);
+}
+
+function notifyForceLogout(userId, reason = "Phiên đăng nhập đã được thay thế ở thiết bị khác") {
+  const set = posClients.get(String(userId));
+  if (!set) return;
+  const payload = JSON.stringify({ event: "FORCE_LOGOUT", reason });
+  for (const ws of set) {
+    if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+  }
+}
+
+async function authMiddleware(req, res, next) {
+  try {
+    const auth = String(req.headers.authorization || "");
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    if (!token) return res.status(401).json({ error: "Chưa đăng nhập" });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await mongoDb.collection("users").findOne({
+      sqlite_id: Number(decoded.id),
+      is_active: { $ne: 0 },
+    });
+    if (!user) return res.status(401).json({ error: "Tài khoản không tồn tại hoặc đã bị khóa" });
+    const tokenSid = String(decoded.session_id || "");
+    const tokenSv = Number(decoded.session_version || 0);
+    const activeSid = String(user.active_session_id || "");
+    const activeSv = Number(user.session_version || 0);
+    if (!tokenSid || tokenSid !== activeSid || tokenSv !== activeSv) {
+      return res.status(401).json({ error: "Phiên đăng nhập đã hết hiệu lực" });
+    }
+    req.user = {
+      id: Number(user.sqlite_id || 0),
+      username: user.username,
+      role: user.role || "staff",
+      full_name: user.full_name || user.username,
+      session_id: tokenSid,
+      session_version: tokenSv,
+      raw: user,
+    };
+    next();
+  } catch {
+    return res.status(401).json({ error: "Token không hợp lệ hoặc đã hết hạn" });
+  }
+}
+
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ error: "Không có quyền thực hiện thao tác này" });
+    }
+    next();
+  };
+}
 
 // =============================================
 // WEBSOCKET – Print Bridge (/bridge)
@@ -133,6 +206,29 @@ const wss = new WebSocketServer({ server });
 wss.on("connection", (ws, req) => {
   const rawUrl = req.url || "";
   const onlyPath = rawUrl.split("?")[0];
+  if (onlyPath === "/pos") {
+    try {
+      const token = rawUrl.match(/[?&]token=([^&]+)/)?.[1];
+      if (!token) {
+        ws.close(1008, "Unauthorized");
+        return;
+      }
+      const decoded = jwt.verify(decodeURIComponent(token), JWT_SECRET);
+      ws.userId = Number(decoded.id || 0);
+      ws.sessionId = String(decoded.session_id || "");
+      if (!ws.userId || !ws.sessionId) {
+        ws.close(1008, "Unauthorized");
+        return;
+      }
+      addPosClient(ws.userId, ws);
+      ws.on("close", () => removePosClient(ws.userId, ws));
+      ws.on("error", () => removePosClient(ws.userId, ws));
+      return;
+    } catch {
+      ws.close(1008, "Unauthorized");
+      return;
+    }
+  }
   if (onlyPath !== "/bridge") {
     ws.close(1008, "Unknown path");
     return;
@@ -256,6 +352,47 @@ async function seedMongoMenuIfEmpty() {
   console.log(`🌱 Mongo menu seed executed: ${menuSeedItems.length} món`);
 }
 
+async function ensureAuthBootstrap() {
+  const col = mongoDb.collection("users");
+  await col.createIndex({ username: 1 }, { unique: true });
+  const admin = await col.findOne({ username: "admin" });
+  if (!admin) {
+    const id = await getNextMongoId("users");
+    const hash = await bcrypt.hash("admin123", 10);
+    await col.insertOne({
+      sqlite_id: id,
+      username: "admin",
+      password_hash: hash,
+      role: "admin",
+      full_name: "Administrator",
+      is_active: 1,
+      session_version: 0,
+      active_session_id: "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    console.log("👤 Tạo tài khoản admin mặc định: admin / admin123");
+  }
+  const staff = await col.findOne({ username: "staff" });
+  if (!staff) {
+    const id = await getNextMongoId("users");
+    const hash = await bcrypt.hash("staff123", 10);
+    await col.insertOne({
+      sqlite_id: id,
+      username: "staff",
+      password_hash: hash,
+      role: "staff",
+      full_name: "Nhân viên",
+      is_active: 1,
+      session_version: 0,
+      active_session_id: "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    console.log("👤 Tạo tài khoản staff mặc định: staff / staff123");
+  }
+}
+
 /**
  * Mongo-only boot:
  * - connect Mongo
@@ -271,6 +408,7 @@ async function initMongoOnly() {
   }
 
   await seedMongoMenuIfEmpty();
+  await ensureAuthBootstrap();
 
   // Default settings để UI không bị undefined
   const defaultSettings = [
@@ -321,6 +459,90 @@ async function initMongoOnly() {
 // =============================================
 
 function startServer() {
+  // =============================================
+  // AUTH APIs
+  // =============================================
+  app.post("/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body || {};
+      if (!username || !password) return res.status(400).json({ error: "Thiếu username/password" });
+      const user = await mongoDb.collection("users").findOne({
+        username: String(username).trim(),
+        is_active: { $ne: 0 },
+      });
+      if (!user) return res.status(401).json({ error: "Tài khoản không tồn tại hoặc đã bị khóa" });
+      const ok = await bcrypt.compare(String(password), String(user.password_hash || ""));
+      if (!ok) return res.status(401).json({ error: "Mật khẩu không đúng" });
+
+      const previousSessionId = String(user.active_session_id || "");
+      const sessionVersion = Number(user.session_version || 0) + 1;
+      const sessionId = makeSessionId();
+      await mongoDb.collection("users").updateOne(
+        { sqlite_id: Number(user.sqlite_id) },
+        {
+          $set: {
+            session_version: sessionVersion,
+            active_session_id: sessionId,
+            updated_at: new Date().toISOString(),
+          },
+        }
+      );
+      if (previousSessionId) {
+        notifyForceLogout(user.sqlite_id, "Tài khoản đã đăng nhập trên thiết bị khác");
+      }
+      const token = jwt.sign(
+        {
+          id: Number(user.sqlite_id),
+          username: user.username,
+          role: user.role || "staff",
+          full_name: user.full_name || user.username,
+          session_id: sessionId,
+          session_version: sessionVersion,
+        },
+        JWT_SECRET,
+        { expiresIn: "12h" }
+      );
+      return res.json({
+        token,
+        user: {
+          id: Number(user.sqlite_id),
+          username: user.username,
+          role: user.role || "staff",
+          full_name: user.full_name || user.username,
+        },
+      });
+    } catch (e) {
+      return res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.get("/auth/me", authMiddleware, (req, res) => {
+    res.json({
+      id: req.user.id,
+      username: req.user.username,
+      role: req.user.role,
+      full_name: req.user.full_name,
+    });
+  });
+
+  app.post("/auth/logout", authMiddleware, async (req, res) => {
+    try {
+      await mongoDb.collection("users").updateOne(
+        { sqlite_id: req.user.id },
+        {
+          $set: {
+            active_session_id: "",
+            session_version: Number(req.user.session_version || 0) + 1,
+            updated_at: new Date().toISOString(),
+          },
+        }
+      );
+      notifyForceLogout(req.user.id, "Bạn đã đăng xuất");
+      return res.json({ success: true });
+    } catch (e) {
+      return res.status(500).json({ error: e.message || String(e) });
+    }
+  });
 
   // Lấy toàn bộ menu
   app.get("/menu", async (req, res) => {
@@ -341,7 +563,7 @@ function startServer() {
   });
 
   // Thêm món mới
-  app.post("/menu", menuUpload.single("image"), async (req, res) => {
+  app.post("/menu", authMiddleware, requireRole("admin"), menuUpload.single("image"), async (req, res) => {
     const { name, price, type } = req.body;
     try {
       let imageValue = "";
@@ -378,7 +600,7 @@ function startServer() {
   });
 
   // Cập nhật món
-  app.put("/menu/:id", menuUpload.single("image"), async (req, res) => {
+  app.put("/menu/:id", authMiddleware, requireRole("admin"), menuUpload.single("image"), async (req, res) => {
     const { name, price, type } = req.body;
     const { id } = req.params;
     try {
@@ -418,7 +640,7 @@ function startServer() {
   });
 
   // Xóa món
-  app.delete("/menu/:id", async (req, res) => {
+  app.delete("/menu/:id", authMiddleware, requireRole("admin"), async (req, res) => {
     try {
       const result = await mongoDb.collection("menu").deleteOne({ sqlite_id: Number(req.params.id) });
       if (result.deletedCount === 0) return res.status(404).json({ error: "Không tìm thấy món" });
@@ -550,7 +772,7 @@ function startServer() {
   // =============================================
 
   // Tạo hóa đơn mới
-  app.post("/bills", async (req, res) => {
+  app.post("/bills", authMiddleware, requireRole("admin"), async (req, res) => {
     const { table_num, total, items } = req.body || {};
     if (!table_num) return res.status(400).json({ error: "Thiếu table_num" });
     if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: "Danh sách món không hợp lệ" });
@@ -593,7 +815,7 @@ function startServer() {
   });
 
   // Lịch sử hóa đơn theo ngày
-  app.get("/bills", async (req, res) => {
+  app.get("/bills", authMiddleware, requireRole("admin"), async (req, res) => {
     const date = req.query.date || new Date().toISOString().split("T")[0];
     try {
       const bills = await mongoDb.collection("bills")
@@ -634,7 +856,7 @@ function startServer() {
   });
 
   // Chi tiết 1 hóa đơn
-  app.get("/bills/:id", async (req, res) => {
+  app.get("/bills/:id", authMiddleware, requireRole("admin"), async (req, res) => {
     const { id } = req.params;
     const billId = Number(id);
     try {
@@ -669,7 +891,7 @@ function startServer() {
   // =============================================
 
   // Doanh thu theo ngày trong tháng
-  app.get("/stats/daily", async (req, res) => {
+  app.get("/stats/daily", authMiddleware, requireRole("admin"), async (req, res) => {
     const month = req.query.month || new Date().toISOString().slice(0, 7);
     try {
       const bills = await mongoDb.collection("bills")
@@ -694,7 +916,7 @@ function startServer() {
   });
 
   // Stats theo tháng (gộp theo ngày trong tháng đó)
-  app.get("/stats/monthly", async (req, res) => {
+  app.get("/stats/monthly", authMiddleware, requireRole("admin"), async (req, res) => {
     const month = req.query.month || new Date().toISOString().slice(0, 7);
     try {
       const bills = await mongoDb.collection("bills")
@@ -746,7 +968,7 @@ function startServer() {
   });
 
   // Stats theo năm (gộp theo tháng)
-  app.get("/stats/yearly", async (req, res) => {
+  app.get("/stats/yearly", authMiddleware, requireRole("admin"), async (req, res) => {
     const year = req.query.year || new Date().getFullYear().toString();
     try {
       const bills = await mongoDb.collection("bills")
@@ -798,7 +1020,7 @@ function startServer() {
   });
 
   // Tổng quan hôm nay
-  app.get("/stats/today", async (req, res) => {
+  app.get("/stats/today", authMiddleware, requireRole("admin"), async (req, res) => {
     const today = new Date().toISOString().split("T")[0];
     try {
       const bills = await mongoDb.collection("bills")
@@ -886,7 +1108,7 @@ function startServer() {
   // WINDOWS PRINTERS APIs
   // =============================================
 
-  app.get("/windows_printers", async (req, res) => {
+  app.get("/windows_printers", authMiddleware, async (req, res) => {
     try {
       const docs = await mongoDb.collection("windows_printers").find({}).sort({ sqlite_id: 1 }).toArray();
       res.json(
@@ -903,7 +1125,7 @@ function startServer() {
     }
   });
 
-  app.post("/windows_printers", async (req, res) => {
+  app.post("/windows_printers", authMiddleware, requireRole("admin"), async (req, res) => {
     const { name, type, paper_size, is_enabled } = req.body || {};
     if (!name) return res.status(400).json({ error: "Thiếu tên máy in" });
     try {
@@ -922,7 +1144,7 @@ function startServer() {
     }
   });
 
-  app.put("/windows_printers/:id", async (req, res) => {
+  app.put("/windows_printers/:id", authMiddleware, requireRole("admin"), async (req, res) => {
     const { name, type, paper_size, is_enabled } = req.body || {};
     const id = Number(req.params.id);
     try {
@@ -945,7 +1167,7 @@ function startServer() {
     }
   });
 
-  app.delete("/windows_printers/:id", async (req, res) => {
+  app.delete("/windows_printers/:id", authMiddleware, requireRole("admin"), async (req, res) => {
     const id = Number(req.params.id);
     try {
       const result = await mongoDb.collection("windows_printers").deleteOne({ sqlite_id: id });
@@ -957,11 +1179,11 @@ function startServer() {
     }
   });
 
-  app.get("/settings", (req, res) => {
+  app.get("/settings", authMiddleware, (req, res) => {
     res.json(settingsCache);
   });
 
-  app.post("/settings", async (req, res) => {
+  app.post("/settings", authMiddleware, requireRole("admin"), async (req, res) => {
     const { key, value } = req.body || {};
     if (!key) return res.status(400).json({ error: "Missing key" });
     try {
@@ -1133,7 +1355,7 @@ function startServer() {
   // =============================================
   // LEGACY PRINT BRIDGE COMPAT (giống server cũ)
   // =============================================
-  app.get("/print/printers", async (req, res) => {
+  app.get("/print/printers", authMiddleware, async (req, res) => {
     try {
       res.json(printersCache.map(mapToLegacyPrinter));
     } catch (e) {
@@ -1141,7 +1363,7 @@ function startServer() {
     }
   });
 
-  app.post("/print/printers", async (req, res) => {
+  app.post("/print/printers", authMiddleware, requireRole("admin"), async (req, res) => {
     try {
       const { printer_name, job_type, paper_width } = req.body || {};
       if (!printer_name || !job_type) {
@@ -1164,7 +1386,7 @@ function startServer() {
     }
   });
 
-  app.put("/print/printers/:id", async (req, res) => {
+  app.put("/print/printers/:id", authMiddleware, requireRole("admin"), async (req, res) => {
     try {
       const id = Number(req.params.id);
       const { printer_name, job_type, paper_width, is_active } = req.body || {};
@@ -1186,7 +1408,7 @@ function startServer() {
     }
   });
 
-  app.delete("/print/printers/:id", async (req, res) => {
+  app.delete("/print/printers/:id", authMiddleware, requireRole("admin"), async (req, res) => {
     try {
       const id = Number(req.params.id);
       await mongoDb.collection("windows_printers").deleteOne({ sqlite_id: id });
@@ -1284,7 +1506,7 @@ function startServer() {
   });
 
   // Hàng đợi in phía client (Electron / máy quầy)
-  app.post("/print/render-queue", async (req, res) => {
+  app.post("/print/render-queue", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const { action } = req.body || {};
     try {
       if (action === "kitchen") {
@@ -1407,7 +1629,7 @@ function startServer() {
   });
 
   // In phiếu bếp (Tách Đồ ăn -> Bếp, Nước uống -> Bill/Pha chế)
-  app.post("/print/kitchen", async (req, res) => {
+  app.post("/print/kitchen", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const { table_num, items = [] } = req.body;
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Danh sách món không hợp lệ" });
@@ -1472,7 +1694,7 @@ function startServer() {
   });
 
   // Tạm tính
-  app.post("/print/tamtinh", async (req, res) => {
+  app.post("/print/tamtinh", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const { table_num, items = [], total } = req.body;
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Danh sách món không hợp lệ" });
@@ -1512,7 +1734,7 @@ function startServer() {
   });
 
   // In hóa đơn tài chính
-  app.post("/print/bill", async (req, res) => {
+  app.post("/print/bill", authMiddleware, requireRole("admin"), async (req, res) => {
     const { table_num, items = [], total } = req.body;
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Danh sách món không hợp lệ" });
@@ -1554,7 +1776,7 @@ function startServer() {
   });
 
   // In lại hóa đơn từ lịch sử
-  app.post("/print/bill/:id", async (req, res) => {
+  app.post("/print/bill/:id", authMiddleware, requireRole("admin"), async (req, res) => {
     const { id } = req.params;
     const billId = Number(id);
     try {
@@ -1635,7 +1857,7 @@ function startServer() {
   });
 
   // Mở cửa sổ Log Electron từ React UI
-  app.post("/open-log", (req, res) => {
+  app.post("/open-log", authMiddleware, requireRole("admin"), (req, res) => {
     if (typeof global.openLogWindow === "function") {
       global.openLogWindow();
       res.json({ ok: true });

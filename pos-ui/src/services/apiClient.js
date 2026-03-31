@@ -1,4 +1,5 @@
 import { buildApiUrl } from "../config/api";
+import { clearAuthSession, getAuthToken } from "./authService";
 
 async function parseJsonSafe(response) {
   try {
@@ -9,12 +10,18 @@ async function parseJsonSafe(response) {
 }
 
 export async function apiRequest(path, options = {}) {
-  const response = await fetch(buildApiUrl(path), options);
+  const token = getAuthToken();
+  const headers = {
+    ...(options.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  const response = await fetch(buildApiUrl(path), { ...options, headers });
   const data = await parseJsonSafe(response);
   if (!response.ok) {
     const error = new Error(data.error || "Yeu cau that bai");
     error.status = response.status;
     error.payload = data;
+    if (response.status === 401) clearAuthSession();
     throw error;
   }
   return data;

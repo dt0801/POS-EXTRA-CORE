@@ -1,9 +1,11 @@
 const express = require("express");
 const cors    = require("cors");
 const multer  = require("multer");
+const http    = require("http");
 const path    = require("path");
 const fs      = require("fs");
 const { exec } = require("child_process");
+const { WebSocketServer, WebSocket } = require("ws");
 const { PrinterTypes, CharacterSet } = require("node-thermal-printer");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const {
@@ -34,6 +36,7 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 const UI_BUILD = path.join(__dirname, "pos-ui", "build");
 
 const app = express();
+const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(UPLOADS_DIR));
@@ -118,6 +121,45 @@ let mongoReady = false;
 let mongoConnectPromise = null;
 let settingsCache = {};
 let printersCache = [];
+const PRINT_BRIDGE_SECRET = (process.env.PRINT_BRIDGE_SECRET || "bbq-pos-bridge-secret-2024").trim();
+const bridgeClients = new Set();
+
+// =============================================
+// WEBSOCKET – Print Bridge (/bridge)
+// =============================================
+const wss = new WebSocketServer({ server });
+
+wss.on("connection", (ws, req) => {
+  const rawUrl = req.url || "";
+  const onlyPath = rawUrl.split("?")[0];
+  if (onlyPath !== "/bridge") {
+    ws.close(1008, "Unknown path");
+    return;
+  }
+  const secret = rawUrl.match(/[?&]secret=([^&]+)/)?.[1];
+  if (secret !== PRINT_BRIDGE_SECRET) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
+  bridgeClients.add(ws);
+  console.log(`✅ Print Bridge kết nối. Tổng: ${bridgeClients.size}`);
+  ws.on("close", () => {
+    bridgeClients.delete(ws);
+    console.log(`⚠️  Print Bridge ngắt. Còn: ${bridgeClients.size}`);
+  });
+  ws.on("error", () => {
+    bridgeClients.delete(ws);
+  });
+});
+
+function broadcastToBridges(payload) {
+  const message = JSON.stringify(payload);
+  for (const ws of bridgeClients) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+    }
+  }
+}
 
 async function connectMongoIfConfigured() {
   const uri = (process.env.MONGODB_URI || process.env.MONGO_URL || "").trim();
@@ -1042,6 +1084,203 @@ function startServer() {
     }));
   }
 
+  function mapToLegacyPrinter(row) {
+    return {
+      id: Number(row.id || 0),
+      printer_name: row.name,
+      job_type: row.type || "ALL",
+      paper_width: Number(row.paper_size || 80),
+      is_active: Number(row.is_enabled) === 1,
+      created_at: row.created_at || new Date().toISOString(),
+    };
+  }
+
+  async function createPrintJob(jobType, billId, payload) {
+    const nextId = await getNextMongoId("print_jobs");
+    const doc = {
+      sqlite_id: nextId,
+      bill_id: billId || null,
+      job_type: jobType,
+      payload,
+      status: "pending",
+      error_message: "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    await mongoDb.collection("print_jobs").insertOne(doc);
+    broadcastToBridges({
+      event: "NEW_PRINT_JOB",
+      job: {
+        id: nextId,
+        bill_id: doc.bill_id,
+        job_type: doc.job_type,
+        payload: doc.payload,
+        status: doc.status,
+        error_message: doc.error_message,
+        created_at: doc.created_at,
+        updated_at: doc.updated_at,
+      },
+    });
+    return doc;
+  }
+
+  function useBridgeQueue() {
+    return bridgeClients.size > 0 && typeof global.printHtmlToDevice !== "function";
+  }
+
+  // =============================================
+  // LEGACY PRINT BRIDGE COMPAT (giống server cũ)
+  // =============================================
+  app.get("/print/printers", async (req, res) => {
+    try {
+      res.json(printersCache.map(mapToLegacyPrinter));
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.post("/print/printers", async (req, res) => {
+    try {
+      const { printer_name, job_type, paper_width } = req.body || {};
+      if (!printer_name || !job_type) {
+        return res.status(400).json({ error: "Thiếu printer_name hoặc job_type" });
+      }
+      const nextId = await getNextMongoId("windows_printers");
+      await mongoDb.collection("windows_printers").insertOne({
+        sqlite_id: nextId,
+        name: String(printer_name).trim(),
+        type: String(job_type).trim().toUpperCase() || "ALL",
+        paper_size: Number(paper_width) || 80,
+        is_enabled: 1,
+        created_at: new Date().toISOString(),
+      });
+      await refreshPrintersCache();
+      const created = printersCache.find((p) => Number(p.id) === nextId);
+      res.json(mapToLegacyPrinter(created || { id: nextId, name: printer_name, type: job_type, paper_size: paper_width, is_enabled: 1 }));
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.put("/print/printers/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { printer_name, job_type, paper_width, is_active } = req.body || {};
+      const setData = {};
+      if (printer_name !== undefined) setData.name = String(printer_name || "").trim();
+      if (job_type !== undefined) setData.type = String(job_type || "ALL").trim().toUpperCase();
+      if (paper_width !== undefined) setData.paper_size = Number(paper_width) || 80;
+      if (is_active !== undefined) setData.is_enabled = is_active ? 1 : 0;
+      const result = await mongoDb.collection("windows_printers").updateOne(
+        { sqlite_id: id },
+        { $set: setData }
+      );
+      if (!result.matchedCount) return res.status(404).json({ error: "Không tìm thấy máy in" });
+      await refreshPrintersCache();
+      const updated = printersCache.find((p) => Number(p.id) === id);
+      res.json(mapToLegacyPrinter(updated || { id, ...setData }));
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.delete("/print/printers/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await mongoDb.collection("windows_printers").deleteOne({ sqlite_id: id });
+      await refreshPrintersCache();
+      res.json({ deleted: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.get("/print/jobs", async (req, res) => {
+    try {
+      const status = String(req.query.status || "pending");
+      const limit = Number(req.query.limit) || 50;
+      const docs = await mongoDb
+        .collection("print_jobs")
+        .find({ status })
+        .sort({ sqlite_id: 1 })
+        .limit(limit)
+        .toArray();
+      res.json(
+        docs.map((d) => ({
+          id: Number(d.sqlite_id || 0),
+          bill_id: d.bill_id ?? null,
+          job_type: d.job_type,
+          payload: d.payload,
+          status: d.status || "pending",
+          error_message: d.error_message || "",
+          created_at: d.created_at,
+          updated_at: d.updated_at,
+        }))
+      );
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.post("/print/jobs/:id/done", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const result = await mongoDb.collection("print_jobs").updateOne(
+        { sqlite_id: id, status: "pending" },
+        { $set: { status: "done", updated_at: new Date().toISOString() } }
+      );
+      if (!result.matchedCount) return res.status(404).json({ error: "Job không tồn tại hoặc đã xử lý" });
+      const job = await mongoDb.collection("print_jobs").findOne({ sqlite_id: id });
+      res.json({ success: true, job });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.post("/print/jobs/:id/fail", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { error_message } = req.body || {};
+      const result = await mongoDb.collection("print_jobs").updateOne(
+        { sqlite_id: id },
+        {
+          $set: {
+            status: "failed",
+            error_message: String(error_message || "Unknown error"),
+            updated_at: new Date().toISOString(),
+          },
+        }
+      );
+      if (!result.matchedCount) return res.status(404).json({ error: "Job không tồn tại" });
+      const job = await mongoDb.collection("print_jobs").findOne({ sqlite_id: id });
+      res.json({ success: true, job });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  app.post("/print/jobs/:id/retry", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const result = await mongoDb.collection("print_jobs").updateOne(
+        { sqlite_id: id },
+        {
+          $set: {
+            status: "pending",
+            error_message: "",
+            updated_at: new Date().toISOString(),
+          },
+        }
+      );
+      if (!result.matchedCount) return res.status(404).json({ error: "Job không tồn tại" });
+      const job = await mongoDb.collection("print_jobs").findOne({ sqlite_id: id });
+      broadcastToBridges({ event: "NEW_PRINT_JOB", job });
+      res.json({ success: true, job });
+    } catch (e) {
+      res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
   // Hàng đợi in phía client (Electron / máy quầy)
   app.post("/print/render-queue", async (req, res) => {
     const { action } = req.body || {};
@@ -1171,6 +1410,18 @@ function startServer() {
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Danh sách món không hợp lệ" });
     }
+    if (useBridgeQueue()) {
+      try {
+        const job = await createPrintJob("KITCHEN", null, {
+          table_num,
+          items,
+          note: "",
+        });
+        return res.json({ success: true, job_id: Number(job.sqlite_id || 0) });
+      } catch (e) {
+        return res.status(500).json({ error: e.message || String(e) });
+      }
+    }
 
     const nowText = new Date().toLocaleString("vi-VN");
     const foodItems = items.filter((i) => i.type !== "DRINK");
@@ -1224,6 +1475,18 @@ function startServer() {
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Danh sách món không hợp lệ" });
     }
+    if (useBridgeQueue()) {
+      try {
+        const job = await createPrintJob("TAMTINH", null, {
+          table_num,
+          items,
+          total,
+        });
+        return res.json({ success: true, job_id: Number(job.sqlite_id || 0) });
+      } catch (e) {
+        return res.status(500).json({ error: e.message || String(e) });
+      }
+    }
 
     try {
       const store = getStoreProfile();
@@ -1251,6 +1514,18 @@ function startServer() {
     const { table_num, items = [], total } = req.body;
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Danh sách món không hợp lệ" });
+    }
+    if (useBridgeQueue()) {
+      try {
+        const job = await createPrintJob("BILL", null, {
+          table_num,
+          items,
+          total,
+        });
+        return res.json({ success: true, job_id: Number(job.sqlite_id || 0) });
+      } catch (e) {
+        return res.status(500).json({ error: e.message || String(e) });
+      }
     }
 
     try {
@@ -1288,6 +1563,20 @@ function startServer() {
         .find({ bill_id: billId })
         .sort({ sqlite_id: 1 })
         .toArray();
+    if (useBridgeQueue()) {
+      try {
+        const job = await createPrintJob("BILL", billId, {
+          bill_id: billId,
+          table_num: Number(bill.table_num || 0),
+          items,
+          total: Number(bill.total || 0),
+          reprint: true,
+        });
+        return res.json({ success: true, job_id: Number(job.sqlite_id || 0) });
+      } catch (err) {
+        return res.status(500).json({ error: err.message || String(err) });
+      }
+    }
     try {
       const store = getStoreProfile();
       const sent = dispatchReceiptToType("BILL", {
@@ -1315,6 +1604,13 @@ function startServer() {
 
   // Kiểm tra kết nối máy in
   app.get("/print/status", async (req, res) => {
+    if (bridgeClients.size > 0) {
+      return res.json({
+        connected: true,
+        bridge_count: bridgeClients.size,
+        mode: "bridge",
+      });
+    }
     const printers = printersCache.filter((p) => Number(p.is_enabled) === 1);
     if (printers.length === 0) return res.json({ connected: false });
     
@@ -1333,7 +1629,7 @@ function startServer() {
          // skip
        }
     }
-    res.json({ connected: allConnected, count: printers.length });
+    res.json({ connected: allConnected, count: printers.length, bridge_count: bridgeClients.size, mode: "local" });
   });
 
   // Mở cửa sổ Log Electron từ React UI
@@ -1389,11 +1685,12 @@ function startServer() {
   // =============================================
   // START SERVER
   // =============================================
-  app.listen(3000, () => {
+  server.listen(3000, () => {
     console.log("✅ Server đang chạy tại http://localhost:3000");
     const printerIp = getPrinterIP();
     console.log(`🖨️  Máy in POS: ${printerIp ? `tcp://${printerIp}` : "chưa cấu hình"}`);
     console.log("   → Cấu hình IP máy in qua giao diện Settings");
+    console.log(`🔌 Print Bridge WS: ws://localhost:3000/bridge?secret=${PRINT_BRIDGE_SECRET}`);
     if (typeof global.printHtmlToDevice !== "function") {
       console.log("ℹ️  In HTML ngầm tới máy Windows: chạy `npm run electron` (cùng thư mục, đã build UI nếu cần).");
     }

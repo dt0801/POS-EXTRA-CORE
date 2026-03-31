@@ -3,7 +3,6 @@ import "./App.css";
 import { FILTERS } from "./constants/filters";
 import { API_URL, isLocalQuayOrigin } from "./config/api";
 import { isPosElectron, printViaElectronRemote } from "./services/electronPrint";
-import { printViaBridgeRemote } from "./services/bridgeWs";
 import { usePrinterStatus } from "./hooks/usePrinterStatus";
 import SidebarItem from "./components/layout/SidebarItem";
 import TablesView from "./components/views/TablesView";
@@ -471,14 +470,6 @@ export default function App() {
   const callPrintApi = async (endpoint, payload) => {
     if (isPosElectron() && endpoint.startsWith("/print/")) {
       return printViaElectronRemote(API_URL, endpoint, payload);
-    }
-    if (endpoint.startsWith("/print/")) {
-      try {
-        return await printViaBridgeRemote(API_URL, endpoint, payload);
-      } catch (bridgeErr) {
-        // Fallback về API cũ để tương thích khi chưa chạy bridge
-        console.warn("Bridge print fallback:", bridgeErr?.message || bridgeErr);
-      }
     }
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: "POST",

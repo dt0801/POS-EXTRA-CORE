@@ -1,6 +1,5 @@
 import { get, post } from "./apiClient";
 import { electronListPrinters, isPosElectron } from "./electronPrint";
-import { bridgeListPrinters } from "./bridgeWs";
 
 export function fetchPrinterStatus() {
   return get("/print/status");
@@ -11,8 +10,12 @@ export async function fetchWindowsPrinters() {
     return electronListPrinters();
   }
   try {
-    const viaBridge = await bridgeListPrinters();
-    if (viaBridge.length) return viaBridge;
+    const configured = await get("/print/printers");
+    if (Array.isArray(configured) && configured.length) {
+      return configured
+        .map((p) => ({ name: p.printer_name || p.name || "" }))
+        .filter((p) => p.name);
+    }
   } catch {
     // fallback HTTP API
   }

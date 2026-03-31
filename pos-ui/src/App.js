@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import "./App.css";
 import { FILTERS } from "./constants/filters";
 import { API_URL, isLocalQuayOrigin } from "./config/api";
+import { isPosElectron, printViaElectronRemote } from "./services/electronPrint";
 import { usePrinterStatus } from "./hooks/usePrinterStatus";
 import SidebarItem from "./components/layout/SidebarItem";
 import TablesView from "./components/views/TablesView";
@@ -467,6 +468,9 @@ export default function App() {
   // =============================================
 
   const callPrintApi = async (endpoint, payload) => {
+    if (isPosElectron() && endpoint.startsWith("/print/")) {
+      return printViaElectronRemote(API_URL, endpoint, payload);
+    }
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1610,7 +1614,7 @@ export default function App() {
                     </button>
                   </div>
 
-                  {!isLocalQuayOrigin() && (
+                  {!isLocalQuayOrigin() && !isPosElectron() && (
                     <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
                       <p className="font-bold mb-1">Tại sao không thấy máy in?</p>
                       <p className="text-amber-900/90 leading-relaxed">

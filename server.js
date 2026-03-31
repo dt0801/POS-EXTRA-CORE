@@ -1016,16 +1016,153 @@ function startServer() {
     return v && String(v).trim() ? String(v).trim() : "";
   }
 
+  function getEnabledPrintersByType(type) {
+    return printersCache.filter(
+      (p) => Number(p.is_enabled) === 1 && (p.type === type || p.type === "ALL")
+    );
+  }
+
   const { buildReceiptHtml } = createBuildReceiptHtml({
     getBillCssOverride,
     getStoreProfile,
   });
   const { dispatchReceiptToType } = createDispatchReceiptToType({
-    getEnabledPrintersByType: (type) =>
-      printersCache.filter(
-        (p) => Number(p.is_enabled) === 1 && (p.type === type || p.type === "ALL")
-      ),
+    getEnabledPrintersByType,
     buildReceiptHtml,
+  });
+
+  /** Dùng cho Electron + UI cloud: render HTML + máy đích, không in trên server. */
+  function enqueueJobsForType(type, receiptData) {
+    const printers = getEnabledPrintersByType(type);
+    return printers.map((printer) => ({
+      printType: type,
+      printerName: printer.name,
+      paperSize: printer.paper_size || 80,
+      html: buildReceiptHtml(receiptData, printer.paper_size || 80),
+    }));
+  }
+
+  // Hàng đợi in phía client (Electron / máy quầy)
+  app.post("/print/render-queue", async (req, res) => {
+    const { action } = req.body || {};
+    try {
+      if (action === "kitchen") {
+        const { table_num, items = [] } = req.body;
+        if (!Array.isArray(items) || items.length === 0) {
+          return res.status(400).json({ error: "Danh sách món không hợp lệ" });
+        }
+        const nowText = new Date().toLocaleString("vi-VN");
+        const foodItems = items.filter((i) => i.type !== "DRINK");
+        const drinkItems = items.filter((i) => i.type === "DRINK");
+        const prints = [];
+        if (foodItems.length > 0) {
+          prints.push(
+            ...enqueueJobsForType("KITCHEN", {
+              title: "PHIẾU BẾP",
+              subtitle: "ĐỒ ĂN",
+              tableNum: table_num,
+              timeLabel: "Giờ",
+              timeValue: nowText,
+              items: foodItems,
+              footer: "Giao bếp",
+              hidePrices: true,
+            })
+          );
+        }
+        if (drinkItems.length > 0) {
+          prints.push(
+            ...enqueueJobsForType("BILL", {
+              title: "PHIẾU PHA CHẾ",
+              subtitle: "NƯỚC",
+              tableNum: table_num,
+              timeLabel: "Giờ",
+              timeValue: nowText,
+              items: drinkItems,
+              footer: "Pha chế",
+              hidePrices: true,
+            })
+          );
+        }
+        return res.json({ success: true, prints, queued: prints.length });
+      }
+
+      if (action === "tamtinh") {
+        const { table_num, items = [], total } = req.body;
+        if (!Array.isArray(items) || items.length === 0) {
+          return res.status(400).json({ error: "Danh sách món không hợp lệ" });
+        }
+        const store = getStoreProfile();
+        const prints = enqueueJobsForType("TAMTINH", {
+          title: store.storeName || "TẠM TÍNH",
+          tableNum: table_num,
+          timeLabel: "Giờ",
+          timeValue: new Date().toLocaleString("vi-VN"),
+          items,
+          totalLabel: "TẠM TÍNH",
+          totalValue: total,
+          billNo: "--",
+          cashier: store.cashierName,
+          footer: "(Chưa thanh toán chính thức)",
+          groupItemsByType: true,
+        });
+        return res.json({ success: true, prints, queued: prints.length });
+      }
+
+      if (action === "bill") {
+        const { table_num, items = [], total } = req.body;
+        if (!Array.isArray(items) || items.length === 0) {
+          return res.status(400).json({ error: "Danh sách món không hợp lệ" });
+        }
+        const store = getStoreProfile();
+        const prints = enqueueJobsForType("BILL", {
+          title: store.storeName,
+          subtitle: store.storeSubtitle,
+          tableNum: table_num,
+          timeLabel: "Ngày",
+          timeValue: new Date().toLocaleString("vi-VN"),
+          items,
+          totalLabel: "THÀNH TIỀN",
+          totalValue: total,
+          billNo: "--",
+          cashier: store.cashierName,
+          footer: "Cảm ơn quý khách - Hẹn gặp lại!",
+          groupItemsByType: true,
+        });
+        return res.json({ success: true, prints, queued: prints.length });
+      }
+
+      if (action === "bill_reprint") {
+        const billId = Number(req.body.billId);
+        if (!billId) return res.status(400).json({ error: "Thiếu billId" });
+        const bill = await mongoDb.collection("bills").findOne({ sqlite_id: billId });
+        if (!bill) return res.status(404).json({ error: "Không tìm thấy hóa đơn" });
+        const items = await mongoDb
+          .collection("bill_items")
+          .find({ bill_id: billId })
+          .sort({ sqlite_id: 1 })
+          .toArray();
+        const store = getStoreProfile();
+        const prints = enqueueJobsForType("BILL", {
+          title: store.storeName,
+          subtitle: store.storeSubtitle,
+          tableNum: Number(bill.table_num || 0),
+          timeLabel: "Ngày",
+          timeValue: new Date(bill.created_at).toLocaleString("vi-VN"),
+          items,
+          totalLabel: "THÀNH TIỀN",
+          totalValue: Number(bill.total || 0),
+          billNo: Number(bill.sqlite_id ?? bill.id ?? billId),
+          cashier: store.cashierName,
+          footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
+          groupItemsByType: true,
+        });
+        return res.json({ success: true, prints, queued: prints.length });
+      }
+
+      return res.status(400).json({ error: "action không hợp lệ" });
+    } catch (e) {
+      return res.status(500).json({ error: e.message || String(e) });
+    }
   });
 
   // In phiếu bếp (Tách Đồ ăn -> Bếp, Nước uống -> Bill/Pha chế)

@@ -1,10 +1,14 @@
 import { get, post } from "./apiClient";
+import { electronListPrinters, isPosElectron } from "./electronPrint";
 
 export function fetchPrinterStatus() {
   return get("/print/status");
 }
 
-export function fetchWindowsPrinters() {
+export async function fetchWindowsPrinters() {
+  if (isPosElectron()) {
+    return electronListPrinters();
+  }
   return get("/printers");
 }
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * In HTML im lặng tới máy Windows qua Chromium (Electron), không qua dialog trình duyệt.
  */
 const { BrowserWindow } = require("electron");
@@ -59,4 +59,4 @@ function silentPrintJob(html, deviceName, options) {
   });
 }
 
-module.exports = { createPrintHtmlToDevice };
+module.exports = { createPrintHtmlToDevice, silentPrintJob };

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Citrus Terminal | BBQ POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "error-container": "#ffdad6",
+                "on-secondary-container": "#763006",
+                "tertiary-container": "#059eff",
+                "surface-dim": "#ddd9de",
+                "on-background": "#1c1b1f",
+                "primary": "#a04100",
+                "inverse-on-surface": "#f4eff5",
+                "primary-fixed-dim": "#ffb693",
+                "on-surface": "#1c1b1f",
+                "on-secondary": "#ffffff",
+                "surface-tint": "#a04100",
+                "error": "#ba1a1a",
+                "background": "#fdf8fd",
+                "on-primary-fixed": "#351000",
+                "outline": "#8e7164",
+                "on-surface-variant": "#5a4136",
+                "surface-container-low": "#f7f2f8",
+                "surface-container-high": "#ebe7ec",
+                "secondary-container": "#fe9a69",
+                "secondary": "#96481e",
+                "primary-container": "#ff6b00",
+                "on-tertiary-fixed": "#001d35",
+                "surface-container-highest": "#e5e1e7",
+                "primary-fixed": "#ffdbcc",
+                "tertiary": "#0062a1",
+                "on-primary-fixed-variant": "#7a3000",
+                "inverse-primary": "#ffb693",
+                "on-secondary-fixed": "#351000",
+                "surface-variant": "#e5e1e7",
+                "on-tertiary-container": "#003357",
+                "surface": "#fdf8fd",
+                "on-primary-container": "#572000",
+                "on-error": "#ffffff",
+                "surface-bright": "#fdf8fd",
+                "inverse-surface": "#313034",
+                "surface-container": "#f1ecf2",
+                "tertiary-fixed": "#d0e4ff",
+                "surface-container-lowest": "#ffffff",
+                "on-tertiary": "#ffffff",
+                "secondary-fixed": "#ffdbcc",
+                "on-secondary-fixed-variant": "#783207",
+                "on-tertiary-fixed-variant": "#00497b",
+                "tertiary-fixed-dim": "#9ccaff",
+                "outline-variant": "#e2bfb0",
+                "on-primary": "#ffffff",
+                "on-error-container": "#93000a",
+                "secondary-fixed-dim": "#ffb693"
+              },
+              fontFamily: {
+                "headline": ["Manrope"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "1.5rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .tonal-layering-no-border {
+            border: none !important;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container font-body text-on-surface antialiased">
+<!-- TopAppBar -->
+<header class="bg-orange-50/80 dark:bg-zinc-900/80 backdrop-blur-xl fixed top-0 w-full z-50 shadow-sm dark:shadow-none tonal-layering-no-border">
+<div class="flex items-center justify-between px-6 py-4 w-full">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-orange-600 dark:text-orange-500" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+<h1 class="text-orange-700 dark:text-orange-400 font-black tracking-tighter italic font-manrope headline-md">CITRUS TERMINAL</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-orange-100/50 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-zinc-500">search</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-orange-100/50 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-zinc-500">notifications</span>
+</button>
+</div>
+</div>
+</header>
+<main class="pt-20 pb-32">
+<!-- Category Filter -->
+<section class="sticky top-[72px] z-40 bg-surface-container py-4">
+<div class="flex overflow-x-auto hide-scrollbar px-6 gap-3">
+<button class="flex-none px-6 py-2.5 rounded-full bg-primary-container text-on-primary-container font-semibold text-sm transition-all active:scale-95">Tất cả</button>
+<button class="flex-none px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium text-sm hover:bg-orange-100/50 transition-all active:scale-95">Combo</button>
+<button class="flex-none px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium text-sm hover:bg-orange-100/50 transition-all active:scale-95">Khai vị</button>
+<button class="flex-none px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium text-sm hover:bg-orange-100/50 transition-all active:scale-95">Signature</button>
+<button class="flex-none px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium text-sm hover:bg-orange-100/50 transition-all active:scale-95">Nhậu</button>
+</div>
+</section>
+<!-- Menu Grid -->
+<section class="px-6 grid grid-cols-2 gap-4 mt-2">
+<!-- Item Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group">
+<div class="aspect-[4/3] relative overflow-hidden">
+<img alt="BBQ Ribs" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Glistening slow-cooked BBQ pork ribs with sticky glaze on a rustic wooden platter with rosemary sprigs and dark moody lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCC10rsh9wmPGCeREdo-xx6pyseFo4BwkoWpstZ-Wv60A1J9KAeCf45cGMmpInwVIGLCOlR4yNDwCoALdEijfg3RwhI3WtMXyLCD6W-3NuzV-C_ciq3yqgf36GIlRm0drB0pWGXINr7Cn_vzIF-QhUbZf64TmY0XWXKpa5hOrCsSrKMmUHmVVH53VrAOSZErDKuAT-DJgoIoGapb2lGVfGwrfFY_vQzxeOkn6iB1zqNFjNzQheEIPD9L5bIT1-MaqVAfuZ1WyyABaSW"/>
+</div>
+<div class="p-4">
+<h3 class="font-bold text-on-surface leading-tight text-sm mb-1">Sườn Nướng Tảng</h3>
+<div class="flex items-center justify-between mt-3">
+<span class="text-primary font-black text-base">345.000đ</span>
+<button class="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center active:scale-90 transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group">
+<div class="aspect-[4/3] relative overflow-hidden">
+<img alt="Beef Steak" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Perfectly seared wagyu beef steak slices showing pink medium-rare center on a ceramic plate with sea salt flakes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEoIlfBAwz75vWuXcdkde4AqhqaaQ4oqphlw0L82VRnx1V46MdV-IaZc6u6YwNSsbAbjFS-19rcyDWJwN04VzMUWtaFeJKnOuX3ZPOdGlB-li8MgeHR1qmjSb8dXDOnPeE4q9S1PS4-o-yncxGxYF8iARUz0uy2qw4gMznKLv7Tt0qB2QnSYFMy97XTy8JiDDwzh-OsrbOcv33AByvmpHiuTFjbvFqWBY8DJM2gKDifkHvAXP0pRWBQEvgne-aPA8pXa1WVNc1dvWO"/>
+</div>
+<div class="p-4">
+<h3 class="font-bold text-on-surface leading-tight text-sm mb-1">Bò Mỹ Thượng Hạng</h3>
+<div class="flex items-center justify-between mt-3">
+<span class="text-primary font-black text-base">420.000đ</span>
+<button class="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center active:scale-90 transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group">
+<div class="aspect-[4/3] relative overflow-hidden">
+<img alt="Grilled Chicken" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Assorted grilled chicken skewers and vegetables with char marks on a dark stone surface with dramatic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWb7pyi0FFVHTKH2oDvC236gUrgYu1BFhbGvVlKw4YhkB9WNu9gidqcjniKJbI78_UaUloUHzJ5-ZZ0Kh6JbFkFF-pHCjlXggCFQpGlGEmPpBmJNJNaUJkCuHoJ_rhK6rx6OUwcdFzYnHRT1HdhcDVi1NwyuRmI9LBMHU4GDA9zlSoOO90wPpf44N_xBds2G--t7165MbGcUQJET1Rh0XBNCUFE8tLLFyffUaUai2jQwdJGDMXeem1mIxLJdJSpSzKFKQfVgjVA5FI"/>
+</div>
+<div class="p-4">
+<h3 class="font-bold text-on-surface leading-tight text-sm mb-1">Combo Xiên Nướng</h3>
+<div class="flex items-center justify-between mt-3">
+<span class="text-primary font-black text-base">215.000đ</span>
+<button class="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center active:scale-90 transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item Card 4 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group">
+<div class="aspect-[4/3] relative overflow-hidden">
+<img alt="Kimchi" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Traditional Korean kimchi in a ceramic bowl with bright red chili flakes and fresh spring onions" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJXGffhIdSpVZ-XQGDvl6eDzcWBy51LbHabcUAc5lplgNgLaKbyLedkzcK1KdihGJ48yy-K1cLcOvNze1ozvtClGmkegsFUDSy172G8ntsijsoGhan2WmUAx5McNiPn5SERjBQVjBmri7-1S7nZEysbD1oR0jmjKcMWe9NOczUY9yINBljCdd_-5aBRIvKh-Orbfot_qg9U_EkMWjo3NX9tePh0WT7baLxgBCPn_hE7YJNXdTbXi751iVmCb2dabVqxWUZEVWtCTE3"/>
+</div>
+<div class="p-4">
+<h3 class="font-bold text-on-surface leading-tight text-sm mb-1">Kimchi Cải Thảo</h3>
+<div class="flex items-center justify-between mt-3">
+<span class="text-primary font-black text-base">45.000đ</span>
+<button class="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center active:scale-90 transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item Card 5 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group">
+<div class="aspect-[4/3] relative overflow-hidden">
+<img alt="Salad" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Fresh vibrant garden salad with cherry tomatoes, cucumber slices and balsamic glaze in a light marble bowl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXHkqyTQnXErMXYtwGTzZU4Uxld1lcXYVgoxPnypq1kBEzd8uQWXhA8h9czddZiRGkxxQW1qA1aoLbF1V46-fkEgMrpVchVbSipD11-GHjWwUIrhwJVaMHXyTZRLzrY5PH6viKANJcnWjWs4QahEH8gFR0uoAQdDpXuT2Rfj18kEPbJA1OVHhktk3XvLgmaI8QlHm_m_hhgVNK8SRoFfSV-Q2xtJHkDqSk7GCV_YMH2dWVA3ZqB3NHem3Q6vGzb9Njvk2d3fcWhRN8"/>
+</div>
+<div class="p-4">
+<h3 class="font-bold text-on-surface leading-tight text-sm mb-1">Salad Hoa Quả</h3>
+<div class="flex items-center justify-between mt-3">
+<span class="text-primary font-black text-base">85.000đ</span>
+<button class="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center active:scale-90 transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item Card 6 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm group">
+<div class="aspect-[4/3] relative overflow-hidden">
+<img alt="Vegetables" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Grilled seasonal vegetables including bell peppers, zucchini and mushrooms with light char and olive oil drizzle" src="https://lh3.googleusercontent.com/aida-public/AB6AXuASIUqClvtORjhw8l465L2h4iHo_BEVSxnkrBbSBPRtMEawc63WRker2Fu9SE7owxOwSbTtVZH3aERyXXzdsM1Dv4Ru_P0Js61HdWNEAY8mOAQTAk55PsEpgTDEJNDXFmaMWKjL0m-e-CKfRBn8liGj24v8EGcKJ5Y03eY77jl19cPPvjh8s2SBBOm46LVEROrrRh_M82QkykaqoSSuu0y3vl0ibLxkGijhGUgwcFhEKhwL7l5g8ovBxh-vFsadR1yDSwKI8hg7OoEh"/>
+</div>
+<div class="p-4">
+<h3 class="font-bold text-on-surface leading-tight text-sm mb-1">Rau Củ Nướng</h3>
+<div class="flex items-center justify-between mt-3">
+<span class="text-primary font-black text-base">65.000đ</span>
+<button class="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center active:scale-90 transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Floating Cart Summary -->
+<div class="fixed bottom-24 left-6 right-6 z-40">
+<div class="bg-surface/95 backdrop-blur-md rounded-2xl shadow-xl flex items-center justify-between p-4 outline outline-1 outline-primary/10">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-700">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] uppercase tracking-widest font-bold text-orange-600">Bàn 1</span>
+<span class="w-1 h-1 rounded-full bg-zinc-300"></span>
+<span class="text-[10px] uppercase tracking-widest font-bold text-zinc-500">4 Món</span>
+</div>
+<div class="text-xl font-manrope font-extrabold text-on-surface tracking-tight">823.000đ</div>
+</div>
+</div>
+<button class="bg-primary-container text-on-primary-container px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-orange-500/20">
+                Thanh toán
+                <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- BottomNavBar -->
+<nav class="bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md fixed bottom-0 w-full z-50 rounded-t-[1.5rem] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] tonal-shift-surface-container-low">
+<div class="flex justify-around items-center w-full px-4 pb-6 pt-3">
+<!-- Active Tab: Orders (Semantic shell mapping for ordering screen) -->
+<a class="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 px-5 py-2 hover:text-orange-600 dark:hover:text-orange-400 active:scale-90 duration-150 ease-out" href="#">
+<span class="material-symbols-outlined mb-1">layers</span>
+<span class="font-inter font-semibold text-[11px] uppercase tracking-wider">Floor</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl px-5 py-2 scale-105 transition-all active:scale-90 duration-150 ease-out" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span class="font-inter font-semibold text-[11px] uppercase tracking-wider">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 px-5 py-2 hover:text-orange-600 dark:hover:text-orange-400 active:scale-90 duration-150 ease-out" href="#">
+<span class="material-symbols-outlined mb-1">outdoor_grill</span>
+<span class="font-inter font-semibold text-[11px] uppercase tracking-wider">Kitchen</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 px-5 py-2 hover:text-orange-600 dark:hover:text-orange-400 active:scale-90 duration-150 ease-out" href="#">
+<span class="material-symbols-outlined mb-1">settings</span>
+<span class="font-inter font-semibold text-[11px] uppercase tracking-wider">Settings</span>
+</a>
+</div>
+</nav>
+</body></html>

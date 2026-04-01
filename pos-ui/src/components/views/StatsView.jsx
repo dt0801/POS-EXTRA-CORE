@@ -15,47 +15,120 @@ export default function StatsView({
   statsYearlyData,
 }) {
   const fmt = formatMoney;
-  const kpiCls = "p-6 rounded-[2rem] shadow-sm border border-outline-variant/20";
 
-  return (
-    <div className="p-4 md:p-8 flex flex-col w-full max-w-7xl mx-auto h-full overflow-y-auto">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 shrink-0">
-        <div>
-          <span className="text-primary font-headline font-bold text-sm tracking-widest uppercase">Thống kê vận hành</span>
-          <h3 className="text-3xl font-headline font-extrabold text-on-surface mt-1">Báo Cáo Doanh Thu</h3>
+  const renderKPIs = (title, revenue, bills, avg) => (
+    <section className="grid grid-cols-2 gap-4">
+      {/* Total Revenue - Hero Card */}
+      <div className="col-span-2 bg-gradient-to-br from-primary to-primary-container p-6 rounded-[2rem] shadow-lg shadow-orange-500/20 text-white overflow-hidden relative">
+        <div className="relative z-10">
+          <p className="font-headline font-semibold text-orange-100/80 text-xs uppercase tracking-widest mb-1">{title}</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl font-headline font-extrabold tracking-tighter">{fmt(revenue).replace(/đ/g, '')}</span>
+            <span className="text-lg font-bold">đ</span>
+          </div>
         </div>
-        <div className="flex bg-surface-container-highest rounded-xl p-1 gap-1 items-center shadow-inner">
-          {[["day", "Hôm nay"], ["month", "Tháng"], ["year", "Năm"]].map(([v, l]) => (
-            <button key={v} onClick={() => setStatsTab(v)} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${statsTab === v ? "bg-white shadow-sm text-primary" : "text-on-surface-variant hover:text-on-surface"}`}>{l}</button>
-          ))}
-          {statsTab === "month" && <input type="month" value={statsMonth} onChange={(e) => { setStatsMonth(e.target.value); fetchStatsMonthly(e.target.value); }} className="ml-2 bg-transparent border-none text-sm font-bold text-on-surface-variant focus:ring-0 outline-none cursor-pointer hover:bg-white/50 px-2 py-1 rounded-lg transition-colors" />}
-          {statsTab === "year" && <select value={statsYear} onChange={(e) => { setStatsYear(e.target.value); fetchStatsYearly(e.target.value); }} className="ml-2 bg-transparent border-none text-sm font-bold text-on-surface-variant focus:ring-0 outline-none cursor-pointer hover:bg-white/50 px-2 py-1 rounded-lg transition-colors appearance-none pr-6 font-mono">{Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString()).map((y) => <option key={y} value={y}>{y}</option>)}</select>}
+        {/* Abstract Glass Circle Background */}
+        <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Total Invoices */}
+      <div className="bg-surface-container-lowest p-5 rounded-[1.5rem] flex flex-col justify-between shadow-sm">
+        <div>
+          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-3">
+            <span className="material-symbols-outlined text-blue-600">receipt_long</span>
+          </div>
+          <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-1">Tổng hóa đơn</p>
+          <p className="text-2xl font-headline font-bold text-on-surface">{bills}</p>
         </div>
       </div>
 
-      {statsTab === "day" && statsToday && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className={`${kpiCls} bg-gradient-to-br from-primary to-primary-container text-white`}><p className="text-xs uppercase font-bold">Doanh thu hôm nay</p><h4 className="text-4xl font-black mt-2">{fmt(statsToday.revenue)}</h4></div>
-          <div className={`${kpiCls} bg-surface-container-lowest`}><p className="text-xs uppercase font-bold text-on-surface-variant">Tổng hóa đơn</p><h4 className="text-4xl font-black mt-2">{statsToday.bill_count}</h4></div>
-          <div className={`${kpiCls} bg-surface-container-lowest`}><p className="text-xs uppercase font-bold text-on-surface-variant">Trung bình/HĐ</p><h4 className="text-4xl font-black mt-2">{statsToday.bill_count ? fmt(Math.round(statsToday.revenue / statsToday.bill_count)) : "0đ"}</h4></div>
+      {/* Average / Order */}
+      <div className="bg-surface-container-lowest p-5 rounded-[1.5rem] flex flex-col justify-between shadow-sm">
+        <div>
+          <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center mb-3">
+            <span className="material-symbols-outlined text-orange-600">analytics</span>
+          </div>
+          <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-1">Trung bình</p>
+          <p className="text-2xl font-headline font-bold text-on-surface">{avg}</p>
         </div>
+      </div>
+    </section>
+  );
+
+  return (
+    <div className="p-4 md:p-8 flex flex-col w-full max-w-7xl mx-auto h-full overflow-y-auto pb-32">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 shrink-0">
+        <div>
+          <h2 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface">Báo Cáo Doanh Thu</h2>
+          <p className="text-on-surface-variant text-sm mt-1">Thống kê vận hành</p>
+        </div>
+        
+        {/* Tabs and Controllers */}
+        <div className="flex bg-surface-container-highest rounded-xl p-1 gap-1 items-center shadow-inner overflow-x-auto hide-scrollbar w-full md:w-auto">
+          {[["day", "Hôm nay"], ["month", "Tháng"], ["year", "Năm"]].map(([v, l]) => (
+            <button 
+              key={v} 
+              onClick={() => setStatsTab(v)} 
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${statsTab === v ? "bg-white shadow-sm text-primary" : "text-on-surface-variant hover:text-on-surface"}`}
+            >
+              {l}
+            </button>
+          ))}
+          
+          {statsTab === "month" && (
+            <input 
+              type="month" 
+              value={statsMonth} 
+              onChange={(e) => { setStatsMonth(e.target.value); fetchStatsMonthly(e.target.value); }} 
+              className="ml-2 bg-transparent border-none text-sm font-bold text-on-surface-variant focus:ring-0 outline-none cursor-pointer hover:bg-white/50 px-2 py-1 rounded-lg transition-colors" 
+            />
+          )}
+
+          {statsTab === "year" && (
+            <select 
+              value={statsYear} 
+              onChange={(e) => { setStatsYear(e.target.value); fetchStatsYearly(e.target.value); }} 
+              className="ml-2 bg-transparent border-none text-sm font-bold text-on-surface-variant focus:ring-0 outline-none cursor-pointer hover:bg-white/50 px-2 py-1 rounded-lg transition-colors appearance-none pr-6 font-mono"
+            >
+              {Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString()).map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {statsTab === "day" && statsToday && renderKPIs(
+        "Doanh thu hôm nay",
+        statsToday.revenue,
+        statsToday.bill_count,
+        statsToday.bill_count ? fmt(Math.round(statsToday.revenue / statsToday.bill_count)) : "0đ"
       )}
 
-      {statsTab === "month" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className={`${kpiCls} bg-gradient-to-br from-primary to-primary-container text-white`}><p className="text-xs uppercase font-bold">Doanh thu tháng</p><h4 className="text-4xl font-black mt-2">{fmt(statsMonthlyData?.revenue ?? 0)}</h4></div>
-          <div className={`${kpiCls} bg-surface-container-lowest`}><p className="text-xs uppercase font-bold text-on-surface-variant">Hóa đơn tháng</p><h4 className="text-4xl font-black mt-2">{statsMonthlyData?.bill_count ?? "0"}</h4></div>
-          <div className={`${kpiCls} bg-surface-container-lowest`}><p className="text-xs uppercase font-bold text-on-surface-variant">Trung bình ngày</p><h4 className="text-4xl font-black mt-2">{statsMonthlyData?.days?.length ? fmt(Math.round(statsMonthlyData.revenue / statsMonthlyData.days.length)) : "0đ"}</h4></div>
-        </div>
+      {statsTab === "month" && renderKPIs(
+        "Doanh thu tháng",
+        statsMonthlyData?.revenue ?? 0,
+        statsMonthlyData?.bill_count ?? 0,
+        statsMonthlyData?.days?.length ? fmt(Math.round(statsMonthlyData.revenue / statsMonthlyData.days.length)) : "0đ"
       )}
 
-      {statsTab === "year" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className={`${kpiCls} bg-gradient-to-br from-primary to-primary-container text-white`}><p className="text-xs uppercase font-bold">Doanh thu năm</p><h4 className="text-4xl font-black mt-2">{fmt(statsYearlyData?.revenue ?? 0)}</h4></div>
-          <div className={`${kpiCls} bg-surface-container-lowest`}><p className="text-xs uppercase font-bold text-on-surface-variant">Hóa đơn cả năm</p><h4 className="text-4xl font-black mt-2">{statsYearlyData?.bill_count ?? "0"}</h4></div>
-          <div className={`${kpiCls} bg-surface-container-lowest`}><p className="text-xs uppercase font-bold text-on-surface-variant">Trung bình tháng</p><h4 className="text-4xl font-black mt-2">{statsYearlyData?.months?.length ? fmt(Math.round(statsYearlyData.revenue / statsYearlyData.months.length)) : "0đ"}</h4></div>
-        </div>
+      {statsTab === "year" && renderKPIs(
+        "Doanh thu năm",
+        statsYearlyData?.revenue ?? 0,
+        statsYearlyData?.bill_count ?? 0,
+        statsYearlyData?.months?.length ? fmt(Math.round(statsYearlyData.revenue / statsYearlyData.months.length)) : "0đ"
       )}
+
+      <section className="mt-8 bg-surface-container-lowest p-6 rounded-[2rem] shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-headline font-bold text-lg">Biểu đồ hoạt động</h3>
+          <span className="text-primary text-xs font-bold uppercase tracking-widest">Gần đây</span>
+        </div>
+        <div className="h-32 flex items-center justify-center border-2 border-dashed border-outline-variant/30 rounded-xl relative overflow-hidden">
+          <p className="text-on-surface-variant/50 text-sm font-semibold italic">Đang cập nhật dữ liệu biểu đồ...</p>
+        </div>
+      </section>
+
     </div>
   );
 }

@@ -1225,13 +1225,13 @@ export default function App() {
         </div>
       )}
 
-      {/* ==================== LEFT SIDEBAR (Stitch Version) ==================== */}
-      <aside className={`h-screen ${isSidebarExpanded ? "w-64" : "w-[88px]"} bg-surface flex flex-col py-6 space-y-4 shadow-sm shrink-0 transition-all duration-300 z-10 border-r border-outline-variant/20 relative`}>
+      {/* ==================== LEFT SIDEBAR (Desktop Version) ==================== */}
+      <aside className={`hidden md:flex h-screen ${isSidebarExpanded ? "w-64" : "w-[88px]"} bg-surface flex-col py-6 space-y-4 shadow-sm shrink-0 transition-all duration-300 z-10 border-r border-outline-variant/20 relative`}>
         {/* Toggle Button / Logo Area */}
         <div className={`flex items-center ${isSidebarExpanded ? "px-6 justify-between" : "justify-center"} mb-4`}>
           {isSidebarExpanded && (
             <div className="flex flex-col overflow-hidden">
-              <h1 className="text-xl font-black text-primary font-headline whitespace-nowrap">Da Lat & Em</h1>
+              <h1 className="text-xl font-black text-primary font-headline whitespace-nowrap">Citrus POS</h1>
               <p className="font-manrope text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant whitespace-nowrap">Premium BBQ</p>
             </div>
           )}
@@ -1278,15 +1278,29 @@ export default function App() {
         </div>
       </aside>
 
-      {/* ==================== MAIN PANEL (Stitch Version) ==================== */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-surface-container relative">
+      {/* ==================== CONTENT PANEL (Stitch Version) ==================== */}
+      <main className="flex-1 flex flex-col overflow-hidden bg-surface-container relative pb-safe">
+
+        {/* ==================== MOBILE TOP APP BAR ==================== */}
+        <header className="md:hidden sticky top-0 z-40 bg-stone-50/90 backdrop-blur-md dark:bg-stone-950/90 shrink-0">
+          <div className="flex justify-between items-center w-full px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-orange-600 dark:text-orange-500">restaurant_menu</span>
+              <h1 className="text-lg font-extrabold tracking-tighter text-stone-900 dark:text-stone-50 font-headline">{settings.store_name || "Citrus POS"}</h1>
+            </div>
+            <button className="text-orange-600 dark:text-orange-500 active:scale-95 transition-transform duration-200">
+              <span className="material-symbols-outlined">notifications</span>
+            </button>
+          </div>
+          <div className="bg-stone-200/50 dark:bg-stone-800/50 h-[1px] w-full"></div>
+        </header>
 
         <div className="flex-1 flex overflow-hidden">
 
       {/* ==================== CONTENT ROUTER ==================== */}
-      <div className="flex-1 p-6 lg:p-10 flex flex-col overflow-hidden w-full max-w-[1600px] mx-auto">
+      <div className="flex-1 px-2 md:p-6 lg:p-10 flex flex-col overflow-hidden w-full max-w-[1600px] mx-auto pb-24 md:pb-6">
       {!isAdmin && (
-        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900 mx-2 md:mx-0">
           Bạn đang ở <strong>màn hình nhân viên</strong>: chỉ được thao tác Order, gửi bếp và tạm tính.
         </div>
       )}
@@ -1305,12 +1319,12 @@ export default function App() {
 
         {/* ===== ORDER VIEW ===== */}
         {sidebarView === "order" && (
-          <div className="flex-1 flex overflow-hidden gap-6 -m-6 p-6">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 lg:gap-6 lg:-m-6 lg:p-6">
             
             {/* Middle: Menu Grid Area */}
-            <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+            <div className="flex-1 flex flex-col gap-4 lg:gap-6 overflow-hidden">
                {/* Custom Category Tabs + Search */}
-               <div className="flex items-center gap-3 overflow-x-auto pb-2 custom-scrollbar shrink-0">
+               <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar shrink-0 px-2 lg:px-0">
                  {/* Search */}
                  <div className="relative shrink-0 mr-2">
                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 material-symbols-outlined scale-75">search</span>
@@ -1319,13 +1333,13 @@ export default function App() {
                      placeholder="Tìm món ăn..."
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
-                     className="pl-10 pr-4 py-2 bg-surface-container-high rounded-full border border-outline-variant/30 focus:border-primary outline-none focus:ring-2 focus:ring-primary/20 text-sm w-48 focus:w-64 transition-all"
+                     className="pl-10 pr-4 py-2 bg-surface-container-high rounded-full border border-outline-variant/30 focus:border-primary outline-none focus:ring-2 focus:ring-primary/20 text-sm w-40 lg:w-48 focus:w-56 lg:focus:w-64 transition-all"
                    />
                  </div>
                  {/* Tabs */}
                  {FILTERS.map(f => (
                    <button key={f.key} onClick={() => setFilter(f.key)}
-                     className={`px-6 py-2.5 font-headline font-bold rounded-xl shadow-sm transition-all whitespace-nowrap
+                     className={`px-4 lg:px-6 py-2 lg:py-2.5 font-headline font-semibold lg:font-bold rounded-xl shadow-sm transition-all whitespace-nowrap text-sm lg:text-base
                        ${filter === f.key ? "bg-primary text-white shadow-md shadow-orange-500/30" : "bg-surface-container-lowest text-on-surface-variant hover:bg-orange-50 dark:hover:bg-stone-800"}`}
                    >{f.label}</button>
                  ))}
@@ -2130,71 +2144,6 @@ export default function App() {
                         </button>
                       </div>
                     ))}
-                    {!users.length && <div className="text-on-surface-variant">Chưa có user.</div>}
-                  </div>
-                )}
-              </section>
-            </div>
-          </div>
-        )}
-
-        {sidebarView === "stats" && (
-          <StatsView
-            formatMoney={formatMoney}
-            statsTab={statsTab}
-            setStatsTab={setStatsTab}
-            statsMonth={statsMonth}
-            setStatsMonth={setStatsMonth}
-            fetchStatsMonthly={fetchStatsMonthly}
-            statsYear={statsYear}
-            setStatsYear={setStatsYear}
-            fetchStatsYearly={fetchStatsYearly}
-            statsToday={statsToday}
-            statsMonthlyData={statsMonthlyData}
-            statsYearlyData={statsYearlyData}
-          />
-        )}
-
-      </div>
-
-      {/* ==================== MODAL CHUYỂN BÀN (Citrus Style) ==================== */}
-      {showTransferModal && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-[2.5rem] p-8 md:p-10 border border-outline-variant/30 shadow-2xl max-w-xl w-full relative animate-in fade-in zoom-in-95 duration-200">
-            
-            {/* Close Button */}
-            <button onClick={() => setShowTransferModal(false)} className="absolute top-6 right-6 w-12 h-12 bg-surface-container-high hover:bg-outline-variant/30 text-on-surface flex items-center justify-center rounded-full transition-colors shadow-sm">
-              <span className="material-symbols-outlined text-2xl">close</span>
-            </button>
-
-            <h3 className="text-3xl font-black font-headline mb-4 text-on-surface flex items-center gap-3 pr-12">
-              <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center">
-                <span className="material-symbols-outlined text-3xl">sync_alt</span>
-              </div>
-              Chuyển bàn {currentTable}
-            </h3>
-            
-            <p className="text-on-surface-variant font-medium mb-8">Chọn bàn đích để chuyển toàn bộ order của bàn hiện tại sang.</p>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 gap-3 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
-                {tables
-                  .filter(t => t !== currentTable)
-                  .map(t => {
-                    const status = tableStatus[t];
-                    const isOccupied = status === "OPEN" || status === "PAYING";
-                    return (
-                      <button
-                        key={t}
-                        onClick={() => !isOccupied && transferTable(t)}
-                        disabled={isOccupied}
-                        className={`h-14 rounded-2xl font-black text-lg transition-all border-2 relative
-                          ${isOccupied
-                            ? "bg-stone-50 border-stone-100 text-stone-300 cursor-not-allowed"
-                            : "bg-white border-primary/20 text-primary hover:border-primary hover:bg-orange-50 hover:scale-110 shadow-sm active:scale-95"
-                          }`}
-                        title={isOccupied ? `Bàn ${t} đang có khách` : `Chuyển sang bàn ${t}`}
-                      >
                         {t}
                         {isOccupied && (
                           <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full border-2 border-white"></span>
@@ -2213,22 +2162,92 @@ export default function App() {
                 <div className="flex items-center gap-2">
                    <div className="w-3 h-3 rounded-full bg-stone-300"></div>
                    <span className="text-xs font-bold text-on-surface-variant/60">Có khách - Không thể</span>
-                </div>
+            >
+              <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: sidebarView === "tables" ? "'FILL' 1" : "'FILL' 0" }}>grid_view</span>
+              <span className="font-headline font-semibold text-[10px] uppercase tracking-widest">Sơ đồ Bàn</span>
+            </button>
+            <button 
+              onClick={() => setSidebarView("order")}
+              className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "order" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
+            >
+              <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: sidebarView === "order" ? "'FILL' 1" : "'FILL' 0" }}>restaurant_menu</span>
+              <span className="font-headline font-semibold text-[10px] uppercase tracking-widest">Gọi món</span>
+            </button>
+            {isAdmin && (
+              <button 
+                onClick={() => setSidebarView("history")}
+                className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "history" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
+              >
+                <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: sidebarView === "history" ? "'FILL' 1" : "'FILL' 0" }}>receipt_long</span>
+                <span className="font-headline font-semibold text-[10px] uppercase tracking-widest">Hóa đơn</span>
+              </button>
+            )}
+            <button 
+              onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+              className="md:hidden flex flex-col items-center justify-center text-stone-400 px-4 py-2 hover:text-orange-500 transition-all duration-300 active:scale-90"
+            >
+              <span className="material-symbols-outlined mb-1">menu</span>
+              <span className="font-headline font-semibold text-[10px] uppercase tracking-widest">Menu</span>
+            </button>
+          </nav>
+        )}
+
+        {/* Mobile Full Menu Overlay */}
+        {isSidebarExpanded && (
+          <div className="md:hidden fixed inset-0 z-[60] bg-surface-container flex flex-col animate-in slide-in-from-bottom pb-safe">
+            <div className="flex items-center justify-between p-6 shrink-0 border-b border-outline-variant/20">
+              <h2 className="text-2xl font-black font-headline text-primary">Danh mục mở rộng</h2>
+              <button onClick={() => setIsSidebarExpanded(false)} className="bg-surface-container-high rounded-full p-2 flex items-center justify-center active:scale-95 text-on-surface-variant">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => { setSidebarView("tables"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "tables" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                  <span className="material-symbols-outlined text-3xl">grid_view</span>
+                  <span className="font-bold">Sơ đồ bàn</span>
+                </button>
+                <button onClick={() => { setSidebarView("order"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "order" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                  <span className="material-symbols-outlined text-3xl">restaurant_menu</span>
+                  <span className="font-bold">Gọi món</span>
+                </button>
+                {isAdmin && (
+                  <>
+                    <button onClick={() => { setSidebarView("manage"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "manage" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                      <span className="material-symbols-outlined text-3xl">format_list_bulleted</span>
+                      <span className="font-bold text-center">Quản lý Thực đơn</span>
+                    </button>
+                    <button onClick={() => { setSidebarView("history"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "history" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                      <span className="material-symbols-outlined text-3xl">receipt_long</span>
+                      <span className="font-bold text-center">Lịch sử Hóa đơn</span>
+                    </button>
+                    <button onClick={() => { setSidebarView("stats"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "stats" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                      <span className="material-symbols-outlined text-3xl">trending_up</span>
+                      <span className="font-bold text-center">Thống kê</span>
+                    </button>
+                    <button onClick={() => { setSidebarView("users"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "users" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                      <span className="material-symbols-outlined text-3xl">group</span>
+                      <span className="font-bold text-center">Nhân sự</span>
+                    </button>
+                    <button onClick={() => { setSidebarView("settings"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "settings" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                      <span className="material-symbols-outlined text-3xl">settings</span>
+                      <span className="font-bold text-center">Cài đặt HT</span>
+                    </button>
+                  </>
+                )}
+              </div>
+              <div className="pt-6 border-t border-outline-variant/20 flex flex-col items-center gap-4">
+                <button onClick={handleLogout} className="w-full py-4 bg-error-container text-on-error-container font-black rounded-2xl flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined">logout</span> Đăng xuất
+                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-
-
-        </div>
       </main>
     </div>
   );
 }
 
-
-
-
-
+export default App;

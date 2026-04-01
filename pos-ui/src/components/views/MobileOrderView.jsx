@@ -206,22 +206,22 @@ export default function MobileOrderView({
       {/* BottomNavBar */}
       <nav className="bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md fixed bottom-0 w-full z-50 rounded-t-[1.5rem] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] lg:hidden">
         <div className="flex justify-around items-center w-full px-4 pb-6 pt-3">
-          <a onClick={(e) => { e.preventDefault(); setSidebarView("tables"); }} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'tables' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`} href="#">
+          <button type="button" onClick={() => setSidebarView("tables")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'tables' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
             <span className="material-symbols-outlined mb-1">layers</span>
             <span className="font-body font-semibold text-[11px] uppercase tracking-wider">Bàn</span>
-          </a>
-          <a onClick={(e) => { e.preventDefault(); setSidebarView("order"); }} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'order' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`} href="#">
+          </button>
+          <button type="button" onClick={() => setSidebarView("order")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'order' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
             <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: sidebarView === "order" ? "'FILL' 1" : undefined }}>receipt_long</span>
             <span className="font-body font-semibold text-[11px] uppercase tracking-wider">Đơn</span>
-          </a>
-          <a onClick={(e) => { e.preventDefault(); setSidebarView("history"); }} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'history' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`} href="#">
+          </button>
+          <button type="button" onClick={() => setSidebarView("history")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'history' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
             <span className="material-symbols-outlined mb-1">outdoor_grill</span>
             <span className="font-body font-semibold text-[11px] uppercase tracking-wider">Bếp / HD</span>
-          </a>
-          <a onClick={(e) => { e.preventDefault(); setSidebarView("settings"); }} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'settings' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`} href="#">
+          </button>
+          <button type="button" onClick={() => setSidebarView("settings")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'settings' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
             <span className="material-symbols-outlined mb-1">settings</span>
             <span className="font-body font-semibold text-[11px] uppercase tracking-wider">Cấu hình</span>
-          </a>
+          </button>
         </div>
       </nav>
     </div>

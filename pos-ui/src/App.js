@@ -132,9 +132,6 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarView, setSidebarView] = useState("order");  // "order" | "manage" | "history" | "stats"
 
-  // ----- CHUYỂN BÀN -----
-  const [showTransferModal, setShowTransferModal] = useState(false);
-
   // ----- SIDEBAR STATE -----
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
@@ -174,10 +171,6 @@ export default function App() {
   const [splitModal,    setSplitModal]    = useState(false);
   const [splitTarget,   setSplitTarget]   = useState("");
   const [splitSelected, setSplitSelected] = useState([]);
-  const [statsTab,      setStatsTab]      = useState("day");
-  const [statsMonthlyData, setStatsMonthlyData] = useState(null);
-  const [statsYearlyData,  setStatsYearlyData]  = useState(null);
-  const [statsYear,     setStatsYear]     = useState(new Date().getFullYear().toString());
   const [users, setUsers] = useState([]);
   const [userLoading, setUserLoading] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -463,10 +456,6 @@ export default function App() {
   const [settingsPreviewPaper, setSettingsPreviewPaper] = useState(80);
   const [settingsPreviewLoading, setSettingsPreviewLoading] = useState(false);
 
-  // ----- STATS STATE -----
-  const [statsToday, setStatsToday]   = useState(null);
-  const [statsMonth, setStatsMonth]   = useState(new Date().toISOString().slice(0, 7));
-
   // ----- DERIVED -----
   // Danh sách số bàn – lấy từ tableList (đã merge DB + settings)
   // fallback về 1..20 nếu tableList chưa load xong
@@ -523,12 +512,6 @@ export default function App() {
   const fetchBills = useCallback((date) => {
     authedFetch(`${API_URL}/bills?date=${date}`).then(r => r.json()).then(setBills)
       .catch(e => console.error("Lỗi fetch bills:", e));
-  }, [authedFetch]);
-
-  /** Fetch thống kê hôm nay */
-  const fetchStatsToday = useCallback(() => {
-    authedFetch(`${API_URL}/stats/today`).then(r => r.json()).then(setStatsToday)
-      .catch(e => console.error("Lỗi fetch stats today:", e));
   }, [authedFetch]);
 
   /** Fetch chi tiết 1 bill */
@@ -599,21 +582,6 @@ export default function App() {
   useEffect(() => {
     if (sidebarView === "history") fetchBills(historyDate);
   }, [sidebarView, historyDate, fetchBills]);
-
-  const fetchStatsMonthly = useCallback((month) => {
-    authedFetch(`${API_URL}/stats/monthly?month=${month}`).then(r=>r.json()).then(setStatsMonthlyData).catch(()=>{});
-  }, [authedFetch]);
-  const fetchStatsYearly = useCallback((year) => {
-    authedFetch(`${API_URL}/stats/yearly?year=${year}`).then(r=>r.json()).then(setStatsYearlyData).catch(()=>{});
-  }, [authedFetch]);
-
-  useEffect(() => {
-    if (sidebarView === "stats") {
-      fetchStatsToday();
-      fetchStatsMonthly(statsMonth);
-      fetchStatsYearly(statsYear);
-    }
-  }, [sidebarView, statsMonth, statsYear, fetchStatsToday, fetchStatsMonthly, fetchStatsYearly]);
 
   // =============================================
   // ORDER HANDLERS
@@ -908,7 +876,6 @@ export default function App() {
     await updateTableStatus(targetTable, "OPEN");
     setTableStatus(prev => ({ ...prev, [currentTable]: "PAID", [targetTable]: "OPEN" }));
     setCurrentTable(targetTable);
-    setShowTransferModal(false);
   };
 
   // Tách bàn
@@ -1438,7 +1405,21 @@ export default function App() {
                    </div>
                    {tableStatus[currentTable] === "OPEN" && (
                      <div className="flex gap-2">
-                       <button onClick={() => setShowTransferModal(true)} disabled={currentItems.length === 0} className="w-10 h-10 bg-orange-100 rounded-[1.2rem] flex items-center justify-center text-orange-600 hover:bg-orange-200 transition-all disabled:opacity-50 shadow-sm border border-orange-200/50 group/btn" title="Chuyển bàn">
+                      <button
+                        onClick={() => {
+                          const raw = window.prompt("Nhập số bàn muốn chuyển tới:");
+                          const target = Number(raw);
+                          if (!raw) return;
+                          if (!Number.isInteger(target) || target <= 0) {
+                            alert("Số bàn không hợp lệ.");
+                            return;
+                          }
+                          transferTable(target);
+                        }}
+                        disabled={currentItems.length === 0}
+                        className="w-10 h-10 bg-orange-100 rounded-[1.2rem] flex items-center justify-center text-orange-600 hover:bg-orange-200 transition-all disabled:opacity-50 shadow-sm border border-orange-200/50 group/btn"
+                        title="Chuyển bàn"
+                      >
                          <span className="material-symbols-outlined text-[20px]">sync_alt</span>
                        </button>
                        <button onClick={() => { setSplitSelected([]); setSplitTarget(""); setSplitModal(true); }} disabled={currentItems.length === 0} className="w-10 h-10 bg-stone-100 rounded-[1.2rem] flex items-center justify-center text-stone-500 hover:bg-stone-200 hover:text-stone-800 transition-all disabled:opacity-50 shadow-sm border border-stone-200" title="Tách bàn">

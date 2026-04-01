@@ -165,3 +165,22 @@ button:active{
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--color-outline);
 }
+
+/* ===== MOBILE UTILITIES ===== */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tonal-layering-no-border {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+  backdrop-filter: blur(10px);
+}
+
+.headline-md {
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.02em;
+}

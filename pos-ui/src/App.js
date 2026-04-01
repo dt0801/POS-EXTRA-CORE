@@ -22,6 +22,7 @@ import {
   fetchDbPrinters as fetchDbPrintersRequest,
   addDbPrinter as addDbPrinterRequest,
 } from "./services/printerService";
+import MobileOrderView from "./components/views/MobileOrderView";
 
 // =============================================
 // CONSTANTS
@@ -139,6 +140,16 @@ export default function App() {
 
   // Trạng thái kết nối máy in: null | "online" | "offline"
   const { printerStatus } = usePrinterStatus();
+
+  // Responsive & Mobile Cart state
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [showMobileCart, setShowMobileCart] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Danh sách máy in Windows
   const [windowsPrinters, setWindowsPrinters] = useState([]);
@@ -1319,237 +1330,258 @@ export default function App() {
 
         {/* ===== ORDER VIEW ===== */}
         {sidebarView === "order" && (
-          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 lg:gap-6 lg:-m-6 lg:p-6">
-            
-            {/* Middle: Menu Grid Area */}
-            <div className="flex-1 flex flex-col gap-4 lg:gap-6 overflow-hidden">
-               {/* Custom Category Tabs + Search */}
-               <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar shrink-0 px-2 lg:px-0">
-                 {/* Search */}
-                 <div className="relative shrink-0 mr-2">
-                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 material-symbols-outlined scale-75">search</span>
-                   <input
-                     type="text"
-                     placeholder="Tìm món ăn..."
-                     value={searchQuery}
-                     onChange={(e) => setSearchQuery(e.target.value)}
-                     className="pl-10 pr-4 py-2 bg-surface-container-high rounded-full border border-outline-variant/30 focus:border-primary outline-none focus:ring-2 focus:ring-primary/20 text-sm w-40 lg:w-48 focus:w-56 lg:focus:w-64 transition-all"
-                   />
+          isMobile ? (
+            <MobileOrderView
+              menu={menu}
+              filter={filter}
+              setFilter={setFilter}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              currentTable={currentTable}
+              tableOrders={tableOrders}
+              total={total}
+              calcTotalQty={calcTotalQty}
+              addItem={addItem}
+              updateQty={updateQty}
+              formatMoney={formatMoney}
+              menuImageSrc={menuImageSrc}
+              sidebarView={sidebarView}
+              setSidebarView={setSidebarView}
+              setShowMobileCart={setShowMobileCart}
+            />
+          ) : (
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 lg:gap-6 lg:-m-6 lg:p-6">
+              
+              {/* Middle: Menu Grid Area */}
+              <div className="flex-1 flex flex-col gap-4 lg:gap-6 overflow-hidden">
+                 {/* Custom Category Tabs + Search */}
+                 <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar shrink-0 px-2 lg:px-0">
+                   {/* Search */}
+                   <div className="relative shrink-0 mr-2">
+                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 material-symbols-outlined scale-75">search</span>
+                     <input
+                       type="text"
+                       placeholder="Tìm món ăn..."
+                       value={searchQuery}
+                       onChange={(e) => setSearchQuery(e.target.value)}
+                       className="pl-10 pr-4 py-2 bg-surface-container-high rounded-full border border-outline-variant/30 focus:border-primary outline-none focus:ring-2 focus:ring-primary/20 text-sm w-40 lg:w-48 focus:w-56 lg:focus:w-64 transition-all"
+                     />
+                   </div>
+                   {/* Tabs */}
+                   {FILTERS.map(f => (
+                     <button key={f.key} onClick={() => setFilter(f.key)}
+                       className={`px-4 lg:px-6 py-2 lg:py-2.5 font-headline font-semibold lg:font-bold rounded-xl shadow-sm transition-all whitespace-nowrap text-sm lg:text-base
+                         ${filter === f.key ? "bg-primary text-white shadow-md shadow-orange-500/30" : "bg-surface-container-lowest text-on-surface-variant hover:bg-orange-50 dark:hover:bg-stone-800"}`}
+                     >{f.label}</button>
+                   ))}
                  </div>
-                 {/* Tabs */}
-                 {FILTERS.map(f => (
-                   <button key={f.key} onClick={() => setFilter(f.key)}
-                     className={`px-4 lg:px-6 py-2 lg:py-2.5 font-headline font-semibold lg:font-bold rounded-xl shadow-sm transition-all whitespace-nowrap text-sm lg:text-base
-                       ${filter === f.key ? "bg-primary text-white shadow-md shadow-orange-500/30" : "bg-surface-container-lowest text-on-surface-variant hover:bg-orange-50 dark:hover:bg-stone-800"}`}
-                   >{f.label}</button>
-                 ))}
-               </div>
 
-               {/* Bento Grid Menu */}
-               <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                {menu.length === 0 ? (
-                  <div className="h-full min-h-[320px] flex flex-col items-center justify-center text-on-surface-variant border-2 border-dashed border-outline-variant/40 rounded-3xl bg-surface-container-lowest">
-                    <span className="material-symbols-outlined text-5xl mb-3 opacity-40">restaurant_menu</span>
-                    <p className="font-bold text-base">Chưa có dữ liệu menu</p>
-                    <p className="text-sm mt-1">Vui lòng seed menu ở backend hoặc kiểm tra API `/menu`.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12">
-                    {filteredMenu.map(m => {
-                      const qty = tableOrders[currentTable]?.[m.id]?.qty || 0;
-                      return (
-                        <div key={m.id} className="group bg-surface-container-lowest rounded-[2rem] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-md border border-outline-variant/30">
-                          <div className="h-32 relative overflow-hidden bg-surface-container-high cursor-pointer" onClick={() => addItem(m)}>
-                            {m.image ? (
-                              <img src={menuImageSrc(m.image)} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={m.name} />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-on-surface-variant"><span className="material-symbols-outlined text-4xl opacity-50">restaurant</span></div>
-                            )}
-                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2.5 py-0.5 rounded-full text-[10px] font-bold text-primary shadow-sm">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</div>
-                          </div>
-                          <div className="p-3.5 flex flex-col flex-1">
-                            <h3 className="font-headline font-bold text-stone-900 line-clamp-2 leading-tight mb-1 text-sm">{m.name}</h3>
-                            <p className="text-[11px] font-semibold text-stone-500 mb-3">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</p>
-                            <div className="mt-auto flex items-center justify-between">
-                              <span className="font-headline font-black text-base text-primary">{formatMoney(m.price)}</span>
-                              {qty > 0 ? (
-                                <div className="flex items-center bg-primary-container/20 rounded-xl p-1 gap-1.5 shadow-sm border border-primary/10">
-                                  <button onClick={() => updateQty(m.id, "dec")} className="w-7 h-7 rounded-[0.5rem] bg-white text-primary flex items-center justify-center shadow-sm hover:bg-white/80 transition-colors"><span className="material-symbols-outlined text-[16px]">remove</span></button>
-                                  <span className="font-extrabold text-primary w-4 text-center text-sm">{qty}</span>
-                                  <button onClick={() => updateQty(m.id, "inc")} className="w-7 h-7 rounded-[0.5rem] bg-primary text-white flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"><span className="material-symbols-outlined text-[16px]">add</span></button>
-                                </div>
+                 {/* Bento Grid Menu */}
+                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                  {menu.length === 0 ? (
+                    <div className="h-full min-h-[320px] flex flex-col items-center justify-center text-on-surface-variant border-2 border-dashed border-outline-variant/40 rounded-3xl bg-surface-container-lowest">
+                      <span className="material-symbols-outlined text-5xl mb-3 opacity-40">restaurant_menu</span>
+                      <p className="font-bold text-base">Chưa có dữ liệu menu</p>
+                      <p className="text-sm mt-1">Vui lòng seed menu ở backend hoặc kiểm tra API `/menu`.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12">
+                      {filteredMenu.map(m => {
+                        const qty = tableOrders[currentTable]?.[m.id]?.qty || 0;
+                        return (
+                          <div key={m.id} className="group bg-surface-container-lowest rounded-[2rem] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-md border border-outline-variant/30">
+                            <div className="h-32 relative overflow-hidden bg-surface-container-high cursor-pointer" onClick={() => addItem(m)}>
+                              {m.image ? (
+                                <img src={menuImageSrc(m.image)} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={m.name} />
                               ) : (
-                                <button onClick={() => addItem(m)} className="w-9 h-9 rounded-[1rem] bg-orange-50 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm">
-                                  <span className="material-symbols-outlined text-[20px]">add</span>
-                                </button>
+                                <div className="w-full h-full flex items-center justify-center text-on-surface-variant"><span className="material-symbols-outlined text-4xl opacity-50">restaurant</span></div>
                               )}
+                              <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2.5 py-0.5 rounded-full text-[10px] font-bold text-primary shadow-sm">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</div>
+                            </div>
+                            <div className="p-3.5 flex flex-col flex-1">
+                              <h3 className="font-headline font-bold text-stone-900 line-clamp-2 leading-tight mb-1 text-sm">{m.name}</h3>
+                              <p className="text-[11px] font-semibold text-stone-500 mb-3">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</p>
+                              <div className="mt-auto flex items-center justify-between">
+                                <span className="font-headline font-black text-base text-primary">{formatMoney(m.price)}</span>
+                                {qty > 0 ? (
+                                  <div className="flex items-center bg-primary-container/20 rounded-xl p-1 gap-1.5 shadow-sm border border-primary/10">
+                                    <button onClick={() => updateQty(m.id, "dec")} className="w-7 h-7 rounded-[0.5rem] bg-white text-primary flex items-center justify-center shadow-sm hover:bg-white/80 transition-colors"><span className="material-symbols-outlined text-[16px]">remove</span></button>
+                                    <span className="font-extrabold text-primary w-4 text-center text-sm">{qty}</span>
+                                    <button onClick={() => updateQty(m.id, "inc")} className="w-7 h-7 rounded-[0.5rem] bg-primary text-white flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"><span className="material-symbols-outlined text-[16px]">add</span></button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => addItem(m)} className="w-9 h-9 rounded-[1rem] bg-orange-50 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm">
+                                    <span className="material-symbols-outlined text-[20px]">add</span>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                 </div>
+              </div>
+
+              {/* Right Side: Order Panel */}
+              <aside className="w-[380px] lg:w-[420px] flex flex-col bg-white rounded-[2rem] p-6 lg:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] shrink-0">
+                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100 shrink-0">
+                   <div className="flex items-center gap-2">
+                     <h2 className="font-headline font-black text-xl text-stone-900">Bàn {currentTable || "--"}</h2>
+                     <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">
+                       {currentTable ? (
+                          tableStatus[currentTable] === "OPEN" ? `ORDER #${new Date().getTime().toString().slice(-4)}` :
+                          tableStatus[currentTable] === "PAYING" ? "CHỜ RESET" : "TRỐNG"
+                       ) : "Chưa chọn bàn"}
+                     </span>
+                   </div>
+                   {tableStatus[currentTable] === "OPEN" && (
+                     <div className="flex gap-2">
+                       <button onClick={() => setShowTransferModal(true)} disabled={currentItems.length === 0} className="w-10 h-10 bg-orange-100 rounded-[1.2rem] flex items-center justify-center text-orange-600 hover:bg-orange-200 transition-all disabled:opacity-50 shadow-sm border border-orange-200/50 group/btn" title="Chuyển bàn">
+                         <span className="material-symbols-outlined text-[20px]">sync_alt</span>
+                       </button>
+                       <button onClick={() => { setSplitSelected([]); setSplitTarget(""); setSplitModal(true); }} disabled={currentItems.length === 0} className="w-10 h-10 bg-stone-100 rounded-[1.2rem] flex items-center justify-center text-stone-500 hover:bg-stone-200 hover:text-stone-800 transition-all disabled:opacity-50 shadow-sm border border-stone-200" title="Tách bàn">
+                         <span className="material-symbols-outlined text-[20px]">call_split</span>
+                       </button>
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Order List */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar mb-4 pr-1 relative">
+                    {currentItems.length === 0 ? (
+                      <div className="absolute inset-0 flex items-center justify-center flex-col text-stone-400">
+                        <span className="material-symbols-outlined text-6xl opacity-20 mb-4">restaurant</span>
+                        <p className="text-sm font-semibold">Chưa có món nào</p>
+                      </div>
+                    ) : currentItems.map((item, idx) => {
+                      const sentQty = kitchenSent[currentTable]?.[item.id] || 0;
+                      const newQty  = item.qty - sentQty;
+                      const note    = itemNotes[currentTable]?.[item.id] || "";
+                      return (
+                        <div key={item.id} className={`flex gap-3 items-center group py-2.5 ${idx < currentItems.length - 1 ? "border-b border-stone-100" : ""}`}>
+                          {/* Circular Thumbnail */}
+                          <div className="w-11 h-11 rounded-full overflow-hidden bg-stone-100 shrink-0 shadow-sm border border-stone-200/50">
+                            {item.image ? (
+                              <img src={menuImageSrc(item.image)} className="w-full h-full object-cover" alt={item.name}/>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-stone-400"><span className="material-symbols-outlined text-lg">restaurant</span></div>
+                            )}
+                          </div>
+                          
+                          {/* Name + Tag */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-stone-900 text-[13px] leading-tight line-clamp-1">{item.name}</h4>
+                            {newQty > 0 && (
+                              <span className="inline-flex w-fit items-center px-1.5 py-px bg-orange-50 text-[9px] font-bold text-orange-600 rounded mt-0.5">
+                                + {newQty} món mới
+                              </span>
+                            )}
+                            {note && <p className="text-[10px] text-stone-400 mt-0.5 truncate">{note}</p>}
+                            <input
+                              type="text"
+                              value={note}
+                              onChange={e => setItemNotes(prev => ({ ...prev, [currentTable]: { ...(prev[currentTable] || {}), [item.id]: e.target.value } }))}
+                              placeholder="+ Ghi chú..."
+                              className="w-full text-[10px] font-medium bg-transparent border-none p-0 focus:ring-0 text-stone-500 placeholder:text-stone-300 outline-none transition-all opacity-0 h-0 group-hover:opacity-100 group-hover:h-4 group-hover:mt-1"
+                            />
+                          </div>
+                          
+                          {/* Qty + Price + Actions Wrapper */}
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="text-right flex flex-col items-end justify-center">
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => {
+                                  if (item.qty - 1 < sentQty) {
+                                    setKitchenSent(prev => ({...prev, [currentTable]: { ...(prev[currentTable] || {}), [item.id]: Math.max(0, item.qty - 1) }}));
+                                  }
+                                  updateQty(item.id, "dec");
+                                }} className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors text-xs font-bold">-</button>
+                                
+                                <span className="font-bold text-[12px] w-5 text-center text-stone-800">{item.qty < 10 ? `0${item.qty}` : item.qty}</span>
+                                
+                                <button onClick={() => updateQty(item.id, "inc")} className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors text-xs font-bold">+</button>
+                              </div>
+                              <span className="font-bold text-[11px] text-stone-600 mt-1 tracking-tight">{formatMoney(item.price * item.qty)}</span>
+                            </div>
+
+                            {/* Quick Actions (Squircle) */}
+                            <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 shrink-0">
+                               <button className="w-7 h-7 bg-stone-50 text-stone-400 rounded-[0.7rem] flex items-center justify-center hover:bg-orange-50 hover:text-primary transition-all border border-stone-100 shadow-sm" title="Ghi chú">
+                                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                               </button>
+                               <button onClick={() => removeItem(item.id)} className="w-7 h-7 bg-red-50 text-red-500 rounded-[0.7rem] flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm" title="Xóa món">
+                                  <span className="material-symbols-outlined text-[14px]">delete</span>
+                               </button>
                             </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                )}
-               </div>
-            </div>
 
-            {/* Right Side: Order Panel */}
-            <aside className="w-[380px] lg:w-[420px] flex flex-col bg-white rounded-[2rem] p-6 lg:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] shrink-0">
-               <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100 shrink-0">
-                 <div className="flex items-center gap-2">
-                   <h2 className="font-headline font-black text-xl text-stone-900">Bàn {currentTable || "--"}</h2>
-                   <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">
-                     {currentTable ? (
-                        tableStatus[currentTable] === "OPEN" ? `ORDER #${new Date().getTime().toString().slice(-4)}` :
-                        tableStatus[currentTable] === "PAYING" ? "CHỜ RESET" : "TRỐNG"
-                     ) : "Chưa chọn bàn"}
-                   </span>
+                 {/* Billing Summary */}
+                 <div className="pt-6 pb-6 border-t border-dashed border-stone-200 space-y-3 shrink-0">
+                   <div className="flex justify-between text-[13px] font-bold text-stone-400">
+                     <span>Tạm tính</span>
+                     <span className="text-stone-600">{formatMoney(total)}</span>
+                   </div>
+                   <div className="flex justify-between items-end pt-2">
+                     <span className="font-bold text-sm text-stone-900">Tổng cộng</span>
+                     <span className="font-headline font-black text-2xl lg:text-3xl text-primary tracking-tight">{formatMoney(total)}</span>
+                   </div>
                  </div>
-                 {tableStatus[currentTable] === "OPEN" && (
-                   <div className="flex gap-2">
-                     <button onClick={() => setShowTransferModal(true)} disabled={currentItems.length === 0} className="w-10 h-10 bg-orange-100 rounded-[1.2rem] flex items-center justify-center text-orange-600 hover:bg-orange-200 transition-all disabled:opacity-50 shadow-sm border border-orange-200/50 group/btn" title="Chuyển bàn">
-                       <span className="material-symbols-outlined text-[20px]">sync_alt</span>
+
+                 {/* Action Buttons */}
+                 <div className="space-y-3 shrink-0">
+                   <div className="grid grid-cols-2 gap-3">
+                     <button
+                       onClick={() => printOrderTicket('FOOD')}
+                       disabled={currentItems.length === 0}
+                       className="py-3.5 bg-stone-50 text-stone-600 font-bold rounded-2xl hover:bg-stone-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-sm border border-stone-200/50"
+                     >
+                       <span className="material-symbols-outlined text-[16px]">restaurant</span> {currentItems.length > 0 && currentItems.filter(i => i.type !== 'DRINK').some(i => i.qty > (kitchenSent[currentTable]?.[i.id] || 0)) ? <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-error animate-pulse"></span> : null} Gửi Bếp
                      </button>
-                     <button onClick={() => { setSplitSelected([]); setSplitTarget(""); setSplitModal(true); }} disabled={currentItems.length === 0} className="w-10 h-10 bg-stone-100 rounded-[1.2rem] flex items-center justify-center text-stone-500 hover:bg-stone-200 hover:text-stone-800 transition-all disabled:opacity-50 shadow-sm border border-stone-200" title="Tách bàn">
-                       <span className="material-symbols-outlined text-[20px]">call_split</span>
+                     <button
+                       onClick={() => printTamTinh()}
+                       disabled={currentItems.length === 0}
+                       className="py-3.5 bg-stone-50 text-stone-600 font-bold rounded-2xl hover:bg-stone-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-sm border border-stone-200/50"
+                     >
+                       <span className="material-symbols-outlined text-[16px]">receipt</span> Tạm Tính
+                     </button>
+                     {/* Optional: Drink order button, moved to span across if needed, or included in 3-grid. Kept exactly like image (2 cols) + fallback. */}
+                     <button
+                       onClick={() => printOrderTicket('DRINK')}
+                       disabled={currentItems.length === 0}
+                       className="col-span-2 py-2.5 bg-white text-stone-500 font-bold rounded-xl hover:bg-stone-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-[11px] border border-stone-200/30"
+                     >
+                       <span className="material-symbols-outlined text-[14px]">local_cafe</span> Gửi Bếp Nước
                      </button>
                    </div>
-                 )}
-               </div>
-
-               {/* Order List */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar mb-4 pr-1 relative">
-                  {currentItems.length === 0 ? (
-                    <div className="absolute inset-0 flex items-center justify-center flex-col text-stone-400">
-                      <span className="material-symbols-outlined text-6xl opacity-20 mb-4">restaurant</span>
-                      <p className="text-sm font-semibold">Chưa có món nào</p>
-                    </div>
-                  ) : currentItems.map((item, idx) => {
-                    const sentQty = kitchenSent[currentTable]?.[item.id] || 0;
-                    const newQty  = item.qty - sentQty;
-                    const note    = itemNotes[currentTable]?.[item.id] || "";
-                    return (
-                      <div key={item.id} className={`flex gap-3 items-center group py-2.5 ${idx < currentItems.length - 1 ? "border-b border-stone-100" : ""}`}>
-                        {/* Circular Thumbnail */}
-                        <div className="w-11 h-11 rounded-full overflow-hidden bg-stone-100 shrink-0 shadow-sm border border-stone-200/50">
-                          {item.image ? (
-                            <img src={menuImageSrc(item.image)} className="w-full h-full object-cover" alt={item.name}/>
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-stone-400"><span className="material-symbols-outlined text-lg">restaurant</span></div>
-                          )}
-                        </div>
-                        
-                        {/* Name + Tag */}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-stone-900 text-[13px] leading-tight line-clamp-1">{item.name}</h4>
-                          {newQty > 0 && (
-                            <span className="inline-flex w-fit items-center px-1.5 py-px bg-orange-50 text-[9px] font-bold text-orange-600 rounded mt-0.5">
-                              + {newQty} món mới
-                            </span>
-                          )}
-                          {note && <p className="text-[10px] text-stone-400 mt-0.5 truncate">{note}</p>}
-                          <input
-                            type="text"
-                            value={note}
-                            onChange={e => setItemNotes(prev => ({ ...prev, [currentTable]: { ...(prev[currentTable] || {}), [item.id]: e.target.value } }))}
-                            placeholder="+ Ghi chú..."
-                            className="w-full text-[10px] font-medium bg-transparent border-none p-0 focus:ring-0 text-stone-500 placeholder:text-stone-300 outline-none transition-all opacity-0 h-0 group-hover:opacity-100 group-hover:h-4 group-hover:mt-1"
-                          />
-                        </div>
-                        
-                        {/* Qty + Price + Actions Wrapper */}
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-right flex flex-col items-end justify-center">
-                            <div className="flex items-center gap-1.5">
-                              <button onClick={() => {
-                                if (item.qty - 1 < sentQty) {
-                                  setKitchenSent(prev => ({...prev, [currentTable]: { ...(prev[currentTable] || {}), [item.id]: Math.max(0, item.qty - 1) }}));
-                                }
-                                updateQty(item.id, "dec");
-                              }} className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors text-xs font-bold">-</button>
-                              
-                              <span className="font-bold text-[12px] w-5 text-center text-stone-800">{item.qty < 10 ? `0${item.qty}` : item.qty}</span>
-                              
-                              <button onClick={() => updateQty(item.id, "inc")} className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors text-xs font-bold">+</button>
-                            </div>
-                            <span className="font-bold text-[11px] text-stone-600 mt-1 tracking-tight">{formatMoney(item.price * item.qty)}</span>
-                          </div>
-
-                          {/* Quick Actions (Squircle) */}
-                          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 shrink-0">
-                             <button className="w-7 h-7 bg-stone-50 text-stone-400 rounded-[0.7rem] flex items-center justify-center hover:bg-orange-50 hover:text-primary transition-all border border-stone-100 shadow-sm" title="Ghi chú">
-                                <span className="material-symbols-outlined text-[14px]">edit</span>
-                             </button>
-                             <button onClick={() => removeItem(item.id)} className="w-7 h-7 bg-red-50 text-red-500 rounded-[0.7rem] flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm" title="Xóa món">
-                                <span className="material-symbols-outlined text-[14px]">delete</span>
-                             </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-               {/* Billing Summary */}
-               <div className="pt-6 pb-6 border-t border-dashed border-stone-200 space-y-3 shrink-0">
-                 <div className="flex justify-between text-[13px] font-bold text-stone-400">
-                   <span>Tạm tính</span>
-                   <span className="text-stone-600">{formatMoney(total)}</span>
+                   
+                   {tableStatus[currentTable] === "PAYING" ? (
+                     <button
+                       onClick={resetTable}
+                       className="w-full py-4 bg-error-container text-error hover:bg-red-200 font-bold text-sm rounded-[1.2rem] shadow-sm transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                     >
+                       <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+                       RESET BÀN TRỐNG
+                     </button>
+                   ) : (
+                     <button
+                       onClick={handlePayment}
+                       disabled={currentItems.length === 0}
+                       className="w-full py-4 bg-primary hover:bg-[#c2410c] text-white font-bold text-sm rounded-[1.2rem] shadow-lg shadow-orange-300/40 active:scale-95 transition-all uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-70 disabled:grayscale-[0.5]"
+                     >
+                       <span className="material-symbols-outlined text-[18px]">payments</span>
+                       THANH TOÁN & IN BILL
+                     </button>
+                   )}
                  </div>
-                 <div className="flex justify-between items-end pt-2">
-                   <span className="font-bold text-sm text-stone-900">Tổng cộng</span>
-                   <span className="font-headline font-black text-2xl lg:text-3xl text-primary tracking-tight">{formatMoney(total)}</span>
-                 </div>
-               </div>
-
-               {/* Action Buttons */}
-               <div className="space-y-3 shrink-0">
-                 <div className="grid grid-cols-2 gap-3">
-                   <button
-                     onClick={() => printOrderTicket('FOOD')}
-                     disabled={currentItems.length === 0}
-                     className="py-3.5 bg-stone-50 text-stone-600 font-bold rounded-2xl hover:bg-stone-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-sm border border-stone-200/50"
-                   >
-                     <span className="material-symbols-outlined text-[16px]">restaurant</span> {currentItems.length > 0 && currentItems.filter(i => i.type !== 'DRINK').some(i => i.qty > (kitchenSent[currentTable]?.[i.id] || 0)) ? <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-error animate-pulse"></span> : null} Gửi Bếp
-                   </button>
-                   <button
-                     onClick={() => printTamTinh()}
-                     disabled={currentItems.length === 0}
-                     className="py-3.5 bg-stone-50 text-stone-600 font-bold rounded-2xl hover:bg-stone-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-sm border border-stone-200/50"
-                   >
-                     <span className="material-symbols-outlined text-[16px]">receipt</span> Tạm Tính
-                   </button>
-                   {/* Optional: Drink order button, moved to span across if needed, or included in 3-grid. Kept exactly like image (2 cols) + fallback. */}
-                   <button
-                     onClick={() => printOrderTicket('DRINK')}
-                     disabled={currentItems.length === 0}
-                     className="col-span-2 py-2.5 bg-white text-stone-500 font-bold rounded-xl hover:bg-stone-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-[11px] border border-stone-200/30"
-                   >
-                     <span className="material-symbols-outlined text-[14px]">local_cafe</span> Gửi Bếp Nước
-                   </button>
-                 </div>
-                 
-                 {tableStatus[currentTable] === "PAYING" ? (
-                   <button
-                     onClick={resetTable}
-                     className="w-full py-4 bg-error-container text-error hover:bg-red-200 font-bold text-sm rounded-[1.2rem] shadow-sm transition-all uppercase tracking-wider flex items-center justify-center gap-2"
-                   >
-                     <span className="material-symbols-outlined text-[18px]">restart_alt</span>
-                     RESET BÀN TRỐNG
-                   </button>
-                 ) : (
-                   <button
-                     onClick={handlePayment}
-                     disabled={currentItems.length === 0}
-                     className="w-full py-4 bg-primary hover:bg-[#c2410c] text-white font-bold text-sm rounded-[1.2rem] shadow-lg shadow-orange-300/40 active:scale-95 transition-all uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-70 disabled:grayscale-[0.5]"
-                   >
-                     <span className="material-symbols-outlined text-[18px]">payments</span>
-                     THANH TOÁN & IN BILL
-                   </button>
-                 )}
-               </div>
-            </aside>
-          </div>
+              </aside>
+            </div>
+          )
         )}
 
         {/* ===== MANAGE VIEW ===== */}
@@ -2054,200 +2086,300 @@ export default function App() {
           </div>
         )}
 
+        {/* ===== USERS VIEW ===== */}
         {sidebarView === "users" && isAdmin && (
-          <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <section className="xl:col-span-1 bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/30">
-                <h3 className="font-headline font-black text-xl mb-4">Thêm nhân viên</h3>
-                <div className="space-y-3">
-                  <input
-                    className="w-full rounded-xl border border-outline-variant/40 px-4 py-2.5 bg-surface-container"
-                    placeholder="Username"
-                    value={newUser.username}
-                    onChange={(e) => setNewUser((s) => ({ ...s, username: e.target.value }))}
-                  />
-                  <input
-                    type="password"
-                    className="w-full rounded-xl border border-outline-variant/40 px-4 py-2.5 bg-surface-container"
-                    placeholder="Mật khẩu"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser((s) => ({ ...s, password: e.target.value }))}
-                  />
-                  <input
-                    className="w-full rounded-xl border border-outline-variant/40 px-4 py-2.5 bg-surface-container"
-                    placeholder="Tên hiển thị"
-                    value={newUser.full_name}
-                    onChange={(e) => setNewUser((s) => ({ ...s, full_name: e.target.value }))}
-                  />
-                  <select
-                    className="w-full rounded-xl border border-outline-variant/40 px-4 py-2.5 bg-surface-container"
-                    value={newUser.role}
-                    onChange={(e) => setNewUser((s) => ({ ...s, role: e.target.value }))}
-                  >
-                    <option value="staff">Nhân viên</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <button
-                    onClick={createUser}
-                    className="w-full rounded-xl bg-primary text-white py-2.5 font-bold"
-                  >
-                    Tạo user
+          <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 md:p-8">
+            <h2 className="text-3xl font-black font-headline text-on-surface mb-8">Quản lý Nhân sự</h2>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+              {/* Form Thêm Nhân Viên */}
+              <section className="bg-surface-container-lowest p-8 rounded-[2.5rem] border border-outline-variant/30 shadow-sm">
+                <h3 className="font-headline font-black text-xl mb-6 text-on-surface flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><span className="material-symbols-outlined">person_add</span></div>
+                  Thêm nhân viên
+                </h3>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Tên đăng nhập</label>
+                    <input className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all" value={newUser.username} onChange={(e) => setNewUser((s) => ({ ...s, username: e.target.value }))} placeholder="VD: nhanvien1" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Mật khẩu</label>
+                    <input type="password" className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all" value={newUser.password} onChange={(e) => setNewUser((s) => ({ ...s, password: e.target.value }))} placeholder="••••••••" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Tên hiển thị</label>
+                    <input className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all" value={newUser.full_name} onChange={(e) => setNewUser((s) => ({ ...s, full_name: e.target.value }))} placeholder="VD: Nguyễn Văn A" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Quyền hạn</label>
+                    <select className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer appearance-none" value={newUser.role} onChange={(e) => setNewUser((s) => ({ ...s, role: e.target.value }))}>
+                      <option value="staff">Nhân viên (Staff)</option>
+                      <option value="admin">Quản trị (Admin)</option>
+                    </select>
+                  </div>
+                  <button onClick={createUser} className="w-full rounded-2xl bg-primary text-white py-4 font-black text-lg shadow-xl shadow-orange-300/40 active:scale-95 transition-all mt-4">
+                    Tạo tài khoản
                   </button>
                 </div>
               </section>
 
-              <section className="xl:col-span-2 bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/30">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-headline font-black text-xl">Danh sách nhân viên</h3>
-                  <button onClick={fetchUsers} className="px-4 py-2 rounded-xl bg-surface-container-high font-semibold">
-                    Làm mới
+              {/* Danh Sách Nhân Viên */}
+              <section className="xl:col-span-2 bg-surface-container-lowest p-8 rounded-[2.5rem] border border-outline-variant/30 shadow-sm">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="font-headline font-black text-xl text-on-surface flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><span className="material-symbols-outlined">group</span></div>
+                    Danh sách nhân viên
+                  </h3>
+                  <button onClick={fetchUsers} className="px-5 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest font-bold text-sm transition-all flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">refresh</span> Làm mới
                   </button>
                 </div>
                 {userLoading ? (
-                  <div className="text-on-surface-variant">Đang tải...</div>
+                  <div className="flex flex-col items-center justify-center py-20 text-on-surface-variant opacity-50">
+                    <span className="material-symbols-outlined animate-spin text-4xl mb-4">refresh</span>
+                    <p className="font-bold">Đang tải danh sách...</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {users.map((u) => (
-                      <div key={u.id} className="p-4 rounded-2xl border border-outline-variant/30 bg-surface-container flex items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold truncate">{u.full_name || u.username}</div>
-                          <div className="text-xs text-on-surface-variant">{u.username}</div>
+                      <div key={u.id} className="p-5 rounded-3xl border border-outline-variant/20 bg-surface-container hover:border-primary/30 transition-all group overflow-hidden relative">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${u.role === 'admin' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {u.username[0].toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-black text-on-surface truncate">{u.full_name || u.username}</div>
+                            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{u.username} • {u.role === 'admin' ? 'Quản trị' : 'Nhân viên'}</div>
+                          </div>
                         </div>
-                        <select
-                          className="rounded-lg border border-outline-variant/40 px-2 py-1 bg-white text-sm"
-                          value={u.role}
-                          onChange={(e) => updateUser(u, { role: e.target.value })}
-                        >
-                          <option value="staff">staff</option>
-                          <option value="admin">admin</option>
-                        </select>
-                        <button
-                          onClick={() => updateUser(u, { is_active: Number(u.is_active) ? 0 : 1 })}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${Number(u.is_active) ? "bg-green-100 text-green-700" : "bg-stone-200 text-stone-700"}`}
-                        >
-                          {Number(u.is_active) ? "Đang bật" : "Đã khóa"}
-                        </button>
-                        <button
-                          onClick={() => {
-                            const pw = window.prompt(`Đặt mật khẩu mới cho ${u.username}`);
-                            if (pw) updateUser(u, { password: pw });
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-bold"
-                        >
-                          Đổi mật khẩu
-                        </button>
-                        <button
-                          onClick={() => deleteUser(u)}
-                          className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-bold"
-                        >
-                          Xóa
-                        </button>
+                        <div className="flex items-center justify-between pt-4 border-t border-outline-variant/10">
+                          <button onClick={() => updateUser(u, { is_active: Number(u.is_active) ? 0 : 1 })} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${Number(u.is_active) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {Number(u.is_active) ? "Kích hoạt" : "Đã khóa"}
+                          </button>
+                          <div className="flex gap-2">
+                            <button onClick={() => { const pw = window.prompt(`Đặt mật khẩu mới cho ${u.username}`); if (pw) updateUser(u, { password: pw }); }} className="w-8 h-8 rounded-full bg-white text-amber-600 flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all shadow-sm border border-amber-100">
+                              <span className="material-symbols-outlined text-[16px]">key</span>
+                            </button>
+                            <button onClick={() => deleteUser(u)} className="w-8 h-8 rounded-full bg-white text-error flex items-center justify-center hover:bg-error hover:text-white transition-all shadow-sm border border-red-100">
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     ))}
-                        {t}
-                        {isOccupied && (
-                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full border-2 border-white"></span>
-                        )}
-                      </button>
-                    );
-                  })}
-              </div>
-
-              {/* Legend */}
-              <div className="flex items-center gap-6 pt-4 border-t border-stone-100">
-                <div className="flex items-center gap-2">
-                   <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_8px_rgba(234,88,12,0.4)]"></div>
-                   <span className="text-xs font-bold text-on-surface-variant">Trống - Có thể chuyển</span>
-                </div>
-                <div className="flex items-center gap-2">
-                   <div className="w-3 h-3 rounded-full bg-stone-300"></div>
-                   <span className="text-xs font-bold text-on-surface-variant/60">Có khách - Không thể</span>
-            >
-              <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: sidebarView === "tables" ? "'FILL' 1" : "'FILL' 0" }}>grid_view</span>
-              <span className="font-headline font-semibold text-[10px] uppercase tracking-widest">Sơ đồ Bàn</span>
-            </button>
-            <button 
-              onClick={() => setSidebarView("order")}
-              className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "order" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
-            >
-              <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: sidebarView === "order" ? "'FILL' 1" : "'FILL' 0" }}>restaurant_menu</span>
-              <span className="font-headline font-semibold text-[10px] uppercase tracking-widest">Gọi món</span>
-            </button>
-            {isAdmin && (
-              <button 
-                onClick={() => setSidebarView("history")}
-                className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "history" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
-              >
-                <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: sidebarView === "history" ? "'FILL' 1" : "'FILL' 0" }}>receipt_long</span>
-                <span className="font-headline font-semibold text-[10px] uppercase tracking-widest">Hóa đơn</span>
-              </button>
-            )}
-            <button 
-              onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
-              className="md:hidden flex flex-col items-center justify-center text-stone-400 px-4 py-2 hover:text-orange-500 transition-all duration-300 active:scale-90"
-            >
-              <span className="material-symbols-outlined mb-1">menu</span>
-              <span className="font-headline font-semibold text-[10px] uppercase tracking-widest">Menu</span>
-            </button>
-          </nav>
-        )}
-
-        {/* Mobile Full Menu Overlay */}
-        {isSidebarExpanded && (
-          <div className="md:hidden fixed inset-0 z-[60] bg-surface-container flex flex-col animate-in slide-in-from-bottom pb-safe">
-            <div className="flex items-center justify-between p-6 shrink-0 border-b border-outline-variant/20">
-              <h2 className="text-2xl font-black font-headline text-primary">Danh mục mở rộng</h2>
-              <button onClick={() => setIsSidebarExpanded(false)} className="bg-surface-container-high rounded-full p-2 flex items-center justify-center active:scale-95 text-on-surface-variant">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => { setSidebarView("tables"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "tables" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
-                  <span className="material-symbols-outlined text-3xl">grid_view</span>
-                  <span className="font-bold">Sơ đồ bàn</span>
-                </button>
-                <button onClick={() => { setSidebarView("order"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "order" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
-                  <span className="material-symbols-outlined text-3xl">restaurant_menu</span>
-                  <span className="font-bold">Gọi món</span>
-                </button>
-                {isAdmin && (
-                  <>
-                    <button onClick={() => { setSidebarView("manage"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "manage" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
-                      <span className="material-symbols-outlined text-3xl">format_list_bulleted</span>
-                      <span className="font-bold text-center">Quản lý Thực đơn</span>
-                    </button>
-                    <button onClick={() => { setSidebarView("history"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "history" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
-                      <span className="material-symbols-outlined text-3xl">receipt_long</span>
-                      <span className="font-bold text-center">Lịch sử Hóa đơn</span>
-                    </button>
-                    <button onClick={() => { setSidebarView("stats"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "stats" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
-                      <span className="material-symbols-outlined text-3xl">trending_up</span>
-                      <span className="font-bold text-center">Thống kê</span>
-                    </button>
-                    <button onClick={() => { setSidebarView("users"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "users" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
-                      <span className="material-symbols-outlined text-3xl">group</span>
-                      <span className="font-bold text-center">Nhân sự</span>
-                    </button>
-                    <button onClick={() => { setSidebarView("settings"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "settings" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
-                      <span className="material-symbols-outlined text-3xl">settings</span>
-                      <span className="font-bold text-center">Cài đặt HT</span>
-                    </button>
-                  </>
+                  </div>
                 )}
-              </div>
-              <div className="pt-6 border-t border-outline-variant/20 flex flex-col items-center gap-4">
-                <button onClick={handleLogout} className="w-full py-4 bg-error-container text-on-error-container font-black rounded-2xl flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined">logout</span> Đăng xuất
-                </button>
-              </div>
+              </section>
             </div>
           </div>
         )}
 
-      </main>
-    </div>
-  );
-}
+        {/* ===== STATS VIEW ===== */}
+        {sidebarView === "stats" && isAdmin && (
+          <StatsView
+            formatMoney={formatMoney}
+            historyDate={historyDate}
+          />
+        )}
 
-export default App;
+      </div>
+      </div>
+    </main>
+
+    {/* ==================== MOBILE BOTTOM NAVIGATION ==================== */}
+    {isMobile && (
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-t border-stone-200 flex items-center justify-around px-2 py-1.5 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+        <button
+          onClick={() => setSidebarView("tables")}
+          className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "tables" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
+        >
+          <span className="material-symbols-outlined mb-0.5" style={{ fontVariationSettings: sidebarView === "tables" ? "'FILL' 1" : "'FILL' 0" }}>grid_view</span>
+          <span className="font-headline font-bold text-[10px] uppercase tracking-wider">Sơ đồ Bàn</span>
+        </button>
+
+        <button
+          onClick={() => setSidebarView("order")}
+          className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "order" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
+        >
+          <span className="material-symbols-outlined mb-0.5" style={{ fontVariationSettings: sidebarView === "order" ? "'FILL' 1" : "'FILL' 0" }}>restaurant_menu</span>
+          <span className="font-headline font-bold text-[10px] uppercase tracking-wider">Gọi món</span>
+        </button>
+
+        {isAdmin && (
+          <button
+            onClick={() => setSidebarView("history")}
+            className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "history" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
+          >
+            <span className="material-symbols-outlined mb-0.5" style={{ fontVariationSettings: sidebarView === "history" ? "'FILL' 1" : "'FILL' 0" }}>receipt_long</span>
+            <span className="font-headline font-bold text-[10px] uppercase tracking-wider">Hóa đơn</span>
+          </button>
+        )}
+
+        <button
+          onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+          className="md:hidden flex flex-col items-center justify-center text-stone-400 px-4 py-2 hover:text-orange-500 transition-all duration-300 active:scale-90"
+        >
+          <span className="material-symbols-outlined mb-0.5">menu</span>
+          <span className="font-headline font-bold text-[10px] uppercase tracking-wider">Menu</span>
+        </button>
+      </nav>
+    )}
+
+    {/* Mobile Sidebar (Menu Overlay) */}
+    {isSidebarExpanded && isMobile && (
+      <div className="md:hidden fixed inset-0 z-[60] bg-surface-container flex flex-col animate-in slide-in-from-bottom pb-safe">
+        <div className="flex items-center justify-between p-6 shrink-0 border-b border-outline-variant/20">
+          <h2 className="text-2xl font-black font-headline text-primary">Danh mục mở rộng</h2>
+          <button onClick={() => setIsSidebarExpanded(false)} className="bg-surface-container-high rounded-full p-2 flex items-center justify-center active:scale-95 text-on-surface-variant">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <button onClick={() => { setSidebarView("tables"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "tables" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+              <span className="material-symbols-outlined text-3xl">grid_view</span>
+              <span className="font-bold">Sơ đồ bàn</span>
+            </button>
+            <button onClick={() => { setSidebarView("order"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "order" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+              <span className="material-symbols-outlined text-3xl">restaurant_menu</span>
+              <span className="font-bold">Gọi món</span>
+            </button>
+            {isAdmin && (
+              <>
+                <button onClick={() => { setSidebarView("manage"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "manage" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                  <span className="material-symbols-outlined text-3xl">format_list_bulleted</span>
+                  <span className="font-bold text-center">Quản lý Thực đơn</span>
+                </button>
+                <button onClick={() => { setSidebarView("history"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "history" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                  <span className="material-symbols-outlined text-3xl">receipt_long</span>
+                  <span className="font-bold text-center">Lịch sử Hóa đơn</span>
+                </button>
+                <button onClick={() => { setSidebarView("stats"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "stats" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                  <span className="material-symbols-outlined text-3xl">trending_up</span>
+                  <span className="font-bold text-center">Thống kê</span>
+                </button>
+                <button onClick={() => { setSidebarView("users"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "users" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                  <span className="material-symbols-outlined text-3xl">group</span>
+                  <span className="font-bold text-center">Nhân sự</span>
+                </button>
+                <button onClick={() => { setSidebarView("settings"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "settings" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
+                  <span className="material-symbols-outlined text-3xl">settings</span>
+                  <span className="font-bold text-center">Cài đặt HT</span>
+                </button>
+              </>
+            )}
+          </div>
+          <div className="pt-6 border-t border-outline-variant/20 flex flex-col items-center gap-4">
+            <button onClick={handleLogout} className="w-full py-4 bg-error-container text-on-error-container font-black rounded-2xl flex items-center justify-center gap-2">
+              <span className="material-symbols-outlined">logout</span> Đăng xuất
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ==================== MOBILE CART DRAWER (OVERLAY) ==================== */}
+    {isMobile && showMobileCart && (
+      <div className="fixed inset-0 z-[60] flex flex-col bg-stone-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+        <div 
+          className="absolute inset-0" 
+          onClick={() => setShowMobileCart(false)}
+        />
+        <div className="mt-auto bg-white rounded-t-[2.5rem] flex flex-col h-[92vh] w-full relative shadow-2xl animate-in slide-in-from-bottom duration-500 ease-out overflow-hidden">
+          {/* Drag Handle / Close Header */}
+          <div className="flex items-center justify-between p-6 pb-2">
+            <div className="w-12 h-1.5 bg-stone-200 rounded-full mx-auto absolute top-3 left-1/2 -translate-x-1/2" />
+            <button 
+              onClick={() => setShowMobileCart(false)}
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-stone-500 active:scale-90 transition-transform"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+            <h3 className="font-headline font-black text-lg">Thông tin đơn hàng</h3>
+            <div className="w-10" /> 
+          </div>
+
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <aside className="flex-1 flex flex-col bg-white px-6 pb-8">
+               <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100 shrink-0">
+                 <div className="flex items-center gap-2">
+                   <h2 className="font-headline font-black text-xl text-stone-900">Bàn {currentTable || "--"}</h2>
+                   <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">
+                     {currentTable ? (
+                        tableStatus[currentTable] === "OPEN" ? `ORDER #${new Date().getTime().toString().slice(-4)}` :
+                        tableStatus[currentTable] === "PAYING" ? "CHỜ RESET" : "TRỐNG"
+                     ) : "Chưa chọn bàn"}
+                   </span>
+                 </div>
+               </div>
+
+               <div className="flex-1 overflow-y-auto custom-scrollbar mb-4 pr-1 relative">
+                  {currentItems.length === 0 ? (
+                    <div className="absolute inset-0 flex items-center justify-center flex-col text-stone-400">
+                      <span className="material-symbols-outlined text-6xl opacity-20 mb-4">restaurant</span>
+                      <p className="text-sm font-semibold">Chưa có món nào</p>
+                    </div>
+                  ) : currentItems.map((item, idx) => {
+                    const sentQty = kitchenSent[currentTable]?.[item.id] || 0;
+                    const newQty  = item.qty - sentQty;
+                    return (
+                      <div key={item.id} className={`flex gap-3 items-center group py-4 ${idx < currentItems.length - 1 ? "border-b border-stone-100" : ""}`}>
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 shrink-0 shadow-sm border border-stone-200/50">
+                          {item.image ? (
+                            <img src={menuImageSrc(item.image)} className="w-full h-full object-cover" alt={item.name}/>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-stone-400"><span className="material-symbols-outlined text-xl">restaurant</span></div>
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-stone-900 text-sm leading-tight line-clamp-1">{item.name}</h4>
+                          {newQty > 0 && <span className="inline-flex items-center px-1.5 py-px bg-orange-50 text-[9px] font-bold text-orange-600 rounded mt-0.5">+ {newQty} món mới</span>}
+                        </div>
+                        
+                        <div className="flex items-center gap-4 shrink-0">
+                          <div className="flex items-center bg-stone-100 rounded-xl p-1 gap-1.5">
+                            <button onClick={() => updateQty(item.id, "dec")} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-stone-600 font-bold">-</button>
+                            <span className="font-bold text-sm w-4 text-center">{item.qty}</span>
+                            <button onClick={() => updateQty(item.id, "inc")} className="w-8 h-8 rounded-lg bg-primary text-white shadow-sm flex items-center justify-center font-bold">+</button>
+                          </div>
+                          <div className="text-right min-w-[70px]">
+                            <div className="font-black text-sm text-stone-900">{formatMoney(item.price * item.qty)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+               <div className="pt-6 pb-6 border-t border-dashed border-stone-200 space-y-4 shrink-0">
+                 <div className="flex justify-between items-end">
+                   <span className="font-bold text-stone-400">Tổng thanh toán</span>
+                   <span className="font-headline font-black text-3xl text-primary tracking-tight">{formatMoney(total)}</span>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-3 pb-safe">
+                   <button
+                     onClick={() => { printOrderTicket('FOOD'); setShowMobileCart(false); }}
+                     disabled={currentItems.length === 0}
+                     className="py-4 bg-stone-100 text-stone-600 font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm"
+                   >
+                     GỬI BẾP
+                   </button>
+                   <button
+                     onClick={() => { handlePayment(); setShowMobileCart(false); }}
+                     disabled={currentItems.length === 0}
+                     className="py-4 bg-primary text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-orange-300/40 text-sm"
+                   >
+                     THANH TOÁN
+                   </button>
+                 </div>
+               </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+);
+}

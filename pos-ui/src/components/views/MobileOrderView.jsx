@@ -62,7 +62,8 @@ export default function MobileOrderView({
   formatMoney,
   menuImageSrc,
   sidebarView,
-  setSidebarView
+  setSidebarView,
+  setShowMobileCart
 }) {
   const filteredMenu = useMemo(() => {
     const byTab = filterMenu(menu, filter);
@@ -78,9 +79,7 @@ export default function MobileOrderView({
   // maybe we emit an event or call a prop `onOpenCart`. 
   // For now, let's assume setting `sidebarView="tables"` as a switch or just opening a cart modal.
   const openCart = () => {
-    // If we want a separate checkout view, right now the desktop view has an aside. 
-    // We can dispatch an event or callback.
-    alert("Mobile Checkout view to be implemented or hooked into App.js context");
+    setShowMobileCart(true);
   };
 
   return (

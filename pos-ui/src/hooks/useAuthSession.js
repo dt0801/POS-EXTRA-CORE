@@ -46,15 +46,17 @@ export default function useAuthSession() {
       setAuthReady(true);
       return;
     }
+    // Use cached session immediately to avoid blocking UI on every reload.
     setAuthToken(token);
+    setAuthUser(cachedUser);
+    setAuthReady(true);
     fetchMe(token)
       .then((user) => setAuthUser(user))
       .catch(() => {
         clearAuthSession();
         setAuthToken("");
         setAuthUser(null);
-      })
-      .finally(() => setAuthReady(true));
+      });
   }, []);
 
   useEffect(() => {

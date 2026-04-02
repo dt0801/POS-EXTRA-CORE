@@ -182,7 +182,7 @@ export default function App() {
     itemNotes,
     setItemNotes,
     orderSessionReady,
-  } = useOrderSession({ authedFetch });
+  } = useOrderSession({ authedFetch, authToken });
 
   // ----- MANAGE STATE -----
   const [manageTab, setManageTab]   = useState("add");

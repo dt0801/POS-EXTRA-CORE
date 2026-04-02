@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { API_URL } from "../config/api";
 import { clearAuthSession, fetchMe, getAuthToken, getAuthUser } from "../services/authService";
 
@@ -17,12 +17,18 @@ export default function useAuthSession() {
   const [authReady, setAuthReady] = useState(false);
   const [authToken, setAuthToken] = useState("");
   const [authUser, setAuthUser] = useState(null);
+  // Chỉ alert 1 lần sau mỗi lần đăng nhập lại (hoặc reload trang).
+  const didAlertForceLogoutRef = useRef(false);
 
   const forceLogout = useCallback((reason) => {
     clearAuthSession();
     setAuthToken("");
     setAuthUser(null);
-    if (reason) alert(reason);
+    // Chặn spam alert khi nhiều request/WS đồng thời bị 401/FORCE_LOGOUT.
+    if (reason && !didAlertForceLogoutRef.current) {
+      didAlertForceLogoutRef.current = true;
+      alert(reason);
+    }
   }, []);
 
   const authedFetch = useCallback((url, options = {}) => {
@@ -61,6 +67,9 @@ export default function useAuthSession() {
 
   useEffect(() => {
     if (!authToken || !authUser) return;
+    // Khi đăng nhập/refresh thành công thì cho phép alert lại ở lần force logout tiếp theo.
+    didAlertForceLogoutRef.current = false;
+
     const wsUrl = `${apiToWsUrl(API_URL)}?token=${encodeURIComponent(authToken)}`;
     let ws;
     try {

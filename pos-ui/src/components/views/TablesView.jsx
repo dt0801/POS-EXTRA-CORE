@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 
 export default function TablesView({
   tables,
@@ -9,61 +9,33 @@ export default function TablesView({
   setCurrentTable,
   setSidebarView,
 }) {
-  const [filter, setFilter] = useState("ALL");
-
   const totalTables = tables.length;
-  const emptyTables = tables.filter(t => !tableStatus[t] || tableStatus[t] === "OPEN").length;
-  const servingTables = tables.filter(t => tableStatus[t] === "ORDERING").length;
-  const cleaningTables = tables.filter(t => tableStatus[t] === "PAYING").length;
+  const getDisplayStatus = (tableNum) => {
+    const status = tableStatus[tableNum];
+    const hasOrders = Object.keys(tableOrders[tableNum] || {}).length > 0;
+    if (status === "PAYING") return "PAYING";
+    if (hasOrders) return "ORDERING";
+    return "OPEN";
+  };
+  const emptyTables = tables.filter((t) => getDisplayStatus(t) === "OPEN").length;
+  const servingTables = tables.filter((t) => getDisplayStatus(t) === "ORDERING").length;
+  const cleaningTables = tables.filter((t) => getDisplayStatus(t) === "PAYING").length;
 
   return (
     <div className="flex-1 overflow-y-auto pt-6 px-4 md:px-6 pb-32">
       {/* Section Header */}
       <div className="flex items-end justify-between mb-6">
         <h2 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface">Quản lý Bàn</h2>
-        <div className="flex gap-2">
-          <span className="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full text-xs font-bold">TẦNG 1</span>
+        <div className="text-xs font-semibold text-on-surface-variant">
+          Tổng: {totalTables} - Trống: {emptyTables} - Phục vụ: {servingTables} - Chờ dọn: {cleaningTables}
         </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
-        <button 
-          onClick={() => setFilter("ALL")}
-          className={`whitespace-nowrap px-5 py-2.5 rounded-full transition-colors ${filter === "ALL" ? "bg-primary-container text-on-primary-container font-bold shadow-sm" : "bg-surface-container-lowest text-on-surface-variant font-semibold hover:bg-surface-bright"}`}
-        >
-          Tất cả ({totalTables})
-        </button>
-        <button 
-          onClick={() => setFilter("OPEN")}
-          className={`whitespace-nowrap px-5 py-2.5 rounded-full transition-colors ${filter === "OPEN" ? "bg-primary-container text-on-primary-container font-bold shadow-sm" : "bg-surface-container-lowest text-on-surface-variant font-semibold hover:bg-surface-bright"}`}
-        >
-          Trống ({emptyTables})
-        </button>
-        <button 
-          onClick={() => setFilter("ORDERING")}
-          className={`whitespace-nowrap px-5 py-2.5 rounded-full transition-colors ${filter === "ORDERING" ? "bg-primary-container text-on-primary-container font-bold shadow-sm" : "bg-surface-container-lowest text-on-surface-variant font-semibold hover:bg-surface-bright"}`}
-        >
-          Đang phục vụ ({servingTables})
-        </button>
-        <button 
-          onClick={() => setFilter("PAYING")}
-          className={`whitespace-nowrap px-5 py-2.5 rounded-full transition-colors ${filter === "PAYING" ? "bg-primary-container text-on-primary-container font-bold shadow-sm" : "bg-surface-container-lowest text-on-surface-variant font-semibold hover:bg-surface-bright"}`}
-        >
-          Chờ dọn ({cleaningTables})
-        </button>
       </div>
 
       {/* Table Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mt-2">
         {tables
-          .filter(t => {
-            if (filter === "ALL") return true;
-            const status = tableStatus[t] || "OPEN";
-            return status === filter;
-          })
           .map((t) => {
-            const status = tableStatus[t] || "OPEN";
+            const status = getDisplayStatus(t);
             const orders = tableOrders[t] || {};
             const qty = calcTotalQty(orders);
             const revenue = Object.keys(orders).length > 0 ? 

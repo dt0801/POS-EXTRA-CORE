@@ -110,7 +110,7 @@ export default function MobileOrderView({
     <div className="flex flex-col h-full relative bg-surface-container font-body text-on-surface antialiased overflow-hidden">
       <main className="flex-1 overflow-y-auto pb-32">
         {/* Category Filter */}
-        <section className="sticky top-14 z-30 bg-surface-container py-4 shadow-sm">
+        <section className="sticky top-12 z-30 bg-surface-container py-4 shadow-sm">
           <div className="flex overflow-x-auto hide-scrollbar px-6 gap-3">
             {FILTERS.map(f => (
               <button

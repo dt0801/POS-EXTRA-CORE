@@ -184,3 +184,11 @@ button:active{
   font-family: 'Outfit', sans-serif;
   letter-spacing: -0.02em;
 }
+
+/* ===== Safe Area Helpers (iOS notch / home indicator) ===== */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}

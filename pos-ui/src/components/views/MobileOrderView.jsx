@@ -201,7 +201,7 @@ export default function MobileOrderView({
 
       {/* Floating Cart Summary */}
       {currentTable && totalQty > 0 && (
-        <div className="fixed bottom-24 left-6 right-6 z-40 lg:hidden">
+        <div className="fixed bottom-24 left-6 right-6 z-55 lg:hidden">
           <div className="bg-surface/95 backdrop-blur-md rounded-2xl shadow-xl flex items-center justify-between p-4 outline outline-1 outline-primary/10">
             <div className="flex items-center gap-4">
               <div className="relative w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-700">

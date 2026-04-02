@@ -2,26 +2,24 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import "./App.css";
 import { FILTERS } from "./constants/filters";
 import { API_URL, isLocalQuayOrigin } from "./config/api";
-import { isPosElectron, printViaElectronRemote } from "./services/electronPrint";
+import { isPosElectron } from "./services/electronPrint";
 import {
-  clearAuthSession,
-  fetchMe,
-  getAuthToken,
-  getAuthUser,
   login as loginRequest,
   logout as logoutRequest,
 } from "./services/authService";
 import { usePrinterStatus } from "./hooks/usePrinterStatus";
+import useAuthSession from "./hooks/useAuthSession";
+import useOrderSession from "./hooks/useOrderSession";
+import useTableActions from "./hooks/useTableActions";
+import usePrintFlow from "./hooks/usePrintFlow";
+import useMenuManagement from "./hooks/useMenuManagement";
+import useTableManagement from "./hooks/useTableManagement";
+import useSettingsPrinterManagement from "./hooks/useSettingsPrinterManagement";
+import { calcTotal, calcTotalQty, filterMenu, formatMoney, menuImageSrc, removeTones } from "./utils/posHelpers";
 import SidebarItem from "./components/layout/SidebarItem";
 import TablesView from "./components/views/TablesView";
 import HistoryView from "./components/views/HistoryView";
 import StatsView from "./components/views/StatsView";
-import { fetchSettings, saveAllSettings as saveAllSettingsRequest } from "./services/settingsService";
-import {
-  fetchWindowsPrinters as fetchWindowsPrintersRequest,
-  fetchDbPrinters as fetchDbPrintersRequest,
-  addDbPrinter as addDbPrinterRequest,
-} from "./services/printerService";
 import MobileOrderView from "./components/views/MobileOrderView";
 
 // =============================================
@@ -30,95 +28,17 @@ import MobileOrderView from "./components/views/MobileOrderView";
 const TOTAL_TABLES = 20;
 
 // =============================================
-// HELPER FUNCTIONS
-// =============================================
-
-/** Format số tiền VND */
-const formatMoney = (n) => new Intl.NumberFormat("vi-VN").format(n * 1000) + "đ";
-
-/** Ảnh menu: URL đầy đủ (Cloudinary) hoặc file trong /uploads */
-const menuImageSrc = (image) => {
-  if (!image) return "";
-  const s = String(image).trim();
-  if (/^https?:\/\//i.test(s)) return s;
-  return `${API_URL}/uploads/${s}`;
-};
-
-/** Bỏ dấu tiếng Việt để so sánh không bị lỗi encoding */
-const removeTones = (str) => {
-  const map = {
-    'à':'a','á':'a','ả':'a','ã':'a','ạ':'a',
-    'ă':'a','ắ':'a','ằ':'a','ẳ':'a','ẵ':'a','ặ':'a',
-    'â':'a','ấ':'a','ầ':'a','ẩ':'a','ẫ':'a','ậ':'a',
-    'đ':'d',
-    'è':'e','é':'e','ẻ':'e','ẽ':'e','ẹ':'e',
-    'ê':'e','ế':'e','ề':'e','ể':'e','ễ':'e','ệ':'e',
-    'ì':'i','í':'i','ỉ':'i','ĩ':'i','ị':'i',
-    'ò':'o','ó':'o','ỏ':'o','õ':'o','ọ':'o',
-    'ô':'o','ố':'o','ồ':'o','ổ':'o','ỗ':'o','ộ':'o',
-    'ơ':'o','ớ':'o','ờ':'o','ở':'o','ỡ':'o','ợ':'o',
-    'ù':'u','ú':'u','ủ':'u','ũ':'u','ụ':'u',
-    'ư':'u','ứ':'u','ừ':'u','ử':'u','ữ':'u','ự':'u',
-    'ỳ':'y','ý':'y','ỷ':'y','ỹ':'y','ỵ':'y',
-  };
-  return str.toLowerCase().split('').map(c => map[c] || c).join('');
-};
-
-/** Lọc menu theo filter – dùng removeTones để tránh lỗi encoding tiếng Việt */
-const filterMenu = (menu, filter) => {
-  if (filter === "ALL") return menu;
-  // So sánh không dấu
-  const r = (m) => removeTones(m.name);
-  const has  = (m, ...keys) => keys.some(k => r(m).includes(removeTones(k)));
-  const hasN = (m, ...keys) => !keys.some(k => r(m).includes(removeTones(k)));
-
-  const map = {
-    COMBO:     (m) => m.type === "COMBO",
-    DRINK:     (m) => m.type === "DRINK",
-    KHAI_VI:   (m) => has(m, "xuc xich", "khoai tay", "salad"),
-    SIGNATURE: (m) => has(m, "oc nhoi", "heo moi", "nai xao", "nai xong", "dat vang", "tieu xanh"),
-    NHAU:      (m) => has(m, "sun ga chien", "chan ga chien", "canh ga chien", "ech chien gion", "ca trung chien"),
-    GA:        (m) => has(m, "ga") && hasN(m, "chien man", "sun ga", "ca trum", "ra lau"),
-    BO:        (m) => has(m, "bo") && hasN(m, "bun bo", "ra bo"),
-    HEO:       (m) => has(m, "heo", "nai", "suon heo"),
-    ECH:       (m) => has(m, "ech"),
-    CA:        (m) => has(m, "ca trung nuong", "ca tam nuong"),
-    LUON:      (m) => has(m, "luon ngong"),
-    SO_DIEP:   (m) => has(m, "so diep"),
-    HAISAN:    (m) => has(m, "tom", "muc", "bach tuoc"),
-    RAU:       (m) => has(m, "rau muong", "rau cu xao", "rau rung", "mang tay xao"),
-    LAU:       (m) => has(m, "lau", "dia lau", "nam kim cham", "mi goi", "rau lau") && hasN(m, "ca tau mang"),
-    COM_MI:    (m) => has(m, "com chien", "mi xao", "com lam"),
-  };
-  const fn = map[filter];
-  return fn ? menu.filter(fn) : menu;
-};
-
-/** Tính tổng tiền của 1 bàn */
-const calcTotal = (tableData = {}) =>
-  Object.values(tableData).reduce((s, i) => s + i.price * i.qty, 0);
-
-/** Tính tổng số lượng món của 1 bàn */
-const calcTotalQty = (tableData = {}) =>
-  Object.values(tableData).reduce((s, i) => s + i.qty, 0);
-
-function apiToWsUrl(apiUrl) {
-  try {
-    const u = new URL(apiUrl);
-    const proto = u.protocol === "https:" ? "wss:" : "ws:";
-    return `${proto}//${u.host}/pos`;
-  } catch {
-    return "ws://127.0.0.1:3000/pos";
-  }
-}
-
-// =============================================
 // MAIN COMPONENT
 // =============================================
 export default function App() {
-  const [authReady, setAuthReady] = useState(false);
-  const [authToken, setAuthToken] = useState("");
-  const [authUser, setAuthUser] = useState(null);
+  const {
+    authReady,
+    authToken,
+    setAuthToken,
+    authUser,
+    setAuthUser,
+    authedFetch,
+  } = useAuthSession();
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
@@ -126,7 +46,6 @@ export default function App() {
   // ----- CORE STATE -----
   const [menu, setMenu]               = useState([]);
   const [currentTable, setCurrentTable] = useState(null);
-  const [tableOrders, setTableOrders] = useState({});       // { [tableNum]: { [itemId]: {...item, qty} } }
   const [tableStatus, setTableStatus] = useState({});       // { [tableNum]: "OPEN" | "PAID" }
   const [filter, setFilter]           = useState("ALL");  // key từ FILTERS
   const [searchQuery, setSearchQuery] = useState("");
@@ -148,26 +67,6 @@ export default function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Danh sách máy in Windows
-  const [windowsPrinters, setWindowsPrinters] = useState([]);
-
-  // Database Printers
-  const [dbPrinters, setDbPrinters] = useState([]);
-  const [newPrinter, setNewPrinter] = useState({ name: "", type: "ALL", paper_size: 80, is_enabled: 1 });
-  const [loadingDbPrinters, setLoadingDbPrinters] = useState(false);
-
-  // Settings
-  const [settings, setSettings]     = useState({
-    printer_ip:    "",
-    printer_type:  "",
-    store_name:    "",
-    store_address: "",
-    store_phone:   "",
-    cashier_name:  "",
-    total_tables:  "20",
-    bill_css_override: "",
-  });
-  const [settingsSaved, setSettingsSaved] = useState(false);
   const [splitModal,    setSplitModal]    = useState(false);
   const [splitTarget,   setSplitTarget]   = useState("");
   const [splitSelected, setSplitSelected] = useState([]);
@@ -181,88 +80,6 @@ export default function App() {
   });
 
   const isAdmin = (authUser?.role || "staff") === "admin";
-
-  const forceLogout = useCallback((reason) => {
-    clearAuthSession();
-    setAuthToken("");
-    setAuthUser(null);
-    if (reason) alert(reason);
-  }, []);
-
-  const authedFetch = useCallback((url, options = {}) => {
-    const token = authToken || getAuthToken();
-    const headers = {
-      ...(options.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-    return fetch(url, { ...options, headers }).then((res) => {
-      if (res.status === 401) {
-        forceLogout("Phiên đăng nhập đã hết hạn hoặc bị đăng nhập ở thiết bị khác.");
-      }
-      return res;
-    });
-  }, [authToken, forceLogout]);
-
-  useEffect(() => {
-    const token = getAuthToken();
-    const cachedUser = getAuthUser();
-    if (!token || !cachedUser) {
-      setAuthReady(true);
-      return;
-    }
-    setAuthToken(token);
-    fetchMe(token)
-      .then((user) => {
-        setAuthUser(user);
-      })
-      .catch(() => {
-        clearAuthSession();
-        setAuthToken("");
-        setAuthUser(null);
-      })
-      .finally(() => setAuthReady(true));
-  }, []);
-
-  useEffect(() => {
-    if (!authToken || !authUser) return;
-    const wsUrl = `${apiToWsUrl(API_URL)}?token=${encodeURIComponent(authToken)}`;
-    let ws;
-    try {
-      ws = new WebSocket(wsUrl);
-    } catch {
-      return undefined;
-    }
-    ws.onmessage = (evt) => {
-      try {
-        const payload = JSON.parse(evt.data);
-        if (payload?.event === "FORCE_LOGOUT") {
-          forceLogout(payload.reason || "Phiên đăng nhập đã bị thay thế.");
-        }
-      } catch {
-        // ignore malformed event
-      }
-    };
-    return () => {
-      try {
-        ws.close();
-      } catch {}
-    };
-  }, [authToken, authUser, forceLogout]);
-
-  // Load settings từ server khi đăng nhập thành công
-  useEffect(() => {
-    if (!authUser) return;
-    fetchSettings()
-      .then((d) => setSettings((prev) => ({ ...prev, ...d })))
-      .catch(() => {});
-  }, [authUser]);
-
-  // Lưu toàn bộ settings
-  const saveAllSettings = async () => {
-    await saveAllSettingsRequest(settings);
-    setSettingsSaved(true);
-    setTimeout(() => setSettingsSaved(false), 2000);
-  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -281,66 +98,10 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    const token = authToken || getAuthToken();
-    await logoutRequest(token);
+    await logoutRequest(authToken);
     setAuthToken("");
     setAuthUser(null);
     setSidebarView("order");
-  };
-
-  // Lấy danh sách máy in từ Windows
-  const fetchWindowsPrinters = useCallback(async () => {
-    try {
-      const data = await fetchWindowsPrintersRequest();
-      setWindowsPrinters(data);
-    } catch {
-      setWindowsPrinters([]);
-    }
-  }, []);
-
-  // API tương tác máy in trên Database
-  const fetchDbPrinters = useCallback(async () => {
-    setLoadingDbPrinters(true);
-    try {
-      const data = await fetchDbPrintersRequest();
-      setDbPrinters(data);
-    } catch (e) {
-      console.error(e);
-    }
-    setLoadingDbPrinters(false);
-  }, []);
-
-  const addDbPrinter = async () => {
-    if (!newPrinter.name) return alert("Vui lòng chọn tên máy in");
-    try {
-      await addDbPrinterRequest(newPrinter);
-      setNewPrinter({ name: "", type: "ALL", paper_size: 80, is_enabled: 1 });
-      fetchDbPrinters();
-    } catch (e) {
-      alert("Lỗi thêm máy in");
-    }
-  };
-
-  const updateDbPrinter = async (p, updates) => {
-    try {
-      await authedFetch(`${API_URL}/windows_printers/${p.id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...p, ...updates }),
-      });
-      fetchDbPrinters();
-    } catch (e) {
-      alert("Lỗi cập nhật máy in");
-    }
-  };
-
-  const deleteDbPrinter = async (id) => {
-    if (!window.confirm("Xóa cấu hình máy in này?")) return;
-    try {
-      await authedFetch(`${API_URL}/windows_printers/${id}`, { method: "DELETE" });
-      fetchDbPrinters();
-    } catch (e) {
-      alert("Lỗi xóa máy in");
-    }
   };
 
   const fetchUsers = useCallback(async () => {
@@ -405,35 +166,21 @@ export default function App() {
     }
   };
 
-  // Fetch db printers khi vào tab settings
-  useEffect(() => {
-    if (sidebarView === "settings") {
-      fetchDbPrinters();
-      fetchWindowsPrinters();
-    }
-  }, [sidebarView, fetchDbPrinters, fetchWindowsPrinters]);
-
   useEffect(() => {
     if (sidebarView === "users" && isAdmin) {
       fetchUsers();
     }
   }, [sidebarView, isAdmin, fetchUsers]);
 
-  /**
-   * kitchenSent: lưu số lượng đã gửi bếp theo từng món
-   * { [tableNum]: { [itemId]: qty } }
-   * Dùng để biết món nào MỚI (chưa gửi bếp) hay đã gửi rồi
-   */
-  const [kitchenSent, setKitchenSent] = useState({});
-
-  /**
-   * itemNotes: ghi chú từng món theo từng bàn
-   * { [tableNum]: { [itemId]: "ghi chú..." } }
-   */
-  const [itemNotes, setItemNotes] = useState({});
-
-  /** Đã tải xong đơn từ server — tránh ghi đè / ghi rỗng trước khi khôi phục */
-  const [orderSessionReady, setOrderSessionReady] = useState(false);
+  const {
+    tableOrders,
+    setTableOrders,
+    kitchenSent,
+    setKitchenSent,
+    itemNotes,
+    setItemNotes,
+    orderSessionReady,
+  } = useOrderSession({ authedFetch });
 
   // ----- MANAGE STATE -----
   const [manageTab, setManageTab]   = useState("add");
@@ -446,15 +193,35 @@ export default function App() {
   const [tableList, setTableList]       = useState([]);
   const [newTableNum, setNewTableNum]   = useState("");
   const [editingTable, setEditingTable] = useState(null);
-  const [tableMsg, setTableMsg]         = useState(null);
 
   // ----- HISTORY STATE -----
   const [bills, setBills]             = useState([]);
   const [historyDate, setHistoryDate] = useState(new Date().toISOString().split("T")[0]);
   const [selectedBill, setSelectedBill] = useState(null); // chi tiết bill đang xem
-  const [settingsPreviewHtml, setSettingsPreviewHtml] = useState("");
-  const [settingsPreviewPaper, setSettingsPreviewPaper] = useState(80);
-  const [settingsPreviewLoading, setSettingsPreviewLoading] = useState(false);
+  const {
+    settings,
+    setSettings,
+    settingsSaved,
+    saveAllSettings,
+    windowsPrinters,
+    fetchWindowsPrinters,
+    dbPrinters,
+    loadingDbPrinters,
+    newPrinter,
+    setNewPrinter,
+    addDbPrinter,
+    updateDbPrinter,
+    deleteDbPrinter,
+    settingsPreviewHtml,
+    settingsPreviewPaper,
+    setSettingsPreviewPaper,
+    settingsPreviewLoading,
+    refreshSettingsBillPreview,
+  } = useSettingsPrinterManagement({
+    authUser,
+    sidebarView,
+    authedFetch,
+  });
 
   // ----- DERIVED -----
   // Danh sách số bàn – lấy từ tableList (đã merge DB + settings)
@@ -548,31 +315,6 @@ export default function App() {
   // Load menu, trạng thái bàn VÀ danh sách bàn đầy đủ ngay khi khởi động
   useEffect(() => { fetchMenu(); fetchTableStatus(); fetchTableList(); }, [fetchMenu, fetchTableStatus, fetchTableList]);
 
-  // Khôi phục đơn đang gọi từ DB (tắt app / mở lại không mất)
-  useEffect(() => {
-    authedFetch(`${API_URL}/order-session`)
-      .then(r => r.json())
-      .then((data) => {
-        if (data.tableOrders && typeof data.tableOrders === "object") setTableOrders(data.tableOrders);
-        if (data.itemNotes && typeof data.itemNotes === "object") setItemNotes(data.itemNotes);
-        if (data.kitchenSent && typeof data.kitchenSent === "object") setKitchenSent(data.kitchenSent);
-      })
-      .catch(() => {})
-      .finally(() => setOrderSessionReady(true));
-  }, [authedFetch]);
-
-  useEffect(() => {
-    if (!orderSessionReady) return;
-    const t = setTimeout(() => {
-      authedFetch(`${API_URL}/order-session`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tableOrders, itemNotes, kitchenSent }),
-      }).catch(() => {});
-    }, 700);
-    return () => clearTimeout(t);
-  }, [tableOrders, itemNotes, kitchenSent, orderSessionReady, authedFetch]);
-
   // Khi vào tab manage → reload lại danh sách bàn cho chắc
   useEffect(() => {
     if (sidebarView === "manage") fetchTableList();
@@ -584,124 +326,8 @@ export default function App() {
   }, [sidebarView, historyDate, fetchBills]);
 
   // =============================================
-  // ORDER HANDLERS
+  // TABLE STATUS & ORDER/PRINT FLOW
   // =============================================
-
-  /** Thêm món vào bàn, tự động set bàn → OPEN */
-  const addItem = (item) => {
-    if (!orderSessionReady) return alert("Đang tải dữ liệu đơn, thử lại sau vài giây.");
-    if (!currentTable) return alert("Vui lòng chọn bàn trước!");
-
-    setTableOrders(prev => {
-      const table = prev[currentTable] || {};
-      const exist = table[item.id];
-      return {
-        ...prev,
-        [currentTable]: {
-          ...table,
-          [item.id]: exist ? { ...exist, qty: exist.qty + 1 } : { ...item, qty: 1 },
-        },
-      };
-    });
-
-    // Tự động mở bàn khi có món đầu tiên
-    if (!tableStatus[currentTable] || tableStatus[currentTable] === "PAID") {
-      updateTableStatus(currentTable, "OPEN");
-    }
-  };
-
-  /** Tăng / giảm số lượng món */
-  const updateQty = useCallback((itemId, action) => {
-    if (!orderSessionReady) return;
-    if (!currentTable) return;
-    setTableOrders(prev => {
-      const table = prev[currentTable];
-      if (!table || !table[itemId]) return prev;
-      const newQty = action === "inc" ? table[itemId].qty + 1 : table[itemId].qty - 1;
-      const updated = { ...table };
-      if (newQty <= 0) delete updated[itemId];
-      else updated[itemId] = { ...table[itemId], qty: newQty };
-      return { ...prev, [currentTable]: updated };
-    });
-  }, [currentTable, orderSessionReady]);
-  
-  /** Xóa món khỏi bàn */
-  const removeItem = useCallback((itemId) => {
-    if (!orderSessionReady) return;
-    if (!currentTable) return;
-    setTableOrders(prev => {
-      const table = prev[currentTable];
-      if (!table) return prev;
-      const { [itemId]: _, ...updated } = table;
-      return { ...prev, [currentTable]: updated };
-    });
-  }, [currentTable, orderSessionReady]);
-
-  // =============================================
-  // TABLE STATUS & PRINT (ONE BACKEND LOGIC)
-  // =============================================
-
-  const callPrintApi = async (endpoint, payload) => {
-    if (isPosElectron() && endpoint.startsWith("/print/")) {
-      return printViaElectronRemote(API_URL, endpoint, payload);
-    }
-    const res = await authedFetch(`${API_URL}${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data.error || "In phiếu thất bại");
-    }
-    return data;
-  };
-
-  const buildSettingsPreviewPayload = useCallback(() => ({
-    title: (settings.store_name || "TIỆM NƯỚNG ĐÀ LẠT VÀ EM").toUpperCase(),
-    subtitle: `${settings.store_address || "Địa chỉ"} - Hotline ${settings.store_phone || "0000 000 000"}`,
-    tableNum: "12",
-    billNo: "9999",
-    timeLabel: "Ngày",
-    timeValue: new Date().toLocaleString("vi-VN"),
-    items: [
-      { name: "Combo Nọng Tây Đầu", qty: 1, price: 359, note: "Không hành" },
-      { name: "Coca Cola", qty: 2, price: 25, note: "" },
-      { name: "Khoai Tây Lắc Phô Mai", qty: 1, price: 79, note: "" },
-    ],
-    totalLabel: "THÀNH TIỀN",
-    totalValue: 488,
-    cashier: settings.cashier_name || "Nhân viên",
-    footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
-  }), [settings.store_name, settings.store_address, settings.store_phone, settings.cashier_name]);
-
-  const refreshSettingsBillPreview = useCallback(async () => {
-    if (sidebarView !== "settings") return;
-    setSettingsPreviewLoading(true);
-    try {
-      const res = await authedFetch(`${API_URL}/print/preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          receipt: buildSettingsPreviewPayload(),
-          paper_size: settingsPreviewPaper,
-          css_override: settings.bill_css_override || "",
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không tạo được preview");
-      setSettingsPreviewHtml(data.html || "");
-    } catch (err) {
-      console.error(err);
-    }
-    setSettingsPreviewLoading(false);
-  }, [sidebarView, settingsPreviewPaper, settings.bill_css_override, buildSettingsPreviewPayload, authedFetch]);
-
-  useEffect(() => {
-    if (sidebarView !== "settings") return;
-    const t = setTimeout(() => refreshSettingsBillPreview(), 200);
-    return () => clearTimeout(t);
-  }, [sidebarView, settings.bill_css_override, settingsPreviewPaper, settings.store_name, settings.store_address, settings.store_phone, refreshSettingsBillPreview]);
 
   useEffect(() => {
     if (!authUser) return;
@@ -720,351 +346,60 @@ export default function App() {
     });
   };
 
-  /**
-   * Bước 2: In phiếu đồ ăn / nước
-   */
-  const printOrderTicket = async (targetType) => {
-    if (!orderSessionReady) return alert("Đang tải dữ liệu đơn, thử lại sau vài giây.");
-    if (!currentTable) return alert("Vui lòng chọn bàn!");
-    
-    // Tách món theo loại
-    const itemsToPrint = currentItems.filter(item => {
-      const isDrink = item.type === "DRINK";
-      if (targetType === "DRINK") return isDrink;
-      // FOOD bao gồm món ăn và combo, loại trừ DRINK
-      if (targetType === "FOOD") return !isDrink;
-      return true;
-    });
+  const { addItem, updateQty, removeItem, resetTable, transferTable, executeSplit } = useTableActions({
+    orderSessionReady,
+    currentTable,
+    tableStatus,
+    currentItems,
+    splitTarget,
+    splitSelected,
+    setTableOrders,
+    setKitchenSent,
+    setItemNotes,
+    updateTableStatus,
+    setTableStatus,
+    setCurrentTable,
+    setSplitModal,
+    setSplitSelected,
+    setSplitTarget,
+  });
 
-    if (itemsToPrint.length === 0) {
-      return alert(targetType === "DRINK" ? "Chưa có món nước nào!" : "Chưa có món đồ ăn nào!");
-    }
+  const { callPrintApi, printOrderTicket, handlePayment, printTamTinh } = usePrintFlow({
+    authedFetch,
+    isAdmin,
+    orderSessionReady,
+    currentTable,
+    currentItems,
+    itemNotes,
+    total,
+    setKitchenSent,
+    updateTableStatus,
+  });
 
-    const notes = itemNotes[currentTable] || {};
-    const payloadItems = itemsToPrint.map((item) => ({
-      ...item,
-      note: notes[item.id] || "",
-    }));
+  const { addMenu, updateMenu, deleteMenu } = useMenuManagement({
+    authedFetch,
+    newItem,
+    file,
+    setNewItem,
+    setFile,
+    editItem,
+    editFile,
+    setEditItem,
+    setEditFile,
+    fetchMenu,
+  });
 
-    try {
-      await callPrintApi("/print/kitchen", {
-        table_num: currentTable,
-        items: payloadItems,
-      });
-    } catch (err) {
-      alert(err.message || "Không thể in phiếu");
-      return;
-    }
-
-    // Chỉ cập nhật trạng thái "đã gửi bếp" cho các món vừa in
-    setKitchenSent(prev => {
-      const currentSent = prev[currentTable] || {};
-      const newSent = { ...currentSent };
-      itemsToPrint.forEach(i => {
-        // Ghi lại số lượng đã gửi đi
-        newSent[i.id] = i.qty;
-      });
-      return { ...prev, [currentTable]: newSent };
-    });
-  };
-
-  /**
-   * Bước 4: Thanh toán – lưu bill vào DB + in hóa đơn tài chính
-   * KHÔNG reset bàn ở đây, nhân viên reset thủ công ở bước 6
-   */
-  const handlePayment = async () => {
-    if (!isAdmin) return alert("Bạn không có quyền thanh toán.");
-    if (!orderSessionReady) return;
-    if (!currentTable) return;
-    if (currentItems.length === 0) return alert("Bàn chưa có món!");
-
-    const notes = itemNotes[currentTable] || {};
-    const itemsForBill = currentItems.map((i) => ({
-      name: i.name,
-      price: i.price,
-      qty: i.qty,
-      type: i.type || "FOOD",
-      note: notes[i.id] || "",
-    }));
-
-    // 1. Lưu bill lên server
-    await authedFetch(`${API_URL}/bills`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        table_num: currentTable,
-        total,
-        items: itemsForBill.map(({ name, price, qty, type }) => ({ name, price, qty, type })),
-      }),
-    });
-
-    // 2. In hóa đơn tài chính bằng 1 logic backend duy nhất
-    try {
-      await callPrintApi("/print/bill", {
-        table_num: currentTable,
-        items: itemsForBill,
-        total,
-      });
-    } catch (err) {
-      alert(err.message || "Không thể in hóa đơn");
-    }
-
-    // 3. Đánh dấu bàn là PAYING (chờ reset thủ công)
-    updateTableStatus(currentTable, "PAYING");
-  };
-
-  /**
-   * Bước 6: Reset bàn thủ công sau khi khách đã trả tiền xong
-   */
-  const resetTable = () => {
-    if (!orderSessionReady) return;
-    if (!currentTable) return;
-    if (!window.confirm(`Reset bàn ${currentTable}? Toàn bộ order sẽ bị xóa.`)) return;
-
-    // Xóa order
-    setTableOrders(prev => { const c = { ...prev }; delete c[currentTable]; return c; });
-    // Xóa kitchenSent
-    setKitchenSent(prev => { const c = { ...prev }; delete c[currentTable]; return c; });
-    // Xóa ghi chú
-    setItemNotes(prev => { const c = { ...prev }; delete c[currentTable]; return c; });
-    // Set bàn về PAID (trống)
-    updateTableStatus(currentTable, "PAID");
-  };
-
-
-  /**
-   * Chuyển bàn: di chuyển toàn bộ order từ bàn hiện tại sang bàn đích
-   * Điều kiện: bàn đích phải trống (PAID hoặc chưa có trong tableStatus)
-   */
-  const transferTable = async (targetTable) => {
-    if (!orderSessionReady) return;
-    if (!currentTable || currentTable === targetTable) return;
-
-    // Kiểm tra bàn đích
-    const targetStatus = tableStatus[targetTable];
-    if (targetStatus === "OPEN" || targetStatus === "PAYING") {
-      alert(`Bàn ${targetTable} đang có khách, không thể chuyển!`);
-      return;
-    }
-
-    // Di chuyển order
-    setTableOrders(prev => {
-      const updated = { ...prev };
-      updated[targetTable] = prev[currentTable] || {};
-      delete updated[currentTable];
-      return updated;
-    });
-
-    // Di chuyển kitchenSent
-    setKitchenSent(prev => {
-      const updated = { ...prev };
-      updated[targetTable] = prev[currentTable] || {};
-      delete updated[currentTable];
-      return updated;
-    });
-
-    // Di chuyển itemNotes
-    setItemNotes(prev => {
-      const updated = { ...prev };
-      updated[targetTable] = prev[currentTable] || {};
-      delete updated[currentTable];
-      return updated;
-    });
-
-    // Cập nhật trạng thái: bàn cũ → PAID, bàn mới → OPEN
-    await updateTableStatus(currentTable, "PAID");
-    await updateTableStatus(targetTable, "OPEN");
-    setTableStatus(prev => ({ ...prev, [currentTable]: "PAID", [targetTable]: "OPEN" }));
-    setCurrentTable(targetTable);
-  };
-
-  // Tách bàn
-  const executeSplit = () => {
-    if (!orderSessionReady) return;
-    if (!splitTarget || splitSelected.length === 0) return;
-    const itemsToMove = currentItems.filter(i => splitSelected.includes(i.id));
-    const remaining   = currentItems.filter(i => !splitSelected.includes(i.id));
-    setTableOrders(prev => {
-      const dest = { ...(prev[splitTarget] || {}) };
-      itemsToMove.forEach(item => {
-        const ex = dest[item.id];
-        if (ex) dest[item.id] = { ...ex, qty: ex.qty + item.qty };
-        else dest[item.id] = { ...item };
-      });
-      const remainObj = {};
-      remaining.forEach(item => { remainObj[item.id] = { ...item }; });
-      return { ...prev, [splitTarget]: dest, [currentTable]: remainObj };
-    });
-    setItemNotes(prev => {
-      const srcN = prev[currentTable] || {};
-      const dstN = { ...(prev[splitTarget] || {}) };
-      itemsToMove.forEach(item => {
-        const n = srcN[item.id];
-        if (n) dstN[item.id] = n;
-      });
-      const remainN = {};
-      remaining.forEach(item => {
-        const n = srcN[item.id];
-        if (n) remainN[item.id] = n;
-      });
-      return { ...prev, [splitTarget]: dstN, [currentTable]: remainN };
-    });
-    setKitchenSent(prev => {
-      const srcK = prev[currentTable] || {};
-      const dstK = { ...(prev[splitTarget] || {}) };
-      itemsToMove.forEach(item => {
-        const q = srcK[item.id];
-        if (q != null) dstK[item.id] = q;
-      });
-      const remainK = {};
-      remaining.forEach(item => {
-        const q = srcK[item.id];
-        if (q != null) remainK[item.id] = q;
-      });
-      return { ...prev, [splitTarget]: dstK, [currentTable]: remainK };
-    });
-    setTableStatus(p => ({
-      ...p, [splitTarget]: "OPEN",
-      ...(remaining.length === 0 ? { [currentTable]: "PAID" } : {}),
-    }));
-    updateTableStatus(splitTarget, "OPEN");
-    if (remaining.length === 0) updateTableStatus(currentTable, "PAID");
-    setSplitModal(false); setSplitSelected([]); setSplitTarget("");
-  };
-
-  // Tạm tính
-  const printTamTinh = async () => {
-    if (!orderSessionReady) return alert("Đang tải dữ liệu đơn, thử lại sau vài giây.");
-    if (!currentTable) return alert("Vui lòng chọn bàn!");
-    if (currentItems.length === 0) return alert("Chưa có món nào!");
-    const total = currentItems.reduce((s, i) => s + i.price * i.qty, 0);
-    const notes = itemNotes[currentTable] || {};
-    const itemsForBill = currentItems.map((i) => ({
-      name: i.name,
-      price: i.price,
-      qty: i.qty,
-      type: i.type || "FOOD",
-      note: notes[i.id] || "",
-    }));
-    try {
-      await callPrintApi("/print/tamtinh", {
-        table_num: currentTable,
-        items: itemsForBill,
-        total,
-      });
-    } catch (err) {
-      alert(err.message || "Không thể in tạm tính");
-    }
-  };
-
-  // =============================================
-  // MENU MANAGEMENT
-  // =============================================
-
-  const addMenu = async () => {
-    const formData = new FormData();
-    formData.append("name", newItem.name);
-    formData.append("price", newItem.price);
-    formData.append("type", newItem.type);
-    if (file) formData.append("image", file);
-    await authedFetch(`${API_URL}/menu`, { method: "POST", body: formData });
-    setNewItem({ name: "", price: "", type: "FOOD" });
-    setFile(null);
-    fetchMenu();
-  };
-
-  const updateMenu = async () => {
-    if (!editItem) return;
-    const formData = new FormData();
-    formData.append("name", editItem.name);
-    formData.append("price", editItem.price);
-    formData.append("type", editItem.type);
-    if (editFile) formData.append("image", editFile);
-    await authedFetch(`${API_URL}/menu/${editItem.id}`, { method: "PUT", body: formData });
-    setEditItem(null);
-    setEditFile(null);
-    fetchMenu();
-  };
-
-  const deleteMenu = async (id) => {
-    if (!window.confirm("Xóa món này?")) return;
-    await authedFetch(`${API_URL}/menu/${id}`, { method: "DELETE" });
-    fetchMenu();
-  };
-
-  // =============================================
-  // TABLE MANAGEMENT HANDLERS
-  // =============================================
-
-  const showTableMsg = (type, text) => {
-    setTableMsg({ type, text });
-    setTimeout(() => setTableMsg(null), 3000);
-  };
-
-  const addTable = async () => {
-    const num = Number(newTableNum);
-    if (!num || num < 1) return showTableMsg("err", "Số bàn không hợp lệ");
-
-    // Kiểm tra bàn đã có trong list chưa (kể cả bàn trong range 1..total chưa dùng)
-    if (tableList.some(t => t.table_num === num)) {
-      return showTableMsg("err", `Bàn ${num} đã tồn tại`);
-    }
-
-    // Lưu bàn mới vào DB
-    await authedFetch(`${API_URL}/tables`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ table_num: num }),
-    });
-
-    // Cập nhật total_tables nếu bàn mới vượt quá tổng hiện tại
-    const currentTotal = tableList.length;
-    if (num > currentTotal) {
-      await authedFetch(`${API_URL}/settings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "total_tables", value: String(num) }),
-      });
-    }
-
-    setNewTableNum("");
-    showTableMsg("ok", `Đã thêm Bàn ${num}`);
-    fetchTableList();
-    fetchTableStatus();
-  };
-
-  const renameTable = async () => {
-    if (!editingTable) return;
-    const { table_num, new_num } = editingTable;
-    if (!new_num || Number(new_num) < 1) return showTableMsg("err", "Số bàn không hợp lệ");
-    if (Number(new_num) === table_num) { setEditingTable(null); return; }
-    const res  = await authedFetch(`${API_URL}/tables/${table_num}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ new_num: Number(new_num) }),
-    });
-    const data = await res.json();
-    if (!res.ok) return showTableMsg("err", data.error);
-    setEditingTable(null);
-    showTableMsg("ok", `Đã đổi Bàn ${table_num} → Bàn ${new_num}`);
-    fetchTableList();
-    fetchTableStatus();
-  };
-
-  const deleteTable = async (num) => {
-    if (!window.confirm(`Xóa Bàn ${num}? Bàn sẽ bị xóa khỏi danh sách.`)) return;
-    // Nếu bàn chưa có trong DB (chưa từng dùng) thì chỉ xóa khỏi settings total_tables
-    const inDb = tableList.find(t => t.table_num === num);
-    if (inDb) {
-      const res  = await authedFetch(`${API_URL}/tables/${num}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) return showTableMsg("err", data.error);
-    }
-    // Giảm total_tables nếu num là bàn cuối, hoặc chỉ ẩn khỏi list local
-    setTableList(prev => prev.filter(t => t.table_num !== num));
-    showTableMsg("ok", `Đã xóa Bàn ${num}`);
-    fetchTableStatus();
-  };
+  const { tableMsg, addTable, renameTable, deleteTable } = useTableManagement({
+    authedFetch,
+    tableList,
+    setTableList,
+    newTableNum,
+    setNewTableNum,
+    editingTable,
+    setEditingTable,
+    fetchTableList,
+    fetchTableStatus,
+  });
 
   // =============================================
   // RENDER HELPERS

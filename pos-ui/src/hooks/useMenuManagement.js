@@ -1,0 +1,48 @@
+import { useCallback } from "react";
+import { API_URL } from "../config/api";
+
+export default function useMenuManagement({
+  authedFetch,
+  newItem,
+  file,
+  setNewItem,
+  setFile,
+  editItem,
+  editFile,
+  setEditItem,
+  setEditFile,
+  fetchMenu,
+}) {
+  const addMenu = useCallback(async () => {
+    const formData = new FormData();
+    formData.append("name", newItem.name);
+    formData.append("price", newItem.price);
+    formData.append("type", newItem.type);
+    if (file) formData.append("image", file);
+    await authedFetch(`${API_URL}/menu`, { method: "POST", body: formData });
+    setNewItem({ name: "", price: "", type: "FOOD" });
+    setFile(null);
+    fetchMenu();
+  }, [authedFetch, fetchMenu, file, newItem.name, newItem.price, newItem.type, setFile, setNewItem]);
+
+  const updateMenu = useCallback(async () => {
+    if (!editItem) return;
+    const formData = new FormData();
+    formData.append("name", editItem.name);
+    formData.append("price", editItem.price);
+    formData.append("type", editItem.type);
+    if (editFile) formData.append("image", editFile);
+    await authedFetch(`${API_URL}/menu/${editItem.id}`, { method: "PUT", body: formData });
+    setEditItem(null);
+    setEditFile(null);
+    fetchMenu();
+  }, [authedFetch, editFile, editItem, fetchMenu, setEditFile, setEditItem]);
+
+  const deleteMenu = useCallback(async (id) => {
+    if (!window.confirm("Xóa món này?")) return;
+    await authedFetch(`${API_URL}/menu/${id}`, { method: "DELETE" });
+    fetchMenu();
+  }, [authedFetch, fetchMenu]);
+
+  return { addMenu, updateMenu, deleteMenu };
+}

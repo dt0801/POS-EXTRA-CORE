@@ -1720,7 +1720,7 @@ export default function App() {
           className="absolute inset-0" 
           onClick={() => setShowMobileCart(false)}
         />
-        <div className="mt-auto bg-white rounded-t-[2.5rem] flex flex-col h-[92vh] w-full relative shadow-2xl animate-in slide-in-from-bottom duration-500 ease-out overflow-hidden">
+          <div className="mt-auto bg-white rounded-t-[2.5rem] flex flex-col h-[92vh] w-full relative shadow-2xl animate-in slide-in-from-bottom duration-500 ease-out overflow-hidden">
           {/* Drag Handle / Close Header */}
           <div className="flex items-center justify-between p-6 pb-2">
             <div className="w-12 h-1.5 bg-stone-200 rounded-full mx-auto absolute top-3 left-1/2 -translate-x-1/2" />
@@ -1735,7 +1735,7 @@ export default function App() {
           </div>
 
           <div className="flex-1 overflow-hidden flex flex-col">
-            <aside className="flex-1 flex flex-col bg-white px-6 pb-8">
+            <aside className="flex-1 flex flex-col bg-white px-6 pb-0 min-h-0">
                <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100 shrink-0">
                  <div className="flex items-center gap-2">
                    <h2 className="font-headline font-black text-xl text-stone-900">{tt("Bàn", "Tisch")} {currentTable || "--"}</h2>
@@ -1748,7 +1748,7 @@ export default function App() {
                  </div>
                </div>
 
-               <div className="flex-1 overflow-y-auto custom-scrollbar mb-4 pr-1 relative">
+                  <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar mb-4 pr-1 relative">
                   {currentItems.length === 0 ? (
                     <div className="absolute inset-0 flex items-center justify-center flex-col text-stone-400">
                       <span className="material-symbols-outlined text-6xl opacity-20 mb-4">restaurant</span>

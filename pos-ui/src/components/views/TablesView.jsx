@@ -8,7 +8,9 @@ export default function TablesView({
   formatMoney,
   setCurrentTable,
   setSidebarView,
+  language = "vi",
 }) {
+  const tr = (vi, de) => (language === "de" ? de : vi);
   const totalTables = tables.length;
   const getDisplayStatus = (tableNum) => {
     const status = tableStatus[tableNum];
@@ -25,9 +27,9 @@ export default function TablesView({
     <div className="flex-1 overflow-y-auto pt-6 px-4 md:px-6 pb-32">
       {/* Section Header */}
       <div className="flex items-end justify-between mb-6">
-        <h2 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface">Quản lý Bàn</h2>
+        <h2 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface">{tr("Quản lý Bàn", "Tischverwaltung")}</h2>
         <div className="text-xs font-semibold text-on-surface-variant">
-          Tổng: {totalTables} - Trống: {emptyTables} - Phục vụ: {servingTables} - Chờ dọn: {cleaningTables}
+          {tr("Tổng", "Gesamt")}: {totalTables} - {tr("Trống", "Frei")}: {emptyTables} - {tr("Phục vụ", "In Bedienung")}: {servingTables} - {tr("Chờ dọn", "Warten auf Reinigung")}: {cleaningTables}
         </div>
       </div>
 
@@ -59,15 +61,15 @@ export default function TablesView({
                   <div>
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-headline font-extrabold text-3xl md:text-4xl text-primary">{t}</span>
-                      <span className="bg-primary/10 text-primary text-[10px] md:text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">PHỤC VỤ</span>
+                      <span className="bg-primary/10 text-primary text-[10px] md:text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">{tr("PHỤC VỤ", "BEDIENUNG")}</span>
                     </div>
                     <div className="flex items-center gap-1 text-on-surface-variant">
                       <span className="material-symbols-outlined text-sm">restaurant_menu</span>
-                      <span className="text-xs font-semibold">{qty} món</span>
+                      <span className="text-xs font-semibold">{qty} {tr("món", "Gerichte")}</span>
                     </div>
                   </div>
                   <div className="mt-4">
-                    <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest leading-none mb-1">Tổng cộng</p>
+                    <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest leading-none mb-1">{tr("Tổng cộng", "Gesamt")}</p>
                     <p className="font-headline font-black text-xl md:text-2xl text-on-surface leading-none">{formatMoney(revenue)}</p>
                   </div>
                 </div>
@@ -87,15 +89,15 @@ export default function TablesView({
                   <div>
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-headline font-extrabold text-3xl md:text-4xl text-error/60">{t}</span>
-                      <span className="bg-error/10 text-error text-[10px] md:text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">CHỜ DỌN</span>
+                      <span className="bg-error/10 text-error text-[10px] md:text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">{tr("CHỜ DỌN", "REINIGEN")}</span>
                     </div>
                     <div className="flex items-center gap-1 text-error/70">
                       <span className="material-symbols-outlined text-sm">cleaning_services</span>
-                      <span className="text-xs font-semibold">Cần dọn bàn</span>
+                      <span className="text-xs font-semibold">{tr("Cần dọn bàn", "Tisch reinigen")}</span>
                     </div>
                   </div>
                   <div className="mt-4">
-                    <button className="w-full bg-white text-error font-bold text-xs py-2 md:py-3 rounded-xl shadow-sm border border-error/10 active:scale-95 transition-transform">XÁC NHẬN DỌN</button>
+                    <button className="w-full bg-white text-error font-bold text-xs py-2 md:py-3 rounded-xl shadow-sm border border-error/10 active:scale-95 transition-transform">{tr("XÁC NHẬN DỌN", "REINIGUNG BESTÄTIGEN")}</button>
                   </div>
                 </div>
               );
@@ -114,9 +116,9 @@ export default function TablesView({
                 <div>
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-headline font-extrabold text-3xl md:text-4xl text-outline/40">{t}</span>
-                    <span className="bg-surface-container-highest text-on-surface-variant/50 text-[10px] md:text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">TRỐNG</span>
+                    <span className="bg-surface-container-highest text-on-surface-variant/50 text-[10px] md:text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">{tr("TRỐNG", "FREI")}</span>
                   </div>
-                  <p className="text-xs font-medium text-on-surface-variant/40 italic">Chưa có khách</p>
+                  <p className="text-xs font-medium text-on-surface-variant/40 italic">{tr("Chưa có khách", "Noch keine Gäste")}</p>
                 </div>
                 <div className="mt-4 flex items-center justify-center border-2 border-dashed border-outline-variant/20 rounded-2xl py-3 group-hover:bg-surface-container-highest transition-colors">
                   <span className="material-symbols-outlined text-outline/30">add</span>

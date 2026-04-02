@@ -26,6 +26,33 @@ import MobileOrderView from "./components/views/MobileOrderView";
 // CONSTANTS
 // =============================================
 const TOTAL_TABLES = 20;
+const LANGUAGE_STORAGE_KEY = "pos_ui_language";
+const UI_TEXT = {
+  checkingSession: { vi: "Đang kiểm tra phiên đăng nhập...", de: "Sitzung wird geprüft..." },
+  loginTitle: { vi: "Đăng nhập POS", de: "POS-Anmeldung" },
+  username: { vi: "Tên đăng nhập", de: "Benutzername" },
+  password: { vi: "Mật khẩu", de: "Passwort" },
+  loggingIn: { vi: "Đang đăng nhập...", de: "Anmeldung..." },
+  login: { vi: "Đăng nhập", de: "Anmelden" },
+  loginFailed: { vi: "Đăng nhập thất bại", de: "Anmeldung fehlgeschlagen" },
+  floorMap: { vi: "Sơ đồ bàn", de: "Tischplan" },
+  orderMenu: { vi: "Menu Order", de: "Bestellungen" },
+  menuManagement: { vi: "Quản lý Thực Đơn", de: "Speisekarte verwalten" },
+  billHistory: { vi: "Lịch sử Hóa đơn", de: "Rechnungshistorie" },
+  statsReport: { vi: "Thống kê Báo cáo", de: "Statistik" },
+  userManagement: { vi: "Quản lý Nhân viên", de: "Mitarbeiter" },
+  systemSettings: { vi: "Cài đặt Hệ thống", de: "Systemeinstellungen" },
+  logout: { vi: "Đăng xuất", de: "Abmelden" },
+  openLog: { vi: "Mở Log Server", de: "Server-Log öffnen" },
+  mobileTables: { vi: "Sơ đồ Bàn", de: "Tische" },
+  mobileOrder: { vi: "Gọi món", de: "Bestellen" },
+  mobileHistory: { vi: "Hóa đơn", de: "Rechnungen" },
+  mobileMenu: { vi: "Menu", de: "Menü" },
+  extendedMenu: { vi: "Danh mục mở rộng", de: "Erweitertes Menü" },
+  settingsShort: { vi: "Cài đặt HT", de: "Einstellungen" },
+  switchLanguage: { vi: "Đổi ngôn ngữ", de: "Sprache wechseln" },
+  languageLabel: { vi: "Ngôn ngữ", de: "Sprache" },
+};
 
 // =============================================
 // MAIN COMPONENT
@@ -42,6 +69,11 @@ export default function App() {
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
+  const [language, setLanguage] = useState(() => {
+    const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return saved === "de" ? "de" : "vi";
+  });
+  const tr = useCallback((key) => UI_TEXT[key]?.[language] || UI_TEXT[key]?.vi || key, [language]);
 
   // ----- CORE STATE -----
   const [menu, setMenu]               = useState([]);
@@ -92,10 +124,14 @@ export default function App() {
       setSidebarView("order");
       setLoginForm({ username: "", password: "" });
     } catch (err) {
-      setLoginError(err.message || "Đăng nhập thất bại");
+      setLoginError(err.message || tr("loginFailed"));
     }
     setLoggingIn(false);
   };
+
+  useEffect(() => {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }, [language]);
 
   const handleLogout = async () => {
     await logoutRequest(authToken);
@@ -411,7 +447,7 @@ export default function App() {
   if (!authReady) {
     return (
       <div className="h-screen flex items-center justify-center bg-surface-container text-on-surface">
-        Đang kiểm tra phiên đăng nhập...
+        {tr("checkingSession")}
       </div>
     );
   }
@@ -420,17 +456,17 @@ export default function App() {
     return (
       <div className="h-screen flex items-center justify-center bg-surface-container p-6">
         <form onSubmit={handleLogin} className="w-full max-w-sm bg-surface p-6 rounded-2xl border border-outline-variant/30 shadow-sm space-y-4">
-          <h1 className="text-xl font-bold text-on-surface">Đăng nhập POS</h1>
+          <h1 className="text-xl font-bold text-on-surface">{tr("loginTitle")}</h1>
           <input
             className="w-full border border-outline-variant/40 rounded-xl px-4 py-2.5 bg-surface-container-lowest"
-            placeholder="Tên đăng nhập"
+            placeholder={tr("username")}
             value={loginForm.username}
             onChange={(e) => setLoginForm((s) => ({ ...s, username: e.target.value }))}
           />
           <input
             type="password"
             className="w-full border border-outline-variant/40 rounded-xl px-4 py-2.5 bg-surface-container-lowest"
-            placeholder="Mật khẩu"
+            placeholder={tr("password")}
             value={loginForm.password}
             onChange={(e) => setLoginForm((s) => ({ ...s, password: e.target.value }))}
           />
@@ -440,7 +476,7 @@ export default function App() {
             disabled={loggingIn || !loginForm.username || !loginForm.password}
             className="w-full rounded-xl bg-primary text-white py-2.5 font-bold disabled:opacity-60"
           >
-            {loggingIn ? "Đang đăng nhập..." : "Đăng nhập"}
+            {loggingIn ? tr("loggingIn") : tr("login")}
           </button>
         </form>
       </div>
@@ -556,13 +592,13 @@ export default function App() {
         </div>
 
         <nav className={`flex-1 flex flex-col gap-2 ${isSidebarExpanded ? "px-4" : "px-0"}`}>
-          <SidebarItem icon="grid_view" label="Sơ đồ bàn" view="tables" isActive={sidebarView === "tables"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("tables")} />
-          <SidebarItem icon="restaurant_menu" label="Menu Order" view="order" isActive={sidebarView === "order"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("order")} />
-          {isAdmin && <SidebarItem icon="format_list_bulleted" label="Quản lý Thực Đơn" view="manage" isActive={sidebarView === "manage"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("manage")} />}
-          {isAdmin && <SidebarItem icon="receipt_long" label="Lịch sử Hóa đơn" view="history" isActive={sidebarView === "history"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("history")} />}
-          {isAdmin && <SidebarItem icon="trending_up" label="Thống kê Báo cáo" view="stats" isActive={sidebarView === "stats"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("stats")} />}
-          {isAdmin && <SidebarItem icon="group" label="Quản lý Nhân viên" view="users" isActive={sidebarView === "users"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("users")} />}
-          {isAdmin && <SidebarItem icon="settings" label="Cài đặt Hệ thống" view="settings" isActive={sidebarView === "settings"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("settings")} />}
+          <SidebarItem icon="grid_view" label={tr("floorMap")} view="tables" isActive={sidebarView === "tables"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("tables")} />
+          <SidebarItem icon="restaurant_menu" label={tr("orderMenu")} view="order" isActive={sidebarView === "order"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("order")} />
+          {isAdmin && <SidebarItem icon="format_list_bulleted" label={tr("menuManagement")} view="manage" isActive={sidebarView === "manage"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("manage")} />}
+          {isAdmin && <SidebarItem icon="receipt_long" label={tr("billHistory")} view="history" isActive={sidebarView === "history"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("history")} />}
+          {isAdmin && <SidebarItem icon="trending_up" label={tr("statsReport")} view="stats" isActive={sidebarView === "stats"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("stats")} />}
+          {isAdmin && <SidebarItem icon="group" label={tr("userManagement")} view="users" isActive={sidebarView === "users"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("users")} />}
+          {isAdmin && <SidebarItem icon="settings" label={tr("systemSettings")} view="settings" isActive={sidebarView === "settings"} isSidebarExpanded={isSidebarExpanded} onClick={() => setSidebarView("settings")} />}
         </nav>
 
         <div className={`flex flex-col gap-4 mt-auto ${isSidebarExpanded ? "px-4" : "px-0 items-center"}`}>
@@ -579,11 +615,14 @@ export default function App() {
                <span className={`w-2 h-2 rounded-full ${printerStatus === "online" ? "bg-green-400" : printerStatus === "offline" ? "bg-error" : "bg-yellow-400 animate-pulse"}`}/>
             </div>
             {isAdmin ? (
-              <button onClick={() => authedFetch(`${API_URL}/open-log`, { method: "POST" })} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2" title="Mở Log Server">
+              <button onClick={() => authedFetch(`${API_URL}/open-log`, { method: "POST" })} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2" title={tr("openLog")}>
                 <span className="material-symbols-outlined text-[20px]">terminal</span>
               </button>
             ) : null}
-            <button onClick={handleLogout} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2" title="Đăng xuất">
+            <button onClick={() => setLanguage((prev) => (prev === "vi" ? "de" : "vi"))} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2 text-[10px] font-black min-w-[40px]" title={tr("switchLanguage")}>
+              {language.toUpperCase()}
+            </button>
+            <button onClick={handleLogout} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2" title={tr("logout")}>
               <span className="material-symbols-outlined text-[20px]">logout</span>
             </button>
           </div>
@@ -601,8 +640,8 @@ export default function App() {
               <span className="material-symbols-outlined text-orange-600 dark:text-orange-500">restaurant_menu</span>
               <h1 className="text-lg font-extrabold tracking-tighter text-stone-900 dark:text-stone-50 font-headline">{settings.store_name || "Citrus POS"}</h1>
             </div>
-            <button className="text-orange-600 dark:text-orange-500 active:scale-95 transition-transform duration-200">
-              <span className="material-symbols-outlined">notifications</span>
+            <button onClick={() => setLanguage((prev) => (prev === "vi" ? "de" : "vi"))} className="text-orange-600 dark:text-orange-500 active:scale-95 transition-transform duration-200 font-black text-xs px-2 py-1 rounded-lg border border-orange-200/60" title={tr("switchLanguage")}>
+              {language.toUpperCase()}
             </button>
           </div>
           <div className="bg-stone-200/50 dark:bg-stone-800/50 h-[1px] w-full"></div>
@@ -627,6 +666,7 @@ export default function App() {
           formatMoney={formatMoney}
           setCurrentTable={setCurrentTable}
           setSidebarView={setSidebarView}
+          language={language}
         />
       )}
 
@@ -1510,7 +1550,7 @@ export default function App() {
           className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "tables" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
         >
           <span className="material-symbols-outlined mb-0.5" style={{ fontVariationSettings: sidebarView === "tables" ? "'FILL' 1" : "'FILL' 0" }}>grid_view</span>
-          <span className="font-headline font-bold text-[10px] uppercase tracking-wider">Sơ đồ Bàn</span>
+          <span className="font-headline font-bold text-[10px] uppercase tracking-wider">{tr("mobileTables")}</span>
         </button>
 
         <button
@@ -1518,7 +1558,7 @@ export default function App() {
           className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "order" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
         >
           <span className="material-symbols-outlined mb-0.5" style={{ fontVariationSettings: sidebarView === "order" ? "'FILL' 1" : "'FILL' 0" }}>restaurant_menu</span>
-          <span className="font-headline font-bold text-[10px] uppercase tracking-wider">Gọi món</span>
+          <span className="font-headline font-bold text-[10px] uppercase tracking-wider">{tr("mobileOrder")}</span>
         </button>
 
         {isAdmin && (
@@ -1527,7 +1567,7 @@ export default function App() {
             className={`flex flex-col items-center justify-center px-4 py-2 transition-all duration-300 active:scale-90 rounded-2xl ${sidebarView === "history" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-lg shadow-orange-500/20" : "text-stone-400 hover:text-orange-500"}`}
           >
             <span className="material-symbols-outlined mb-0.5" style={{ fontVariationSettings: sidebarView === "history" ? "'FILL' 1" : "'FILL' 0" }}>receipt_long</span>
-            <span className="font-headline font-bold text-[10px] uppercase tracking-wider">Hóa đơn</span>
+            <span className="font-headline font-bold text-[10px] uppercase tracking-wider">{tr("mobileHistory")}</span>
           </button>
         )}
 
@@ -1536,7 +1576,7 @@ export default function App() {
           className="md:hidden flex flex-col items-center justify-center text-stone-400 px-4 py-2 hover:text-orange-500 transition-all duration-300 active:scale-90"
         >
           <span className="material-symbols-outlined mb-0.5">menu</span>
-          <span className="font-headline font-bold text-[10px] uppercase tracking-wider">Menu</span>
+          <span className="font-headline font-bold text-[10px] uppercase tracking-wider">{tr("mobileMenu")}</span>
         </button>
       </nav>
     )}
@@ -1545,7 +1585,7 @@ export default function App() {
     {isSidebarExpanded && isMobile && (
       <div className="md:hidden fixed inset-0 z-[60] bg-surface-container flex flex-col animate-in slide-in-from-bottom pb-safe">
         <div className="flex items-center justify-between p-6 shrink-0 border-b border-outline-variant/20">
-          <h2 className="text-2xl font-black font-headline text-primary">Danh mục mở rộng</h2>
+          <h2 className="text-2xl font-black font-headline text-primary">{tr("extendedMenu")}</h2>
           <button onClick={() => setIsSidebarExpanded(false)} className="bg-surface-container-high rounded-full p-2 flex items-center justify-center active:scale-95 text-on-surface-variant">
             <span className="material-symbols-outlined">close</span>
           </button>
@@ -1554,11 +1594,11 @@ export default function App() {
           <div className="grid grid-cols-2 gap-4">
             <button onClick={() => { setSidebarView("tables"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "tables" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
               <span className="material-symbols-outlined text-3xl">grid_view</span>
-              <span className="font-bold">Sơ đồ bàn</span>
+              <span className="font-bold">{tr("floorMap")}</span>
             </button>
             <button onClick={() => { setSidebarView("order"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "order" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
               <span className="material-symbols-outlined text-3xl">restaurant_menu</span>
-              <span className="font-bold">Gọi món</span>
+              <span className="font-bold">{tr("mobileOrder")}</span>
             </button>
             {isAdmin && (
               <>
@@ -1568,7 +1608,7 @@ export default function App() {
                 </button>
                 <button onClick={() => { setSidebarView("history"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "history" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
                   <span className="material-symbols-outlined text-3xl">receipt_long</span>
-                  <span className="font-bold text-center">Lịch sử Hóa đơn</span>
+                  <span className="font-bold text-center">{tr("billHistory")}</span>
                 </button>
                 <button onClick={() => { setSidebarView("stats"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "stats" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
                   <span className="material-symbols-outlined text-3xl">trending_up</span>
@@ -1580,14 +1620,14 @@ export default function App() {
                 </button>
                 <button onClick={() => { setSidebarView("settings"); setIsSidebarExpanded(false); }} className={`p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border ${sidebarView === "settings" ? "bg-primary-container/20 border-primary text-primary" : "bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant"}`}>
                   <span className="material-symbols-outlined text-3xl">settings</span>
-                  <span className="font-bold text-center">Cài đặt HT</span>
+                  <span className="font-bold text-center">{tr("settingsShort")}</span>
                 </button>
               </>
             )}
           </div>
           <div className="pt-6 border-t border-outline-variant/20 flex flex-col items-center gap-4">
             <button onClick={handleLogout} className="w-full py-4 bg-error-container text-on-error-container font-black rounded-2xl flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined">logout</span> Đăng xuất
+              <span className="material-symbols-outlined">logout</span> {tr("logout")}
             </button>
           </div>
         </div>

@@ -112,18 +112,18 @@ export default function App() {
     try {
       const res = await authedFetch(`${API_URL}/users`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không tải được user");
+      if (!res.ok) throw new Error(data.error || tt("Không tải được user", "Benutzer können nicht geladen werden"));
       setUsers(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
       setUsers([]);
     }
     setUserLoading(false);
-  }, [isAdmin, authedFetch]);
+  }, [isAdmin, authedFetch, tt]);
 
   const createUser = async () => {
     if (!newUser.username || !newUser.password) {
-      alert("Nhập username và password");
+      alert(tt("Nhập username và password", "Benutzername und Passwort eingeben"));
       return;
     }
     try {
@@ -133,11 +133,11 @@ export default function App() {
         body: JSON.stringify(newUser),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Không tạo được user");
+      if (!res.ok) throw new Error(data.error || tt("Không tạo được user", "Benutzer kann nicht erstellt werden"));
       setNewUser({ username: "", password: "", full_name: "", role: "staff" });
       fetchUsers();
     } catch (e) {
-      alert(e.message || "Không tạo được user");
+      alert(e.message || tt("Không tạo được user", "Benutzer kann nicht erstellt werden"));
     }
   };
 
@@ -149,22 +149,22 @@ export default function App() {
         body: JSON.stringify({ ...patch }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Không cập nhật được user");
+      if (!res.ok) throw new Error(data.error || tt("Không cập nhật được user", "Benutzer kann nicht aktualisiert werden"));
       fetchUsers();
     } catch (e) {
-      alert(e.message || "Không cập nhật được user");
+      alert(e.message || tt("Không cập nhật được user", "Benutzer kann nicht aktualisiert werden"));
     }
   };
 
   const deleteUser = async (u) => {
-    if (!window.confirm(`Xóa user ${u.username}?`)) return;
+    if (!window.confirm(`${tt("Xóa user", "Benutzer löschen")} ${u.username}?`)) return;
     try {
       const res = await authedFetch(`${API_URL}/users/${u.id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Không xóa được user");
+      if (!res.ok) throw new Error(data.error || tt("Không xóa được user", "Benutzer kann nicht gelöscht werden"));
       fetchUsers();
     } catch (e) {
-      alert(e.message || "Không xóa được user");
+      alert(e.message || tt("Không xóa được user", "Benutzer kann nicht gelöscht werden"));
     }
   };
 
@@ -466,7 +466,7 @@ export default function App() {
               <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center">
                 <span className="material-symbols-outlined text-3xl">call_split</span>
               </div>
-              Tách bàn {currentTable}
+              {tt("Tách bàn", "Tisch aufteilen")} {currentTable}
             </h3>
 
             <div className="space-y-8">
@@ -491,7 +491,7 @@ export default function App() {
                       </div>
                       <div className="flex-1 min-w-0">
                          <h4 className="font-bold text-on-surface text-sm truncate">{item.name}</h4>
-                         <p className="text-xs text-on-surface-variant font-medium">x{item.qty} món</p>
+                         <p className="text-xs text-on-surface-variant font-medium">x{item.qty} {tt("món", "Gerichte")}</p>
                       </div>
                     </div>
                   ))}
@@ -576,7 +576,7 @@ export default function App() {
           ) : null}
           {/* Status Icons */}
           <div className={`flex items-center ${isSidebarExpanded ? "justify-between px-2" : "flex-col gap-4"} text-on-surface-variant`}>
-            <div title={printerStatus === "online" ? "Máy in: Online" : "Máy in: Offline"} className="flex flex-col items-center gap-1">
+            <div title={printerStatus === "online" ? tt("Máy in: Online", "Drucker: Online") : tt("Máy in: Offline", "Drucker: Offline")} className="flex flex-col items-center gap-1">
                <span className="material-symbols-outlined text-[20px]">print</span>
                <span className={`w-2 h-2 rounded-full ${printerStatus === "online" ? "bg-green-400" : printerStatus === "offline" ? "bg-error" : "bg-yellow-400 animate-pulse"}`}/>
             </div>
@@ -656,6 +656,7 @@ export default function App() {
               sidebarView={sidebarView}
               setSidebarView={setSidebarView}
               setShowMobileCart={setShowMobileCart}
+              language={language}
             />
           ) : (
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 lg:gap-6 lg:-m-6 lg:p-6">
@@ -736,11 +737,11 @@ export default function App() {
               <aside className="w-[380px] lg:w-[420px] flex flex-col bg-white rounded-[2rem] p-6 lg:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] shrink-0">
                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100 shrink-0">
                    <div className="flex items-center gap-2">
-                     <h2 className="font-headline font-black text-xl text-stone-900">Bàn {currentTable || "--"}</h2>
+                    <h2 className="font-headline font-black text-xl text-stone-900">{tt("Bàn", "Tisch")} {currentTable || "--"}</h2>
                      <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">
                        {currentTable ? (
                           tableStatus[currentTable] === "OPEN" ? `ORDER #${new Date().getTime().toString().slice(-4)}` :
-                          tableStatus[currentTable] === "PAYING" ? "CHỜ RESET" : "TRỐNG"
+                         tableStatus[currentTable] === "PAYING" ? tt("CHỜ RESET", "WARTET AUF RESET") : tt("TRỐNG", "FREI")
                        ) : tt("Chưa chọn bàn", "Kein Tisch gewählt")}
                      </span>
                    </div>
@@ -921,7 +922,7 @@ export default function App() {
                   {tt("Món ăn & Đồ uống", "Essen & Getränke")}
                 </button>
                 <button onClick={() => { setManageTab("table"); setEditingTable(null); }} className={`px-6 py-2.5 font-bold rounded-xl transition-all ${manageTab === "table" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
-                  Quản lý Bàn
+                  {tt("Quản lý Bàn", "Tischverwaltung")}
                 </button>
               </div>
             </div>
@@ -937,7 +938,7 @@ export default function App() {
                       <span className="material-symbols-outlined text-3xl">add</span>
                     </div>
                     <span className="text-lg font-bold text-on-surface">{tt("Thêm món mới", "Neues Gericht")}</span>
-                    <p className="text-sm text-on-surface-variant mt-1 text-center">Cập nhật thực đơn</p>
+                    <p className="text-sm text-on-surface-variant mt-1 text-center">{tt("Cập nhật thực đơn", "Menü aktualisieren")}</p>
                   </div>
 
                   {/* Menu Item Cards */}
@@ -950,7 +951,7 @@ export default function App() {
                            <div className="w-full h-full flex items-center justify-center text-on-surface-variant"><span className="material-symbols-outlined text-4xl opacity-50">restaurant</span></div>
                         )}
                         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-orange-700 shadow-sm">
-                           {m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}
+                           {m.type === "FOOD" ? tt("Món ăn", "Essen") : m.type === "DRINK" ? tt("Đồ uống", "Getränk") : "Combo"}
                         </div>
                       </div>
                       <div className="p-5 flex-1 flex flex-col">
@@ -1139,6 +1140,7 @@ export default function App() {
             fetchBillDetail={fetchBillDetail}
             formatMoney={formatMoney}
             callPrintApi={callPrintApi}
+            language={language}
           />
         )}
 
@@ -1174,9 +1176,9 @@ export default function App() {
                   
                   <div className="space-y-4">
                     {[
-                      { label: "Tên cửa hàng", key: "store_name", icon: "storefront", placeholder: "VD: Tiệm Nướng Đà Lạt Và Em" },
-                      { label: "Địa chỉ", key: "store_address", icon: "location_on", placeholder: "Nhập địa chỉ..." },
-                      { label: "Hotline", key: "store_phone", icon: "call", placeholder: "VD: 0988 123 456" }
+                      { label: tt("Tên cửa hàng", "Shopname"), key: "store_name", icon: "storefront", placeholder: tt("VD: Tiệm Nướng Đà Lạt Và Em", "z.B. Dalat Grill & You") },
+                      { label: tt("Địa chỉ", "Adresse"), key: "store_address", icon: "location_on", placeholder: tt("Nhập địa chỉ...", "Adresse eingeben...") },
+                      { label: "Hotline", key: "store_phone", icon: "call", placeholder: tt("VD: 0988 123 456", "z.B. 0988 123 456") }
                     ].map(({ label, key, icon, placeholder }) => (
                       <div key={key} className="space-y-1.5">
                         <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{label}</label>
@@ -1188,7 +1190,7 @@ export default function App() {
                       </div>
                     ))}
                     <div className="space-y-1.5">
-                       <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Số bàn tối đa</label>
+                       <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Số bàn tối đa", "Maximale Tische")}</label>
                        <div className="relative">
                           <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">table_restaurant</span>
                           <input className="w-full bg-surface-container border-none rounded-xl pl-11 pr-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none" type="number" min="1" max="100"
@@ -1203,10 +1205,10 @@ export default function App() {
                     <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center">
                       <span className="material-symbols-outlined">badge</span>
                     </div>
-                    <h4 className="font-bold text-lg font-headline text-on-surface">Nhân viên thu ngân</h4>
+                    <h4 className="font-bold text-lg font-headline text-on-surface">{tt("Nhân viên thu ngân", "Kassenpersonal")}</h4>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Tên hiển thị trên bill</label>
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Tên hiển thị trên bill", "Anzeigename auf Rechnung")}</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">person</span>
                       <input
@@ -1214,7 +1216,7 @@ export default function App() {
                         type="text"
                         value={settings.cashier_name || ""}
                         onChange={(e) => setSettings((s) => ({ ...s, cashier_name: e.target.value }))}
-                        placeholder="VD: Thu ngân A"
+                        placeholder={tt("VD: Thu ngân A", "z.B. Kasse A")}
                       />
                     </div>
                   </div>
@@ -1242,25 +1244,25 @@ export default function App() {
 
                   {!isLocalQuayOrigin() && !isPosElectron() && (
                     <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                      <p className="font-bold mb-1">Tại sao không thấy máy in?</p>
+                      <p className="font-bold mb-1">{tt("Tại sao không thấy máy in?", "Warum werden keine Drucker angezeigt?")}</p>
                       <p className="text-amber-900/90 leading-relaxed">
-                        Bạn đang mở POS trên trang <strong>cloud</strong> (vd: Vercel). Để lấy máy in Windows và in từ cloud, cần{" "}
-                        <strong>POS_PrintBridge.exe</strong> chạy trên máy quầy rồi kết nối tới backend.
+                        {tt("Bạn đang mở POS trên trang ", "Sie öffnen POS auf ")}<strong>cloud</strong>{tt(" (vd: Vercel). Để lấy máy in Windows và in từ cloud, cần ", " (z.B. Vercel). Für Windows-Drucker aus der Cloud benötigen Sie ")}
+                        <strong>POS_PrintBridge.exe</strong>{tt(" chạy trên máy quầy rồi kết nối tới backend.", " auf dem Kassen-PC mit Verbindung zum Backend.")}
                       </p>
                       <p className="mt-2 text-amber-900/90 leading-relaxed">
-                        Hãy chạy <code className="rounded bg-amber-100/80 px-1">POS_PrintBridge.exe</code> với <code className="rounded bg-amber-100/80 px-1">server_url</code> trỏ{" "}
-                        <code className="rounded bg-amber-100/80 px-1">wss://&lt;backend&gt;/bridge?secret=...</code> và{" "}
-                        <code className="rounded bg-amber-100/80 px-1">api_url</code> trỏ <code className="rounded bg-amber-100/80 px-1">https://&lt;backend&gt;</code>.
+                        {tt("Hãy chạy ", "Starten Sie ")}<code className="rounded bg-amber-100/80 px-1">POS_PrintBridge.exe</code>{tt(" với ", " mit ")}<code className="rounded bg-amber-100/80 px-1">server_url</code>{tt(" trỏ ", " auf ")}
+                        <code className="rounded bg-amber-100/80 px-1">wss://&lt;backend&gt;/bridge?secret=...</code>{tt(" và ", " und ")}
+                        <code className="rounded bg-amber-100/80 px-1">api_url</code>{tt(" trỏ ", " auf ")}<code className="rounded bg-amber-100/80 px-1">https://&lt;backend&gt;</code>.
                       </p>
                     </div>
                   )}
 
                   {/* Form thêm máy in */}
                   <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/30 mb-8 shrink-0">
-                     <h5 className="font-bold text-sm text-on-surface mb-4 uppercase tracking-wider">Thêm thiết bị in mới</h5>
+                     <h5 className="font-bold text-sm text-on-surface mb-4 uppercase tracking-wider">{tt("Thêm thiết bị in mới", "Neues Druckgerät hinzufügen")}</h5>
                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         <div className="md:col-span-2 space-y-1.5">
-                           <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Chọn máy in hệ thống</label>
+                           <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Chọn máy in hệ thống", "Systemdrucker wählen")}</label>
                            <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">print_add</span>
                               <select value={newPrinter.name} onChange={e => setNewPrinter(s => ({ ...s, name: e.target.value }))}
@@ -1271,7 +1273,7 @@ export default function App() {
                            </div>
                         </div>
                         <div className="space-y-1.5">
-                           <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Vai trò in</label>
+                           <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Vai trò in", "Druckrolle")}</label>
                            <select value={newPrinter.type} onChange={e => setNewPrinter(s => ({ ...s, type: e.target.value }))}
                               className="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm appearance-none">
                               <option value="ALL">{tt("Tất cả", "Alle")}</option>
@@ -1313,11 +1315,11 @@ export default function App() {
                                   </div>
                                </div>
                                <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => updateDbPrinter(p, { is_enabled: p.is_enabled ? 0 : 1 })} title={p.is_enabled ? "Tắt máy in" : "Bật máy in"}
+                                  <button onClick={() => updateDbPrinter(p, { is_enabled: p.is_enabled ? 0 : 1 })} title={p.is_enabled ? tt("Tắt máy in", "Drucker ausschalten") : tt("Bật máy in", "Drucker einschalten")}
                                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${p.is_enabled ? 'bg-surface-container-highest text-on-surface hover:text-orange-600' : 'bg-surface-container-highest text-on-surface hover:text-green-600'}`}>
                                      <span className="material-symbols-outlined text-[18px]">{p.is_enabled ? "power_settings_new" : "play_arrow"}</span>
                                   </button>
-                                  <button onClick={() => deleteDbPrinter(p.id)} title="Xóa cấu hình"
+                                  <button onClick={() => deleteDbPrinter(p.id)} title={tt("Xóa cấu hình", "Konfiguration löschen")}
                                      className="w-8 h-8 rounded-full bg-surface-container-highest text-error hover:bg-error hover:text-white flex items-center justify-center transition-colors">
                                      <span className="material-symbols-outlined text-[18px]">delete</span>
                                   </button>
@@ -1325,11 +1327,11 @@ export default function App() {
                             </div>
                             <div className="space-y-2 mt-4 bg-white/50 p-3 rounded-xl border border-outline-variant/20">
                                <div className="flex justify-between items-center text-xs">
-                                  <span className="text-on-surface-variant font-medium">Vai trò:</span>
+                                  <span className="text-on-surface-variant font-medium">{tt("Vai trò", "Rolle")}:</span>
                                  <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${p.type==='KITCHEN'?'bg-orange-100 text-orange-700':p.type==='DRINK'?'bg-blue-100 text-blue-700':'bg-primary-container text-on-primary-container'}`}>{p.type === "ALL" ? tt("Tất cả", "Alle") : p.type}</span>
                                </div>
                                <div className="flex justify-between items-center text-xs">
-                                  <span className="text-on-surface-variant font-medium">Khổ giấy:</span>
+                                  <span className="text-on-surface-variant font-medium">{tt("Khổ giấy", "Papierbreite")}:</span>
                                   <span className="font-bold text-on-surface bg-surface-container-highest px-2 py-0.5 rounded text-[10px]">{p.paper_size}mm</span>
                                </div>
                             </div>
@@ -1342,8 +1344,8 @@ export default function App() {
                 <section className="bg-surface-container-lowest p-6 md:p-8 rounded-[2rem] border border-outline-variant/30 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
                     <div>
-                      <h4 className="font-bold text-xl font-headline text-on-surface">Live Preview Bill</h4>
-                      <p className="text-sm text-on-surface-variant font-medium mt-0.5">Chỉnh CSS bill và xem ngay bản in thực tế.</p>
+                      <h4 className="font-bold text-xl font-headline text-on-surface">{tt("Live Preview Bill", "Live-Rechnungsvorschau")}</h4>
+                      <p className="text-sm text-on-surface-variant font-medium mt-0.5">{tt("Chỉnh CSS bill và xem ngay bản in thực tế.", "Rechnungs-CSS anpassen und Live-Vorschau sehen.")}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <select
@@ -1351,8 +1353,8 @@ export default function App() {
                         value={settingsPreviewPaper}
                         onChange={(e) => setSettingsPreviewPaper(Number(e.target.value))}
                       >
-                        <option value={58}>Khổ 58mm</option>
-                        <option value={80}>Khổ 80mm</option>
+                        <option value={58}>{tt("Khổ 58mm", "58mm Papier")}</option>
+                        <option value={80}>{tt("Khổ 80mm", "80mm Papier")}</option>
                       </select>
                       <button
                         onClick={refreshSettingsBillPreview}
@@ -1367,25 +1369,25 @@ export default function App() {
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                        Bill CSS Override (lưu trong cài đặt)
+                        {tt("Bill CSS Override (lưu trong cài đặt)", "Rechnungs-CSS Override (in Einstellungen gespeichert)")}
                       </label>
                       <textarea
                         className="w-full h-[360px] bg-surface-container border border-outline-variant/40 rounded-xl p-3 font-mono text-xs text-on-surface outline-none"
                         value={settings.bill_css_override || ""}
                         onChange={(e) => setSettings((s) => ({ ...s, bill_css_override: e.target.value }))}
-                        placeholder={`/* Ví dụ:
+                        placeholder={`/* ${tt("Ví dụ", "Beispiel")}:
 .item-name { font-size: 15px !important; font-weight: 800 !important; }
 .summary { font-size: 16px !important; }
 */`}
                       />
                       <p className="text-xs text-on-surface-variant">
-                        Bấm <strong>Lưu thay đổi</strong> để áp dụng CSS này cho toàn bộ bill in thật.
+                        {tt("Bấm ", "Klicken Sie ")}<strong>{tt("Lưu thay đổi", "Änderungen speichern")}</strong>{tt(" để áp dụng CSS này cho toàn bộ bill in thật.", ", um dieses CSS auf alle gedruckten Rechnungen anzuwenden.")}
                       </p>
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                        Preview theo template in thật
+                        {tt("Preview theo template in thật", "Vorschau nach echtem Druck-Template")}
                       </label>
                       <div className="bg-surface-container rounded-xl border border-outline-variant/40 p-3 h-[360px]">
                         {settingsPreviewLoading ? (
@@ -1471,15 +1473,15 @@ export default function App() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-black text-on-surface truncate">{u.full_name || u.username}</div>
-                            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{u.username} • {u.role === 'admin' ? 'Quản trị' : 'Nhân viên'}</div>
+                            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{u.username} • {u.role === 'admin' ? tt("Quản trị", "Administrator") : tt("Nhân viên", "Mitarbeiter")}</div>
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-4 border-t border-outline-variant/10">
                           <button onClick={() => updateUser(u, { is_active: Number(u.is_active) ? 0 : 1 })} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${Number(u.is_active) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                            {Number(u.is_active) ? "Kích hoạt" : "Đã khóa"}
+                            {Number(u.is_active) ? tt("Kích hoạt", "Aktiv") : tt("Đã khóa", "Gesperrt")}
                           </button>
                           <div className="flex gap-2">
-                            <button onClick={() => { const pw = window.prompt(`Đặt mật khẩu mới cho ${u.username}`); if (pw) updateUser(u, { password: pw }); }} className="w-8 h-8 rounded-full bg-white text-amber-600 flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all shadow-sm border border-amber-100">
+                            <button onClick={() => { const pw = window.prompt(tt("Đặt mật khẩu mới cho", "Neues Passwort setzen für") + ` ${u.username}`); if (pw) updateUser(u, { password: pw }); }} className="w-8 h-8 rounded-full bg-white text-amber-600 flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all shadow-sm border border-amber-100">
                               <span className="material-symbols-outlined text-[16px]">key</span>
                             </button>
                             <button onClick={() => deleteUser(u)} className="w-8 h-8 rounded-full bg-white text-error flex items-center justify-center hover:bg-error hover:text-white transition-all shadow-sm border border-red-100">

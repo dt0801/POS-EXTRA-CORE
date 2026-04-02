@@ -63,8 +63,32 @@ export default function MobileOrderView({
   menuImageSrc,
   sidebarView,
   setSidebarView,
-  setShowMobileCart
+  setShowMobileCart,
+  language = "vi",
 }) {
+  const tr = (vi, de) => (language === "de" ? de : vi);
+  const filterLabel = (f) => {
+    const map = {
+      ALL: tr("Tất cả", "Alle"),
+      COMBO: "Combo",
+      DRINK: tr("Đồ uống", "Getränk"),
+      KHAI_VI: tr("Khai vị", "Vorspeise"),
+      SIGNATURE: tr("Signature", "Signature"),
+      NHAU: tr("Nhậu", "Snacks"),
+      GA: tr("Gà", "Huhn"),
+      BO: tr("Bò", "Rind"),
+      HEO: tr("Heo", "Schwein"),
+      ECH: tr("Ếch", "Frosch"),
+      CA: tr("Cá", "Fisch"),
+      LUON: tr("Lươn", "Aal"),
+      SO_DIEP: tr("Sò điệp", "Jakobsmuschel"),
+      HAISAN: tr("Hải sản", "Meeresfrüchte"),
+      RAU: tr("Rau", "Gemüse"),
+      LAU: tr("Lẩu", "Hotpot"),
+      COM_MI: tr("Cơm/Mì", "Reis/Nudeln"),
+    };
+    return map[f.key] || f.label;
+  };
   const filteredMenu = useMemo(() => {
     const byTab = filterMenu(menu, filter);
     if (!searchQuery) return byTab;
@@ -122,7 +146,7 @@ export default function MobileOrderView({
                     : "bg-surface-container-lowest text-on-surface-variant hover:bg-orange-100/50"
                   }`}
               >
-                {f.label}
+                {filterLabel(f)}
               </button>
             ))}
           </div>
@@ -188,15 +212,15 @@ export default function MobileOrderView({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-orange-600">Bàn {currentTable}</span>
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-orange-600">{tr("Bàn", "Tisch")} {currentTable}</span>
                   <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">{totalQty} Món</span>
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">{totalQty} {tr("Món", "Gerichte")}</span>
                 </div>
                 <div className="text-xl font-headline font-extrabold text-on-surface tracking-tight">{formatMoney(total)}</div>
               </div>
             </div>
             <button onClick={openCart} className="bg-primary-container text-on-primary-container px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-orange-500/20">
-              Chi tiết
+              {tr("Chi tiết", "Details")}
               <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </button>
           </div>
@@ -208,19 +232,19 @@ export default function MobileOrderView({
         <div className="flex justify-around items-center w-full px-4 pb-6 pt-3">
           <button type="button" onClick={() => setSidebarView("tables")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'tables' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
             <span className="material-symbols-outlined mb-1">layers</span>
-            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">Bàn</span>
+            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">{tr("Bàn", "Tisch")}</span>
           </button>
           <button type="button" onClick={() => setSidebarView("order")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'order' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
             <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: sidebarView === "order" ? "'FILL' 1" : undefined }}>receipt_long</span>
-            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">Đơn</span>
+            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">{tr("Đơn", "Bestellung")}</span>
           </button>
           <button type="button" onClick={() => setSidebarView("history")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'history' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
             <span className="material-symbols-outlined mb-1">outdoor_grill</span>
-            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">Bếp / HD</span>
+            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">{tr("Bếp / HD", "Küche / Rechnung")}</span>
           </button>
           <button type="button" onClick={() => setSidebarView("settings")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'settings' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
             <span className="material-symbols-outlined mb-1">settings</span>
-            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">Cấu hình</span>
+            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">{tr("Cấu hình", "Einstellungen")}</span>
           </button>
         </div>
       </nav>

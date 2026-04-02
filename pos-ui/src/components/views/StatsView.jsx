@@ -13,8 +13,10 @@ export default function StatsView({
   statsToday,
   statsMonthlyData,
   statsYearlyData,
+  language = "vi",
 }) {
   const fmt = formatMoney;
+  const tr = (vi, de) => (language === "de" ? de : vi);
 
   const renderKPIs = (title, revenue, bills, avg) => (
     <section className="grid grid-cols-2 gap-4">
@@ -37,7 +39,7 @@ export default function StatsView({
           <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-3">
             <span className="material-symbols-outlined text-blue-600">receipt_long</span>
           </div>
-          <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-1">Tổng hóa đơn</p>
+          <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-1">{tr("Tổng hóa đơn", "Rechnungen gesamt")}</p>
           <p className="text-2xl font-headline font-bold text-on-surface">{bills}</p>
         </div>
       </div>
@@ -48,7 +50,7 @@ export default function StatsView({
           <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center mb-3">
             <span className="material-symbols-outlined text-orange-600">analytics</span>
           </div>
-          <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-1">Trung bình</p>
+          <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider mb-1">{tr("Trung bình", "Durchschnitt")}</p>
           <p className="text-2xl font-headline font-bold text-on-surface">{avg}</p>
         </div>
       </div>
@@ -59,13 +61,13 @@ export default function StatsView({
     <div className="p-4 md:p-8 flex flex-col w-full max-w-7xl mx-auto h-full overflow-y-auto pb-32">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 shrink-0">
         <div>
-          <h2 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface">Báo Cáo Doanh Thu</h2>
-          <p className="text-on-surface-variant text-sm mt-1">Thống kê vận hành</p>
+          <h2 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface">{tr("Báo Cáo Doanh Thu", "Umsatzbericht")}</h2>
+          <p className="text-on-surface-variant text-sm mt-1">{tr("Thống kê vận hành", "Betriebsstatistik")}</p>
         </div>
         
         {/* Tabs and Controllers */}
         <div className="flex bg-surface-container-highest rounded-xl p-1 gap-1 items-center shadow-inner overflow-x-auto hide-scrollbar w-full md:w-auto">
-          {[["day", "Hôm nay"], ["month", "Tháng"], ["year", "Năm"]].map(([v, l]) => (
+          {[["day", tr("Hôm nay", "Heute")], ["month", tr("Tháng", "Monat")], ["year", tr("Năm", "Jahr")]].map(([v, l]) => (
             <button 
               key={v} 
               onClick={() => setStatsTab(v)} 
@@ -99,21 +101,21 @@ export default function StatsView({
       </div>
 
       {statsTab === "day" && statsToday && renderKPIs(
-        "Doanh thu hôm nay",
+        tr("Doanh thu hôm nay", "Umsatz heute"),
         statsToday.revenue,
         statsToday.bill_count,
         statsToday.bill_count ? fmt(Math.round(statsToday.revenue / statsToday.bill_count)) : "0đ"
       )}
 
       {statsTab === "month" && renderKPIs(
-        "Doanh thu tháng",
+        tr("Doanh thu tháng", "Umsatz im Monat"),
         statsMonthlyData?.revenue ?? 0,
         statsMonthlyData?.bill_count ?? 0,
         statsMonthlyData?.days?.length ? fmt(Math.round(statsMonthlyData.revenue / statsMonthlyData.days.length)) : "0đ"
       )}
 
       {statsTab === "year" && renderKPIs(
-        "Doanh thu năm",
+        tr("Doanh thu năm", "Umsatz im Jahr"),
         statsYearlyData?.revenue ?? 0,
         statsYearlyData?.bill_count ?? 0,
         statsYearlyData?.months?.length ? fmt(Math.round(statsYearlyData.revenue / statsYearlyData.months.length)) : "0đ"
@@ -121,11 +123,11 @@ export default function StatsView({
 
       <section className="mt-8 bg-surface-container-lowest p-6 rounded-[2rem] shadow-sm">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="font-headline font-bold text-lg">Biểu đồ hoạt động</h3>
-          <span className="text-primary text-xs font-bold uppercase tracking-widest">Gần đây</span>
+          <h3 className="font-headline font-bold text-lg">{tr("Biểu đồ hoạt động", "Aktivitätsdiagramm")}</h3>
+          <span className="text-primary text-xs font-bold uppercase tracking-widest">{tr("Gần đây", "Neueste")}</span>
         </div>
         <div className="h-32 flex items-center justify-center border-2 border-dashed border-outline-variant/30 rounded-xl relative overflow-hidden">
-          <p className="text-on-surface-variant/50 text-sm font-semibold italic">Đang cập nhật dữ liệu biểu đồ...</p>
+          <p className="text-on-surface-variant/50 text-sm font-semibold italic">{tr("Đang cập nhật dữ liệu biểu đồ...", "Diagrammdaten werden aktualisiert...")}</p>
         </div>
       </section>
 

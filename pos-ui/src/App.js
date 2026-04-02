@@ -982,32 +982,32 @@ export default function App() {
                       
                        <div className="space-y-6">
                           <div>
-                             <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">Tên món</label>
+                            <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Tên món", "Gerichtname")}</label>
                              <input type="text" value={manageTab === "add" ? newItem.name : editItem.name} 
                                 onChange={e => manageTab === "add" ? setNewItem({...newItem, name: e.target.value}) : setEditItem({...editItem, name: e.target.value})}
                                 className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all placeholder:text-on-surface-variant/50 text-lg" 
-                                placeholder="VD: Gà nướng muối ớt" />
+                               placeholder={tt("VD: Gà nướng muối ớt", "z.B. Gegrilltes Huhn mit Salz und Chili")} />
                           </div>
                           <div className="grid grid-cols-2 gap-6">
                               <div>
-                                 <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">Giá (VND)</label>
+                                 <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Giá (VND)", "Preis (VND)")}</label>
                                  <input type="number" value={manageTab === "add" ? newItem.price : editItem.price} 
                                     onChange={e => manageTab === "add" ? setNewItem({...newItem, price: e.target.value}) : setEditItem({...editItem, price: e.target.value})}
                                     className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all text-lg" />
                               </div>
                               <div>
-                                 <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">Loại</label>
+                                 <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Loại", "Typ")}</label>
                                  <select value={manageTab === "add" ? newItem.type : editItem.type} 
                                     onChange={e => manageTab === "add" ? setNewItem({...newItem, type: e.target.value}) : setEditItem({...editItem, type: e.target.value})}
                                     className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all cursor-pointer text-lg appearance-none">
-                                    <option value="FOOD">Đồ ăn</option>
+                                   <option value="FOOD">{tt("Đồ ăn", "Essen")}</option>
                                     <option value="DRINK">{tt("Đồ uống", "Getränk")}</option>
                                     <option value="COMBO">Combo</option>
                                  </select>
                               </div>
                           </div>
                           <div>
-                             <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">Ảnh đại diện</label>
+                             <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Ảnh đại diện", "Titelbild")}</label>
                              <div className="flex items-center gap-4">
                                <input type="file" accept="image/*" onChange={e => manageTab === "add" ? setFile(e.target.files[0]) : setEditFile(e.target.files[0])}
                                   className="w-full text-base text-on-surface-variant file:mr-6 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary-container file:text-primary hover:file:bg-orange-100 transition-all cursor-pointer" />
@@ -1051,24 +1051,24 @@ export default function App() {
                    <div className="bg-surface-container-lowest rounded-[2rem] p-8 border border-outline-variant/30 shadow-sm">
                       <h3 className="text-xl font-bold font-headline mb-6 flex items-center gap-2 text-on-surface">
                          <div className="w-10 h-10 rounded-full bg-primary-container text-primary flex items-center justify-center"><span className="material-symbols-outlined">table_restaurant</span></div>
-                         Thêm bàn nhanh
+                         {tt("Thêm bàn nhanh", "Schnell Tisch hinzufügen")}
                       </h3>
                       <div className="flex flex-col gap-4">
                          <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50 select-none font-bold">BÀN</span>
-                            <input type="number" min="1" placeholder="Số (VD: 21)" value={newTableNum} onChange={e => setNewTableNum(e.target.value)} onKeyDown={e => e.key === "Enter" && addTable()}
+                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50 select-none font-bold">{tt("BÀN", "TISCH")}</span>
+                           <input type="number" min="1" placeholder={tt("Số (VD: 21)", "Nummer (z.B. 21)")} value={newTableNum} onChange={e => setNewTableNum(e.target.value)} onKeyDown={e => e.key === "Enter" && addTable()}
                                className="w-full pl-14 pr-4 py-4 rounded-xl bg-surface-container text-on-surface border border-outline-variant/50 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-lg transition-all" />
                          </div>
                          <button onClick={addTable} className="w-full py-4 bg-primary hover:bg-orange-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-200/50 active:scale-95 transition-all">
-                            <span className="material-symbols-outlined">add</span> Thêm bàn mới
+                           <span className="material-symbols-outlined">add</span> {tt("Thêm bàn mới", "Neuen Tisch hinzufügen")}
                          </button>
                       </div>
                    </div>
 
                    <div className="bg-surface-container-lowest rounded-[2rem] p-8 border border-outline-variant/30 shadow-sm flex flex-col items-center justify-center text-center">
                        <span className="material-symbols-outlined text-6xl text-primary/30 mb-4">analytics</span>
-                       <h4 className="text-lg font-bold">Tổng số: {tableList.length} bàn</h4>
-                       <p className="text-on-surface-variant mt-2 text-sm">Quản lý không gian phục vụ và tạo thêm bàn mới khi cần.</p>
+                       <h4 className="text-lg font-bold">{tt("Tổng số", "Gesamt")}: {tableList.length} {tt("bàn", "Tische")}</h4>
+                       <p className="text-on-surface-variant mt-2 text-sm">{tt("Quản lý không gian phục vụ và tạo thêm bàn mới khi cần.", "Verwalten Sie den Servicebereich und fügen Sie bei Bedarf neue Tische hinzu.")}</p>
                    </div>
                 </div>
 
@@ -1076,14 +1076,14 @@ export default function App() {
                    <h3 className="text-xl font-bold font-headline mb-6 flex items-center justify-between text-on-surface">
                       <div className="flex items-center gap-2">
                          <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><span className="material-symbols-outlined">format_list_numbered</span></div>
-                         Danh sách bàn
+                         {tt("Danh sách bàn", "Tischliste")}
                       </div>
                    </h3>
 
                    {tableList.length === 0 ? (
                       <div className="text-center py-12 text-on-surface-variant flex flex-col items-center">
                          <span className="material-symbols-outlined text-6xl mb-4 opacity-20">table_restaurant</span>
-                         <p>Chưa có bàn nào trong hệ thống.</p>
+                         <p>{tt("Chưa có bàn nào trong hệ thống.", "Es gibt noch keine Tische im System.")}</p>
                       </div>
                    ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -1091,12 +1091,12 @@ export default function App() {
                             <div key={t.table_num} className="bg-surface-container rounded-2xl p-5 border border-outline-variant/30 hover:border-primary/50 transition-colors group relative overflow-hidden">
                                {editingTable?.table_num === t.table_num ? (
                                   <div className="flex flex-col gap-3">
-                                     <div className="text-xs font-semibold text-primary uppercase">Đổi bàn số {t.table_num}</div>
+                                     <div className="text-xs font-semibold text-primary uppercase">{tt("Đổi bàn số", "Tischnummer ändern")} {t.table_num}</div>
                                      <input type="number" min="1" value={editingTable.new_num} onChange={e => setEditingTable({ ...editingTable, new_num: e.target.value })} onKeyDown={e => { if (e.key === "Enter") renameTable(); if (e.key === "Escape") setEditingTable(null); }} autoFocus
                                         className="w-full text-lg font-bold px-3 py-2 rounded-xl border-2 border-primary focus:outline-none bg-white text-on-surface" />
                                      <div className="flex gap-2">
-                                        <button onClick={renameTable} className="flex-1 py-2 bg-primary text-white rounded-lg text-sm font-bold active:scale-95 transition-transform">Lưu</button>
-                                        <button onClick={() => setEditingTable(null)} className="flex-1 py-2 bg-surface-container-highest text-on-surface-variant hover:text-on-surface rounded-lg text-sm font-bold active:scale-95 transition-transform">Huỷ</button>
+                                       <button onClick={renameTable} className="flex-1 py-2 bg-primary text-white rounded-lg text-sm font-bold active:scale-95 transition-transform">{tt("Lưu", "Speichern")}</button>
+                                       <button onClick={() => setEditingTable(null)} className="flex-1 py-2 bg-surface-container-highest text-on-surface-variant hover:text-on-surface rounded-lg text-sm font-bold active:scale-95 transition-transform">{tt("Huỷ", "Abbrechen")}</button>
                                      </div>
                                   </div>
                                ) : (
@@ -1114,7 +1114,7 @@ export default function App() {
                                      </div>
                                      <div className={`mt-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold w-fit ${t.status === "OPEN" ? "bg-orange-100 text-orange-700" : "bg-white/60 text-slate-500 border border-outline-variant/50"}`}>
                                         <div className={`w-2 h-2 rounded-full ${t.status === "OPEN" ? "bg-orange-500" : "bg-slate-300"}`}></div>
-                                        {t.status === "OPEN" ? "Đang phục vụ" : "Trống"}
+                                       {t.status === "OPEN" ? tt("Đang phục vụ", "In Bedienung") : tt("Trống", "Frei")}
                                      </div>
                                   </div>
                                )}
@@ -1148,13 +1148,13 @@ export default function App() {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
               <div>
-                <h3 className="text-3xl font-extrabold text-on-surface tracking-tight font-headline">Cấu hình Hệ thống</h3>
-                <p className="text-on-surface-variant mt-1 font-medium">Quản lý thông tin cửa hàng, máy in và bảo mật tài khoản.</p>
+                <h3 className="text-3xl font-extrabold text-on-surface tracking-tight font-headline">{tt("Cấu hình Hệ thống", "Systemeinstellungen")}</h3>
+                <p className="text-on-surface-variant mt-1 font-medium">{tt("Quản lý thông tin cửa hàng, máy in và bảo mật tài khoản.", "Verwalten Sie Shop-Infos, Drucker und Kontosicherheit.")}</p>
               </div>
               <div className="flex gap-3">
                  <button onClick={saveAllSettings} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm ${settingsSaved ? "bg-green-500 text-white" : "bg-primary text-white shadow-primary/20 hover:opacity-90 active:scale-95"}`}>
                     <span className="material-symbols-outlined text-[20px]">{settingsSaved ? "check_circle" : "save"}</span>
-                    {settingsSaved ? "Đã lưu cài đặt" : "Lưu thay đổi"}
+                    {settingsSaved ? tt("Đã lưu cài đặt", "Einstellungen gespeichert") : tt("Lưu thay đổi", "Änderungen speichern")}
                  </button>
               </div>
             </div>
@@ -1169,7 +1169,7 @@ export default function App() {
                     <div className="w-10 h-10 bg-secondary-container/20 text-secondary rounded-xl flex items-center justify-center">
                       <span className="material-symbols-outlined">store</span>
                     </div>
-                    <h4 className="font-bold text-lg font-headline text-on-surface">Thông tin quán</h4>
+                    <h4 className="font-bold text-lg font-headline text-on-surface">{tt("Thông tin quán", "Ladeninformationen")}</h4>
                   </div>
                   
                   <div className="space-y-4">
@@ -1230,13 +1230,13 @@ export default function App() {
                         <span className="material-symbols-outlined text-[24px]">print</span>
                       </div>
                       <div>
-                        <h4 className="font-bold text-xl font-headline text-on-surface">Cấu hình Máy in mạng</h4>
-                        <p className="text-sm text-on-surface-variant font-medium mt-0.5">{dbPrinters.length} thiết bị đang hoạt động</p>
+                        <h4 className="font-bold text-xl font-headline text-on-surface">{tt("Cấu hình Máy in mạng", "Netzwerkdrucker")}</h4>
+                        <p className="text-sm text-on-surface-variant font-medium mt-0.5">{dbPrinters.length} {tt("thiết bị đang hoạt động", "aktive Geräte")}</p>
                       </div>
                     </div>
                     <button onClick={fetchWindowsPrinters} className="flex items-center gap-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors px-4 py-2 rounded-xl text-sm font-bold text-on-surface-variant">
                        <span className="material-symbols-outlined text-[18px]">sync</span>
-                       Làm mới Windows API
+                       {tt("Làm mới Windows API", "Windows-API aktualisieren")}
                     </button>
                   </div>
 
@@ -1265,7 +1265,7 @@ export default function App() {
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">print_add</span>
                               <select value={newPrinter.name} onChange={e => setNewPrinter(s => ({ ...s, name: e.target.value }))}
                                  className="w-full bg-white border border-outline-variant/50 rounded-xl pl-10 pr-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm appearance-none">
-                                 <option value="">-- Chọn máy in Windows --</option>
+                                 <option value="">{tt("-- Chọn máy in Windows --", "-- Windows-Drucker wählen --")}</option>
                                  {windowsPrinters.map((p, i) => <option key={i} value={p.name}>{p.name}</option>)}
                               </select>
                            </div>
@@ -1274,15 +1274,15 @@ export default function App() {
                            <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Vai trò in</label>
                            <select value={newPrinter.type} onChange={e => setNewPrinter(s => ({ ...s, type: e.target.value }))}
                               className="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm appearance-none">
-                              <option value="ALL">Tất cả</option>
-                              <option value="KITCHEN">Bếp (Đồ ăn)</option>
-                              <option value="DRINK">Pha chế</option>
-                              <option value="BILL">Máy POS (Thanh toán)</option>
+                              <option value="ALL">{tt("Tất cả", "Alle")}</option>
+                              <option value="KITCHEN">{tt("Bếp (Đồ ăn)", "Küche (Essen)")}</option>
+                              <option value="DRINK">{tt("Pha chế", "Getränke")}</option>
+                              <option value="BILL">{tt("Máy POS (Thanh toán)", "POS (Kasse)")}</option>
                            </select>
                         </div>
                         <button onClick={addDbPrinter} disabled={!newPrinter.name}
                            className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${newPrinter.name ? "bg-primary text-white hover:bg-orange-600 active:scale-95 shadow-md shadow-primary/20" : "bg-surface-container-highest text-outline-variant cursor-not-allowed"}`}>
-                           <span className="material-symbols-outlined text-[20px]">add</span>Thêm
+                           <span className="material-symbols-outlined text-[20px]">add</span>{tt("Thêm", "Hinzufügen")}
                         </button>
                      </div>
                   </div>
@@ -1293,12 +1293,12 @@ export default function App() {
                       {loadingDbPrinters ? (
                          <div className="col-span-full py-12 text-center text-on-surface-variant flex flex-col items-center">
                             <span className="material-symbols-outlined animate-spin text-4xl mb-3 opacity-20">refresh</span>
-                            <p className="font-medium">Đang tải cấu hình máy in...</p>
+                            <p className="font-medium">{tt("Đang tải cấu hình máy in...", "Druckerkonfiguration wird geladen...")}</p>
                          </div>
                       ) : dbPrinters.length === 0 ? (
                          <div className="col-span-full border-2 border-dashed border-outline-variant/50 rounded-2xl flex flex-col items-center justify-center p-12 gap-3 opacity-70">
                             <span className="material-symbols-outlined text-5xl text-outline">print_disabled</span>
-                            <p className="text-sm font-bold text-on-surface-variant">Chưa có cấu hình máy in nào</p>
+                            <p className="text-sm font-bold text-on-surface-variant">{tt("Chưa có cấu hình máy in nào", "Noch keine Druckerkonfiguration")}</p>
                          </div>
                       ) : dbPrinters.map(p => (
                          <div key={p.id} className={`p-5 rounded-2xl border transition-all group ${p.is_enabled ? 'bg-surface-container border-outline-variant/30 hover:border-primary/40 shadow-sm' : 'bg-surface-container-low border-dashed border-outline-variant/40 opacity-70'}`}>
@@ -1309,7 +1309,7 @@ export default function App() {
                                   </div>
                                   <div>
                                      <h5 className="font-bold text-on-surface text-sm max-w-[150px] truncate">{p.name}</h5>
-                                     <span className={`text-[9px] py-0.5 px-2 rounded-full font-bold uppercase tracking-widest mt-1 inline-block ${p.is_enabled ? 'bg-green-100 text-green-700' : 'bg-surface-container-highest text-on-surface-variant'}`}>{p.is_enabled ? "Đang bật" : "Đã tắt"}</span>
+                                     <span className={`text-[9px] py-0.5 px-2 rounded-full font-bold uppercase tracking-widest mt-1 inline-block ${p.is_enabled ? 'bg-green-100 text-green-700' : 'bg-surface-container-highest text-on-surface-variant'}`}>{p.is_enabled ? tt("Đang bật", "An") : tt("Đã tắt", "Aus")}</span>
                                   </div>
                                </div>
                                <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
@@ -1326,7 +1326,7 @@ export default function App() {
                             <div className="space-y-2 mt-4 bg-white/50 p-3 rounded-xl border border-outline-variant/20">
                                <div className="flex justify-between items-center text-xs">
                                   <span className="text-on-surface-variant font-medium">Vai trò:</span>
-                                  <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${p.type==='KITCHEN'?'bg-orange-100 text-orange-700':p.type==='DRINK'?'bg-blue-100 text-blue-700':'bg-primary-container text-on-primary-container'}`}>{p.type === 'ALL' ? 'Tất cả' : p.type}</span>
+                                 <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${p.type==='KITCHEN'?'bg-orange-100 text-orange-700':p.type==='DRINK'?'bg-blue-100 text-blue-700':'bg-primary-container text-on-primary-container'}`}>{p.type === "ALL" ? tt("Tất cả", "Alle") : p.type}</span>
                                </div>
                                <div className="flex justify-between items-center text-xs">
                                   <span className="text-on-surface-variant font-medium">Khổ giấy:</span>
@@ -1359,7 +1359,7 @@ export default function App() {
                         className="flex items-center gap-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors px-4 py-2 rounded-xl text-sm font-bold text-on-surface"
                       >
                         <span className="material-symbols-outlined text-[18px]">refresh</span>
-                        Làm mới preview
+                        {tt("Làm mới preview", "Vorschau aktualisieren")}
                       </button>
                     </div>
                   </div>
@@ -1390,7 +1390,7 @@ export default function App() {
                       <div className="bg-surface-container rounded-xl border border-outline-variant/40 p-3 h-[360px]">
                         {settingsPreviewLoading ? (
                           <div className="h-full flex items-center justify-center text-on-surface-variant font-medium">
-                            Đang render preview...
+                            {tt("Đang render preview...", "Vorschau wird gerendert...")}
                           </div>
                         ) : (
                           <iframe
@@ -1411,36 +1411,36 @@ export default function App() {
         {/* ===== USERS VIEW ===== */}
         {sidebarView === "users" && isAdmin && (
           <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 md:p-8">
-            <h2 className="text-3xl font-black font-headline text-on-surface mb-8">Quản lý Nhân sự</h2>
+            <h2 className="text-3xl font-black font-headline text-on-surface mb-8">{tt("Quản lý Nhân sự", "Mitarbeiterverwaltung")}</h2>
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               {/* Form Thêm Nhân Viên */}
               <section className="bg-surface-container-lowest p-8 rounded-[2.5rem] border border-outline-variant/30 shadow-sm">
                 <h3 className="font-headline font-black text-xl mb-6 text-on-surface flex items-center gap-2">
                   <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><span className="material-symbols-outlined">person_add</span></div>
-                  Thêm nhân viên
+                  {tt("Thêm nhân viên", "Mitarbeiter hinzufügen")}
                 </h3>
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Tên đăng nhập</label>
-                    <input className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all" value={newUser.username} onChange={(e) => setNewUser((s) => ({ ...s, username: e.target.value }))} placeholder="VD: nhanvien1" />
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">{tt("Tên đăng nhập", "Benutzername")}</label>
+                    <input className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all" value={newUser.username} onChange={(e) => setNewUser((s) => ({ ...s, username: e.target.value }))} placeholder={tt("VD: nhanvien1", "z.B. mitarbeiter1")} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Mật khẩu</label>
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">{tt("Mật khẩu", "Passwort")}</label>
                     <input type="password" className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all" value={newUser.password} onChange={(e) => setNewUser((s) => ({ ...s, password: e.target.value }))} placeholder="••••••••" />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Tên hiển thị</label>
-                    <input className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all" value={newUser.full_name} onChange={(e) => setNewUser((s) => ({ ...s, full_name: e.target.value }))} placeholder="VD: Nguyễn Văn A" />
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">{tt("Tên hiển thị", "Anzeigename")}</label>
+                    <input className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all" value={newUser.full_name} onChange={(e) => setNewUser((s) => ({ ...s, full_name: e.target.value }))} placeholder={tt("VD: Nguyễn Văn A", "z.B. Max Mustermann")} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Quyền hạn</label>
+                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">{tt("Quyền hạn", "Rolle")}</label>
                     <select className="w-full rounded-2xl border-none bg-surface-container px-4 py-3.5 font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer appearance-none" value={newUser.role} onChange={(e) => setNewUser((s) => ({ ...s, role: e.target.value }))}>
-                      <option value="staff">Nhân viên (Staff)</option>
-                      <option value="admin">Quản trị (Admin)</option>
+                      <option value="staff">{tt("Nhân viên (Staff)", "Mitarbeiter (Staff)")}</option>
+                      <option value="admin">{tt("Quản trị (Admin)", "Administrator (Admin)")}</option>
                     </select>
                   </div>
                   <button onClick={createUser} className="w-full rounded-2xl bg-primary text-white py-4 font-black text-lg shadow-xl shadow-orange-300/40 active:scale-95 transition-all mt-4">
-                    Tạo tài khoản
+                    {tt("Tạo tài khoản", "Konto erstellen")}
                   </button>
                 </div>
               </section>
@@ -1450,16 +1450,16 @@ export default function App() {
                 <div className="flex items-center justify-between mb-8">
                   <h3 className="font-headline font-black text-xl text-on-surface flex items-center gap-2">
                     <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><span className="material-symbols-outlined">group</span></div>
-                    Danh sách nhân viên
+                    {tt("Danh sách nhân viên", "Mitarbeiterliste")}
                   </h3>
                   <button onClick={fetchUsers} className="px-5 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest font-bold text-sm transition-all flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px]">refresh</span> Làm mới
+                    <span className="material-symbols-outlined text-[18px]">refresh</span> {tt("Làm mới", "Aktualisieren")}
                   </button>
                 </div>
                 {userLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 text-on-surface-variant opacity-50">
                     <span className="material-symbols-outlined animate-spin text-4xl mb-4">refresh</span>
-                    <p className="font-bold">Đang tải danh sách...</p>
+                    <p className="font-bold">{tt("Đang tải danh sách...", "Liste wird geladen...")}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1501,6 +1501,7 @@ export default function App() {
           <StatsView
             formatMoney={formatMoney}
             historyDate={historyDate}
+            language={language}
           />
         )}
 

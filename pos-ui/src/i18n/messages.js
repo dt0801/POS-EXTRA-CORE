@@ -1,0 +1,28 @@
+export const LANGUAGE_STORAGE_KEY = "pos_ui_language";
+
+export const MESSAGES = {
+  checkingSession: { vi: "Đang kiểm tra phiên đăng nhập...", de: "Sitzung wird geprüft..." },
+  loginTitle: { vi: "Đăng nhập POS", de: "POS-Anmeldung" },
+  username: { vi: "Tên đăng nhập", de: "Benutzername" },
+  password: { vi: "Mật khẩu", de: "Passwort" },
+  loggingIn: { vi: "Đang đăng nhập...", de: "Anmeldung..." },
+  login: { vi: "Đăng nhập", de: "Anmelden" },
+  loginFailed: { vi: "Đăng nhập thất bại", de: "Anmeldung fehlgeschlagen" },
+  floorMap: { vi: "Sơ đồ bàn", de: "Tischplan" },
+  orderMenu: { vi: "Menu Order", de: "Bestellungen" },
+  menuManagement: { vi: "Quản lý Thực Đơn", de: "Speisekarte verwalten" },
+  billHistory: { vi: "Lịch sử Hóa đơn", de: "Rechnungshistorie" },
+  statsReport: { vi: "Thống kê Báo cáo", de: "Statistik" },
+  userManagement: { vi: "Quản lý Nhân viên", de: "Mitarbeiter" },
+  systemSettings: { vi: "Cài đặt Hệ thống", de: "Systemeinstellungen" },
+  logout: { vi: "Đăng xuất", de: "Abmelden" },
+  openLog: { vi: "Mở Log Server", de: "Server-Log öffnen" },
+  mobileTables: { vi: "Sơ đồ Bàn", de: "Tische" },
+  mobileOrder: { vi: "Gọi món", de: "Bestellen" },
+  mobileHistory: { vi: "Hóa đơn", de: "Rechnungen" },
+  mobileMenu: { vi: "Menu", de: "Menü" },
+  extendedMenu: { vi: "Danh mục mở rộng", de: "Erweitertes Menü" },
+  settingsShort: { vi: "Cài đặt HT", de: "Einstellungen" },
+  switchLanguage: { vi: "Đổi ngôn ngữ", de: "Sprache wechseln" },
+  languageLabel: { vi: "Ngôn ngữ", de: "Sprache" },
+};

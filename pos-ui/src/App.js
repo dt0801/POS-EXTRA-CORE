@@ -15,6 +15,7 @@ import usePrintFlow from "./hooks/usePrintFlow";
 import useMenuManagement from "./hooks/useMenuManagement";
 import useTableManagement from "./hooks/useTableManagement";
 import useSettingsPrinterManagement from "./hooks/useSettingsPrinterManagement";
+import useI18n from "./hooks/useI18n";
 import { calcTotal, calcTotalQty, filterMenu, formatMoney, menuImageSrc, removeTones } from "./utils/posHelpers";
 import SidebarItem from "./components/layout/SidebarItem";
 import TablesView from "./components/views/TablesView";
@@ -26,33 +27,6 @@ import MobileOrderView from "./components/views/MobileOrderView";
 // CONSTANTS
 // =============================================
 const TOTAL_TABLES = 20;
-const LANGUAGE_STORAGE_KEY = "pos_ui_language";
-const UI_TEXT = {
-  checkingSession: { vi: "Đang kiểm tra phiên đăng nhập...", de: "Sitzung wird geprüft..." },
-  loginTitle: { vi: "Đăng nhập POS", de: "POS-Anmeldung" },
-  username: { vi: "Tên đăng nhập", de: "Benutzername" },
-  password: { vi: "Mật khẩu", de: "Passwort" },
-  loggingIn: { vi: "Đang đăng nhập...", de: "Anmeldung..." },
-  login: { vi: "Đăng nhập", de: "Anmelden" },
-  loginFailed: { vi: "Đăng nhập thất bại", de: "Anmeldung fehlgeschlagen" },
-  floorMap: { vi: "Sơ đồ bàn", de: "Tischplan" },
-  orderMenu: { vi: "Menu Order", de: "Bestellungen" },
-  menuManagement: { vi: "Quản lý Thực Đơn", de: "Speisekarte verwalten" },
-  billHistory: { vi: "Lịch sử Hóa đơn", de: "Rechnungshistorie" },
-  statsReport: { vi: "Thống kê Báo cáo", de: "Statistik" },
-  userManagement: { vi: "Quản lý Nhân viên", de: "Mitarbeiter" },
-  systemSettings: { vi: "Cài đặt Hệ thống", de: "Systemeinstellungen" },
-  logout: { vi: "Đăng xuất", de: "Abmelden" },
-  openLog: { vi: "Mở Log Server", de: "Server-Log öffnen" },
-  mobileTables: { vi: "Sơ đồ Bàn", de: "Tische" },
-  mobileOrder: { vi: "Gọi món", de: "Bestellen" },
-  mobileHistory: { vi: "Hóa đơn", de: "Rechnungen" },
-  mobileMenu: { vi: "Menu", de: "Menü" },
-  extendedMenu: { vi: "Danh mục mở rộng", de: "Erweitertes Menü" },
-  settingsShort: { vi: "Cài đặt HT", de: "Einstellungen" },
-  switchLanguage: { vi: "Đổi ngôn ngữ", de: "Sprache wechseln" },
-  languageLabel: { vi: "Ngôn ngữ", de: "Sprache" },
-};
 
 // =============================================
 // MAIN COMPONENT
@@ -69,12 +43,7 @@ export default function App() {
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
-  const [language, setLanguage] = useState(() => {
-    const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    return saved === "de" ? "de" : "vi";
-  });
-  const tr = useCallback((key) => UI_TEXT[key]?.[language] || UI_TEXT[key]?.vi || key, [language]);
-  const tt = useCallback((vi, de) => (language === "de" ? de : vi), [language]);
+  const { language, toggleLanguage, t: tr, tPair: tt } = useI18n();
 
   // ----- CORE STATE -----
   const [menu, setMenu]               = useState([]);
@@ -129,10 +98,6 @@ export default function App() {
     }
     setLoggingIn(false);
   };
-
-  useEffect(() => {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-  }, [language]);
 
   const handleLogout = async () => {
     await logoutRequest(authToken);
@@ -620,7 +585,7 @@ export default function App() {
                 <span className="material-symbols-outlined text-[20px]">terminal</span>
               </button>
             ) : null}
-            <button onClick={() => setLanguage((prev) => (prev === "vi" ? "de" : "vi"))} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2 text-[10px] font-black min-w-[40px]" title={tr("switchLanguage")}>
+            <button onClick={toggleLanguage} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2 text-[10px] font-black min-w-[40px]" title={tr("switchLanguage")}>
               {language.toUpperCase()}
             </button>
             <button onClick={handleLogout} className="hover:text-primary transition-colors hover:bg-surface-variant rounded-full p-2" title={tr("logout")}>
@@ -641,7 +606,7 @@ export default function App() {
               <span className="material-symbols-outlined text-orange-600 dark:text-orange-500">restaurant_menu</span>
               <h1 className="text-lg font-extrabold tracking-tighter text-stone-900 dark:text-stone-50 font-headline">{settings.store_name || "Citrus POS"}</h1>
             </div>
-            <button onClick={() => setLanguage((prev) => (prev === "vi" ? "de" : "vi"))} className="text-orange-600 dark:text-orange-500 active:scale-95 transition-transform duration-200 font-black text-xs px-2 py-1 rounded-lg border border-orange-200/60" title={tr("switchLanguage")}>
+            <button onClick={toggleLanguage} className="text-orange-600 dark:text-orange-500 active:scale-95 transition-transform duration-200 font-black text-xs px-2 py-1 rounded-lg border border-orange-200/60" title={tr("switchLanguage")}>
               {language.toUpperCase()}
             </button>
           </div>

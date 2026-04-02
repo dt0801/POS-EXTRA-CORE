@@ -27,6 +27,12 @@ import MobileOrderView from "./components/views/MobileOrderView";
 // CONSTANTS
 // =============================================
 const TOTAL_TABLES = 20;
+const getLocalDateISO = () => {
+  const now = new Date();
+  const tzOffsetMs = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - tzOffsetMs).toISOString().split("T")[0];
+};
+const getLocalMonthISO = () => getLocalDateISO().slice(0, 7);
 
 // =============================================
 // MAIN COMPONENT
@@ -185,7 +191,7 @@ export default function App() {
   } = useOrderSession({ authedFetch, authToken });
 
   // ----- MANAGE STATE -----
-  const [manageTab, setManageTab]   = useState("add");
+  const [manageTab, setManageTab]   = useState("edit");
   const [newItem, setNewItem]       = useState({ name: "", price: "", type: "FOOD" });
   const [file, setFile]             = useState(null);
   const [editItem, setEditItem]     = useState(null);
@@ -198,7 +204,13 @@ export default function App() {
 
   // ----- HISTORY STATE -----
   const [bills, setBills]             = useState([]);
-  const [historyDate, setHistoryDate] = useState(new Date().toISOString().split("T")[0]);
+  const [historyDate, setHistoryDate] = useState(getLocalDateISO());
+  const [statsTab, setStatsTab] = useState("day");
+  const [statsMonth, setStatsMonth] = useState(getLocalMonthISO());
+  const [statsYear, setStatsYear] = useState(() => String(new Date().getFullYear()));
+  const [statsToday, setStatsToday] = useState({ bill_count: 0, revenue: 0, top_items: [] });
+  const [statsMonthlyData, setStatsMonthlyData] = useState({ bill_count: 0, revenue: 0, days: [], top_items: [] });
+  const [statsYearlyData, setStatsYearlyData] = useState({ bill_count: 0, revenue: 0, months: [], top_items: [] });
   const [selectedBill, setSelectedBill] = useState(null); // chi tiết bill đang xem
   const {
     settings,
@@ -279,8 +291,64 @@ export default function App() {
 
   /** Fetch lịch sử hóa đơn theo ngày */
   const fetchBills = useCallback((date) => {
-    authedFetch(`${API_URL}/bills?date=${date}`).then(r => r.json()).then(setBills)
-      .catch(e => console.error("Lỗi fetch bills:", e));
+    authedFetch(`${API_URL}/bills?date=${encodeURIComponent(date)}`)
+      .then(async (r) => {
+        const data = await r.json().catch(() => []);
+        if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
+        return data;
+      })
+      .then((data) => setBills(Array.isArray(data) ? data : []))
+      .catch(e => {
+        console.error("Lỗi fetch bills:", e);
+        setBills([]);
+      });
+  }, [authedFetch]);
+
+  const fetchStatsToday = useCallback(() => {
+    authedFetch(`${API_URL}/stats/today`)
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
+        return data;
+      })
+      .then((data) => setStatsToday({
+        bill_count: Number(data?.bill_count || 0),
+        revenue: Number(data?.revenue || 0),
+        top_items: Array.isArray(data?.top_items) ? data.top_items : [],
+      }))
+      .catch(() => setStatsToday({ bill_count: 0, revenue: 0, top_items: [] }));
+  }, [authedFetch]);
+
+  const fetchStatsMonthly = useCallback((month) => {
+    authedFetch(`${API_URL}/stats/monthly?month=${encodeURIComponent(month)}`)
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
+        return data;
+      })
+      .then((data) => setStatsMonthlyData({
+        bill_count: Number(data?.bill_count || 0),
+        revenue: Number(data?.revenue || 0),
+        days: Array.isArray(data?.days) ? data.days : [],
+        top_items: Array.isArray(data?.top_items) ? data.top_items : [],
+      }))
+      .catch(() => setStatsMonthlyData({ bill_count: 0, revenue: 0, days: [], top_items: [] }));
+  }, [authedFetch]);
+
+  const fetchStatsYearly = useCallback((year) => {
+    authedFetch(`${API_URL}/stats/yearly?year=${encodeURIComponent(year)}`)
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
+        return data;
+      })
+      .then((data) => setStatsYearlyData({
+        bill_count: Number(data?.bill_count || 0),
+        revenue: Number(data?.revenue || 0),
+        months: Array.isArray(data?.months) ? data.months : [],
+        top_items: Array.isArray(data?.top_items) ? data.top_items : [],
+      }))
+      .catch(() => setStatsYearlyData({ bill_count: 0, revenue: 0, months: [], top_items: [] }));
   }, [authedFetch]);
 
   /** Fetch chi tiết 1 bill */
@@ -326,6 +394,21 @@ export default function App() {
   useEffect(() => {
     if (sidebarView === "history") fetchBills(historyDate);
   }, [sidebarView, historyDate, fetchBills]);
+
+  useEffect(() => {
+    if (!authUser || !isAdmin) return;
+    fetchStatsToday();
+  }, [authUser, isAdmin, fetchStatsToday]);
+
+  useEffect(() => {
+    if (!authUser || !isAdmin) return;
+    fetchStatsMonthly(statsMonth);
+  }, [authUser, isAdmin, statsMonth, fetchStatsMonthly]);
+
+  useEffect(() => {
+    if (!authUser || !isAdmin) return;
+    fetchStatsYearly(statsYear);
+  }, [authUser, isAdmin, statsYear, fetchStatsYearly]);
 
   // =============================================
   // TABLE STATUS & ORDER/PRINT FLOW
@@ -1134,6 +1217,7 @@ export default function App() {
           <HistoryView
             historyDate={historyDate}
             setHistoryDate={setHistoryDate}
+            fetchBills={fetchBills}
             setSelectedBill={setSelectedBill}
             bills={bills}
             selectedBill={selectedBill}
@@ -1502,7 +1586,17 @@ export default function App() {
         {sidebarView === "stats" && isAdmin && (
           <StatsView
             formatMoney={formatMoney}
-            historyDate={historyDate}
+            statsTab={statsTab}
+            setStatsTab={setStatsTab}
+            statsMonth={statsMonth}
+            setStatsMonth={setStatsMonth}
+            fetchStatsMonthly={fetchStatsMonthly}
+            statsYear={statsYear}
+            setStatsYear={setStatsYear}
+            fetchStatsYearly={fetchStatsYearly}
+            statsToday={statsToday}
+            statsMonthlyData={statsMonthlyData}
+            statsYearlyData={statsYearlyData}
             language={language}
           />
         )}

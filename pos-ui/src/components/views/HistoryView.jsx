@@ -3,6 +3,7 @@ import React from "react";
 export default function HistoryView({
   historyDate,
   setHistoryDate,
+  fetchBills,
   setSelectedBill,
   bills,
   selectedBill,
@@ -37,7 +38,12 @@ export default function HistoryView({
                 <input 
                   type="date" 
                   value={historyDate} 
-                  onChange={(e) => { setHistoryDate(e.target.value); setSelectedBill(null); }} 
+                  onChange={(e) => {
+                    const nextDate = e.target.value;
+                    setHistoryDate(nextDate);
+                    setSelectedBill(null);
+                    if (typeof fetchBills === "function") fetchBills(nextDate);
+                  }} 
                   className="absolute inset-0 opacity-0 cursor-pointer w-full" 
                 />
                 <span>{new Date(historyDate).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })}</span>

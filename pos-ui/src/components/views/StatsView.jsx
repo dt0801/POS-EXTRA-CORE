@@ -17,6 +17,20 @@ export default function StatsView({
 }) {
   const fmt = formatMoney;
   const tr = (vi, de) => (language === "de" ? de : vi);
+  const chartData = (() => {
+    if (statsTab === "day") {
+      return [{ label: tr("Hôm nay", "Heute"), value: Number(statsToday?.revenue || 0) }];
+    }
+    if (statsTab === "month") {
+      return Array.isArray(statsMonthlyData?.days)
+        ? statsMonthlyData.days.map((d) => ({ label: (d.date || "").slice(8, 10), value: Number(d.revenue || 0) }))
+        : [];
+    }
+    return Array.isArray(statsYearlyData?.months)
+      ? statsYearlyData.months.map((m) => ({ label: (m.month || "").slice(5, 7), value: Number(m.revenue || 0) }))
+      : [];
+  })();
+  const maxValue = Math.max(1, ...chartData.map((d) => d.value));
 
   const renderKPIs = (title, revenue, bills, avg) => (
     <section className="grid grid-cols-2 gap-4">
@@ -126,9 +140,31 @@ export default function StatsView({
           <h3 className="font-headline font-bold text-lg">{tr("Biểu đồ hoạt động", "Aktivitätsdiagramm")}</h3>
           <span className="text-primary text-xs font-bold uppercase tracking-widest">{tr("Gần đây", "Neueste")}</span>
         </div>
-        <div className="h-32 flex items-center justify-center border-2 border-dashed border-outline-variant/30 rounded-xl relative overflow-hidden">
-          <p className="text-on-surface-variant/50 text-sm font-semibold italic">{tr("Đang cập nhật dữ liệu biểu đồ...", "Diagrammdaten werden aktualisiert...")}</p>
-        </div>
+        {chartData.length === 0 ? (
+          <div className="h-32 flex items-center justify-center border-2 border-dashed border-outline-variant/30 rounded-xl relative overflow-hidden">
+            <p className="text-on-surface-variant/50 text-sm font-semibold italic">{tr("Không có dữ liệu trong mốc thời gian này", "Keine Daten in diesem Zeitraum")}</p>
+          </div>
+        ) : (
+          <div className="h-52 border border-outline-variant/20 rounded-xl p-3 bg-surface-container-low">
+            <div className="h-full flex items-end gap-2">
+              {chartData.map((d, idx) => {
+                const heightPct = Math.max(6, Math.round((d.value / maxValue) * 100));
+                return (
+                  <div key={`${d.label}-${idx}`} className="flex-1 h-full flex flex-col justify-end items-center gap-2">
+                    <div className="text-[10px] font-bold text-on-surface-variant">{d.value > 0 ? fmt(d.value) : "0đ"}</div>
+                    <div className="w-full bg-primary/15 rounded-md overflow-hidden" style={{ height: "70%" }}>
+                      <div
+                        className="w-full bg-gradient-to-t from-primary to-orange-400 rounded-md transition-all"
+                        style={{ height: `${heightPct}%`, marginTop: `${100 - heightPct}%` }}
+                      />
+                    </div>
+                    <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{d.label || "-"}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </section>
 
     </div>

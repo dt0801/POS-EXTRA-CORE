@@ -74,6 +74,7 @@ export default function App() {
     return saved === "de" ? "de" : "vi";
   });
   const tr = useCallback((key) => UI_TEXT[key]?.[language] || UI_TEXT[key]?.vi || key, [language]);
+  const tt = useCallback((vi, de) => (language === "de" ? de : vi), [language]);
 
   // ----- CORE STATE -----
   const [menu, setMenu]               = useState([]);
@@ -507,7 +508,7 @@ export default function App() {
               {/* Item Selection */}
               <div>
                 <label className="block text-sm font-bold text-on-surface-variant mb-4 uppercase tracking-widest">
-                  Chọn món muốn chuyển sang bàn khác
+                  {tt("Chọn món muốn chuyển sang bàn khác", "Wähle die Gerichte zum Verschieben")}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                   {currentItems.map(item => (
@@ -535,7 +536,7 @@ export default function App() {
               {/* Destination Selection */}
               <div>
                 <label className="block text-sm font-bold text-on-surface-variant mb-4 uppercase tracking-widest">
-                  Chuyển sang bàn nào?
+                  {tt("Chuyển sang bàn nào?", "Zu welchem Tisch verschieben?")}
                 </label>
                 <div className="grid grid-cols-5 sm:grid-cols-8 gap-3 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
                   {tables.filter(t => t !== currentTable).map(t => (
@@ -562,11 +563,11 @@ export default function App() {
                       ? "bg-gradient-to-br from-primary to-orange-600 text-white shadow-orange-300/40" 
                       : "bg-stone-200 text-stone-400 cursor-not-allowed shadow-none"}`}>
                   <span className="material-symbols-outlined text-2xl">call_split</span>
-                  Xác nhận Tách bàn
+                  {tt("Xác nhận Tách bàn", "Aufteilen bestätigen")}
                 </button>
                 <button onClick={() => setSplitModal(false)}
                   className="px-8 bg-surface-container-highest hover:bg-outline-variant/50 text-on-surface-variant hover:text-on-surface py-4 rounded-2xl font-black text-lg transition-all active:scale-95">
-                  Hủy
+                  {tt("Hủy", "Abbrechen")}
                 </button>
               </div>
             </div>
@@ -653,7 +654,7 @@ export default function App() {
       <div className="flex-1 px-2 md:p-6 lg:p-10 flex flex-col overflow-hidden w-full max-w-[1600px] mx-auto pb-24 md:pb-6">
       {!isAdmin && (
         <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900 mx-2 md:mx-0">
-          Bạn đang ở <strong>màn hình nhân viên</strong>: chỉ được thao tác Order, gửi bếp và tạm tính.
+          {tt("Bạn đang ở ", "Sie sind im ")}<strong>{tt("màn hình nhân viên", "Mitarbeiter-Modus")}</strong>{tt(": chỉ được thao tác Order, gửi bếp và tạm tính.", ": nur Bestellung, Küche senden und Zwischenrechnung sind erlaubt.")}
         </div>
       )}
 
@@ -703,7 +704,7 @@ export default function App() {
                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 material-symbols-outlined scale-75">search</span>
                      <input
                        type="text"
-                       placeholder="Tìm món ăn..."
+                      placeholder={tt("Tìm món ăn...", "Gericht suchen...")}
                        value={searchQuery}
                        onChange={(e) => setSearchQuery(e.target.value)}
                        className="pl-10 pr-4 py-2 bg-surface-container-high rounded-full border border-outline-variant/30 focus:border-primary outline-none focus:ring-2 focus:ring-primary/20 text-sm w-40 lg:w-48 focus:w-56 lg:focus:w-64 transition-all"
@@ -723,8 +724,8 @@ export default function App() {
                   {menu.length === 0 ? (
                     <div className="h-full min-h-[320px] flex flex-col items-center justify-center text-on-surface-variant border-2 border-dashed border-outline-variant/40 rounded-3xl bg-surface-container-lowest">
                       <span className="material-symbols-outlined text-5xl mb-3 opacity-40">restaurant_menu</span>
-                      <p className="font-bold text-base">Chưa có dữ liệu menu</p>
-                      <p className="text-sm mt-1">Vui lòng seed menu ở backend hoặc kiểm tra API `/menu`.</p>
+                      <p className="font-bold text-base">{tt("Chưa có dữ liệu menu", "Keine Menüdaten vorhanden")}</p>
+                      <p className="text-sm mt-1">{tt("Vui lòng seed menu ở backend hoặc kiểm tra API `/menu`.", "Bitte Menüdaten im Backend einspielen oder API `/menu` prüfen.")}</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12">
@@ -738,11 +739,11 @@ export default function App() {
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-on-surface-variant"><span className="material-symbols-outlined text-4xl opacity-50">restaurant</span></div>
                               )}
-                              <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2.5 py-0.5 rounded-full text-[10px] font-bold text-primary shadow-sm">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</div>
+                              <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2.5 py-0.5 rounded-full text-[10px] font-bold text-primary shadow-sm">{m.type === "FOOD" ? tt("Món ăn", "Essen") : m.type === "DRINK" ? tt("Đồ uống", "Getränk") : "Combo"}</div>
                             </div>
                             <div className="p-3.5 flex flex-col flex-1">
                               <h3 className="font-headline font-bold text-stone-900 line-clamp-2 leading-tight mb-1 text-sm">{m.name}</h3>
-                              <p className="text-[11px] font-semibold text-stone-500 mb-3">{m.type === "FOOD" ? "Món ăn" : m.type === "DRINK" ? "Đồ uống" : "Combo"}</p>
+                              <p className="text-[11px] font-semibold text-stone-500 mb-3">{m.type === "FOOD" ? tt("Món ăn", "Essen") : m.type === "DRINK" ? tt("Đồ uống", "Getränk") : "Combo"}</p>
                               <div className="mt-auto flex items-center justify-between">
                                 <span className="font-headline font-black text-base text-primary">{formatMoney(m.price)}</span>
                                 {qty > 0 ? (
@@ -775,29 +776,29 @@ export default function App() {
                        {currentTable ? (
                           tableStatus[currentTable] === "OPEN" ? `ORDER #${new Date().getTime().toString().slice(-4)}` :
                           tableStatus[currentTable] === "PAYING" ? "CHỜ RESET" : "TRỐNG"
-                       ) : "Chưa chọn bàn"}
+                       ) : tt("Chưa chọn bàn", "Kein Tisch gewählt")}
                      </span>
                    </div>
                    {tableStatus[currentTable] === "OPEN" && (
                      <div className="flex gap-2">
                       <button
                         onClick={() => {
-                          const raw = window.prompt("Nhập số bàn muốn chuyển tới:");
+                          const raw = window.prompt(tt("Nhập số bàn muốn chuyển tới:", "Ziel-Tischnummer eingeben:"));
                           const target = Number(raw);
                           if (!raw) return;
                           if (!Number.isInteger(target) || target <= 0) {
-                            alert("Số bàn không hợp lệ.");
+                            alert(tt("Số bàn không hợp lệ.", "Ungültige Tischnummer."));
                             return;
                           }
                           transferTable(target);
                         }}
                         disabled={currentItems.length === 0}
                         className="w-10 h-10 bg-orange-100 rounded-[1.2rem] flex items-center justify-center text-orange-600 hover:bg-orange-200 transition-all disabled:opacity-50 shadow-sm border border-orange-200/50 group/btn"
-                        title="Chuyển bàn"
+                        title={tt("Chuyển bàn", "Tisch wechseln")}
                       >
                          <span className="material-symbols-outlined text-[20px]">sync_alt</span>
                        </button>
-                       <button onClick={() => { setSplitSelected([]); setSplitTarget(""); setSplitModal(true); }} disabled={currentItems.length === 0} className="w-10 h-10 bg-stone-100 rounded-[1.2rem] flex items-center justify-center text-stone-500 hover:bg-stone-200 hover:text-stone-800 transition-all disabled:opacity-50 shadow-sm border border-stone-200" title="Tách bàn">
+                       <button onClick={() => { setSplitSelected([]); setSplitTarget(""); setSplitModal(true); }} disabled={currentItems.length === 0} className="w-10 h-10 bg-stone-100 rounded-[1.2rem] flex items-center justify-center text-stone-500 hover:bg-stone-200 hover:text-stone-800 transition-all disabled:opacity-50 shadow-sm border border-stone-200" title={tt("Tách bàn", "Tisch aufteilen")}>
                          <span className="material-symbols-outlined text-[20px]">call_split</span>
                        </button>
                      </div>
@@ -809,7 +810,7 @@ export default function App() {
                     {currentItems.length === 0 ? (
                       <div className="absolute inset-0 flex items-center justify-center flex-col text-stone-400">
                         <span className="material-symbols-outlined text-6xl opacity-20 mb-4">restaurant</span>
-                        <p className="text-sm font-semibold">Chưa có món nào</p>
+                        <p className="text-sm font-semibold">{tt("Chưa có món nào", "Noch keine Gerichte")}</p>
                       </div>
                     ) : currentItems.map((item, idx) => {
                       const sentQty = kitchenSent[currentTable]?.[item.id] || 0;
@@ -831,7 +832,7 @@ export default function App() {
                             <h4 className="font-bold text-stone-900 text-[13px] leading-tight line-clamp-1">{item.name}</h4>
                             {newQty > 0 && (
                               <span className="inline-flex w-fit items-center px-1.5 py-px bg-orange-50 text-[9px] font-bold text-orange-600 rounded mt-0.5">
-                                + {newQty} món mới
+                                + {newQty} {tt("món mới", "neu")}
                               </span>
                             )}
                             {note && <p className="text-[10px] text-stone-400 mt-0.5 truncate">{note}</p>}
@@ -839,7 +840,7 @@ export default function App() {
                               type="text"
                               value={note}
                               onChange={e => setItemNotes(prev => ({ ...prev, [currentTable]: { ...(prev[currentTable] || {}), [item.id]: e.target.value } }))}
-                              placeholder="+ Ghi chú..."
+                              placeholder={tt("+ Ghi chú...", "+ Notiz...")}
                               className="w-full text-[10px] font-medium bg-transparent border-none p-0 focus:ring-0 text-stone-500 placeholder:text-stone-300 outline-none transition-all opacity-0 h-0 group-hover:opacity-100 group-hover:h-4 group-hover:mt-1"
                             />
                           </div>
@@ -864,10 +865,10 @@ export default function App() {
 
                             {/* Quick Actions (Squircle) */}
                             <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 shrink-0">
-                               <button className="w-7 h-7 bg-stone-50 text-stone-400 rounded-[0.7rem] flex items-center justify-center hover:bg-orange-50 hover:text-primary transition-all border border-stone-100 shadow-sm" title="Ghi chú">
+                               <button className="w-7 h-7 bg-stone-50 text-stone-400 rounded-[0.7rem] flex items-center justify-center hover:bg-orange-50 hover:text-primary transition-all border border-stone-100 shadow-sm" title={tt("Ghi chú", "Notiz")}>
                                   <span className="material-symbols-outlined text-[14px]">edit</span>
                                </button>
-                               <button onClick={() => removeItem(item.id)} className="w-7 h-7 bg-red-50 text-red-500 rounded-[0.7rem] flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm" title="Xóa món">
+                               <button onClick={() => removeItem(item.id)} className="w-7 h-7 bg-red-50 text-red-500 rounded-[0.7rem] flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm" title={tt("Xóa món", "Gericht löschen")}>
                                   <span className="material-symbols-outlined text-[14px]">delete</span>
                                </button>
                             </div>
@@ -880,11 +881,11 @@ export default function App() {
                  {/* Billing Summary */}
                  <div className="pt-6 pb-6 border-t border-dashed border-stone-200 space-y-3 shrink-0">
                    <div className="flex justify-between text-[13px] font-bold text-stone-400">
-                     <span>Tạm tính</span>
+                    <span>{tt("Tạm tính", "Zwischenrechnung")}</span>
                      <span className="text-stone-600">{formatMoney(total)}</span>
                    </div>
                    <div className="flex justify-between items-end pt-2">
-                     <span className="font-bold text-sm text-stone-900">Tổng cộng</span>
+                    <span className="font-bold text-sm text-stone-900">{tt("Tổng cộng", "Gesamt")}</span>
                      <span className="font-headline font-black text-2xl lg:text-3xl text-primary tracking-tight">{formatMoney(total)}</span>
                    </div>
                  </div>
@@ -897,14 +898,14 @@ export default function App() {
                        disabled={currentItems.length === 0}
                        className="py-3.5 bg-stone-50 text-stone-600 font-bold rounded-2xl hover:bg-stone-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-sm border border-stone-200/50"
                      >
-                       <span className="material-symbols-outlined text-[16px]">restaurant</span> {currentItems.length > 0 && currentItems.filter(i => i.type !== 'DRINK').some(i => i.qty > (kitchenSent[currentTable]?.[i.id] || 0)) ? <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-error animate-pulse"></span> : null} Gửi Bếp
+                      <span className="material-symbols-outlined text-[16px]">restaurant</span> {currentItems.length > 0 && currentItems.filter(i => i.type !== 'DRINK').some(i => i.qty > (kitchenSent[currentTable]?.[i.id] || 0)) ? <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-error animate-pulse"></span> : null} {tt("Gửi Bếp", "Zur Küche")}
                      </button>
                      <button
                        onClick={() => printTamTinh()}
                        disabled={currentItems.length === 0}
                        className="py-3.5 bg-stone-50 text-stone-600 font-bold rounded-2xl hover:bg-stone-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-sm border border-stone-200/50"
                      >
-                       <span className="material-symbols-outlined text-[16px]">receipt</span> Tạm Tính
+                      <span className="material-symbols-outlined text-[16px]">receipt</span> {tt("Tạm Tính", "Zwischenrechnung")}
                      </button>
                      {/* Optional: Drink order button, moved to span across if needed, or included in 3-grid. Kept exactly like image (2 cols) + fallback. */}
                      <button
@@ -912,7 +913,7 @@ export default function App() {
                        disabled={currentItems.length === 0}
                        className="col-span-2 py-2.5 bg-white text-stone-500 font-bold rounded-xl hover:bg-stone-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-[11px] border border-stone-200/30"
                      >
-                       <span className="material-symbols-outlined text-[14px]">local_cafe</span> Gửi Bếp Nước
+                      <span className="material-symbols-outlined text-[14px]">local_cafe</span> {tt("Gửi Bếp Nước", "Getränke senden")}
                      </button>
                    </div>
                    
@@ -922,7 +923,7 @@ export default function App() {
                        className="w-full py-4 bg-error-container text-error hover:bg-red-200 font-bold text-sm rounded-[1.2rem] shadow-sm transition-all uppercase tracking-wider flex items-center justify-center gap-2"
                      >
                        <span className="material-symbols-outlined text-[18px]">restart_alt</span>
-                       RESET BÀN TRỐNG
+                      {tt("RESET BÀN TRỐNG", "TISCH ZURÜCKSETZEN")}
                      </button>
                    ) : (
                      <button
@@ -931,7 +932,7 @@ export default function App() {
                        className="w-full py-4 bg-primary hover:bg-[#c2410c] text-white font-bold text-sm rounded-[1.2rem] shadow-lg shadow-orange-300/40 active:scale-95 transition-all uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-70 disabled:grayscale-[0.5]"
                      >
                        <span className="material-symbols-outlined text-[18px]">payments</span>
-                       THANH TOÁN & IN BILL
+                      {tt("THANH TOÁN & IN BILL", "BEZAHLEN & RECHNUNG")}
                      </button>
                    )}
                  </div>
@@ -947,12 +948,12 @@ export default function App() {
             {/* Header Section with Tabs */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 shrink-0">
               <div>
-                <h2 className="text-4xl font-black text-on-surface font-headline mb-2">Hệ thống Quản lý</h2>
-                <p className="text-on-surface-variant font-medium">Điều chỉnh thực đơn và sơ đồ bàn nướng theo thời gian thực.</p>
+                <h2 className="text-4xl font-black text-on-surface font-headline mb-2">{tt("Hệ thống Quản lý", "Verwaltungssystem")}</h2>
+                <p className="text-on-surface-variant font-medium">{tt("Điều chỉnh thực đơn và sơ đồ bàn nướng theo thời gian thực.", "Menü und Tischplan in Echtzeit verwalten.")}</p>
               </div>
               <div className="flex bg-surface-container-high p-1.5 rounded-2xl">
                 <button onClick={() => { setManageTab("edit"); setEditItem(null); }} className={`px-6 py-2.5 font-bold rounded-xl transition-all ${manageTab !== "table" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
-                  Món ăn & Đồ uống
+                  {tt("Món ăn & Đồ uống", "Essen & Getränke")}
                 </button>
                 <button onClick={() => { setManageTab("table"); setEditingTable(null); }} className={`px-6 py-2.5 font-bold rounded-xl transition-all ${manageTab === "table" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
                   Quản lý Bàn
@@ -970,7 +971,7 @@ export default function App() {
                     <div className="w-16 h-16 rounded-full bg-primary text-white shadow-md shadow-orange-500/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-orange-200/50">
                       <span className="material-symbols-outlined text-3xl">add</span>
                     </div>
-                    <span className="text-lg font-bold text-on-surface">Thêm món mới</span>
+                    <span className="text-lg font-bold text-on-surface">{tt("Thêm món mới", "Neues Gericht")}</span>
                     <p className="text-sm text-on-surface-variant mt-1 text-center">Cập nhật thực đơn</p>
                   </div>
 
@@ -1011,7 +1012,7 @@ export default function App() {
                        </button>
 
                        <h3 className="text-3xl font-black font-headline mb-8 text-on-surface pr-14 leading-tight">
-                          {manageTab === "add" ? "Thêm món mới" : `Chỉnh sửa: ${editItem.name}`}
+                          {manageTab === "add" ? tt("Thêm món mới", "Neues Gericht") : `${tt("Chỉnh sửa", "Bearbeiten")}: ${editItem.name}`}
                        </h3>
                       
                        <div className="space-y-6">
@@ -1035,7 +1036,7 @@ export default function App() {
                                     onChange={e => manageTab === "add" ? setNewItem({...newItem, type: e.target.value}) : setEditItem({...editItem, type: e.target.value})}
                                     className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all cursor-pointer text-lg appearance-none">
                                     <option value="FOOD">Đồ ăn</option>
-                                    <option value="DRINK">Đồ uống</option>
+                                    <option value="DRINK">{tt("Đồ uống", "Getränk")}</option>
                                     <option value="COMBO">Combo</option>
                                  </select>
                               </div>
@@ -1058,10 +1059,10 @@ export default function App() {
                           <div className="flex gap-4 pt-4 mt-8">
                              <button onClick={manageTab === "add" ? addMenu : updateMenu} className="flex-1 bg-gradient-to-br from-primary to-orange-600 hover:scale-[1.02] text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-xl shadow-orange-300/40 active:scale-95 transition-all">
                                 <span className="material-symbols-outlined text-2xl">{manageTab === "add" ? 'add_circle' : 'save_as'}</span>
-                                <span>{manageTab === "add" ? "Tạo món mới" : "Lưu thay đổi"}</span>
+                                <span>{manageTab === "add" ? tt("Tạo món mới", "Gericht anlegen") : tt("Lưu thay đổi", "Änderungen speichern")}</span>
                              </button>
                              <button onClick={() => { setManageTab("edit"); setEditItem(null); setFile(null); setEditFile(null); }} className="px-8 bg-surface-container-highest hover:bg-outline-variant/50 text-on-surface-variant hover:text-on-surface py-4 rounded-2xl font-black text-lg transition-all active:scale-95">
-                                Hủy Bỏ
+                                {tt("Hủy Bỏ", "Abbrechen")}
                              </button>
                           </div>
                        </div>
@@ -1136,7 +1137,7 @@ export default function App() {
                                ) : (
                                   <div className="flex flex-col h-full">
                                      <div className="flex justify-between items-start mb-4">
-                                        <div className="font-headline font-black text-2xl text-on-surface">Bàn {t.table_num}</div>
+                                        <div className="font-headline font-black text-2xl text-on-surface">{tt("Bàn", "Tisch")} {t.table_num}</div>
                                         <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                                            <button onClick={() => setEditingTable({ table_num: t.table_num, new_num: String(t.table_num) })} className="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface hover:bg-primary hover:text-white flex items-center justify-center transition-colors">
                                               <span className="material-symbols-outlined text-[16px]">edit</span>
@@ -1659,12 +1660,12 @@ export default function App() {
             <aside className="flex-1 flex flex-col bg-white px-6 pb-8">
                <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100 shrink-0">
                  <div className="flex items-center gap-2">
-                   <h2 className="font-headline font-black text-xl text-stone-900">Bàn {currentTable || "--"}</h2>
+                   <h2 className="font-headline font-black text-xl text-stone-900">{tt("Bàn", "Tisch")} {currentTable || "--"}</h2>
                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">
                      {currentTable ? (
                         tableStatus[currentTable] === "OPEN" ? `ORDER #${new Date().getTime().toString().slice(-4)}` :
                         tableStatus[currentTable] === "PAYING" ? "CHỜ RESET" : "TRỐNG"
-                     ) : "Chưa chọn bàn"}
+                     ) : tt("Chưa chọn bàn", "Kein Tisch gewählt")}
                    </span>
                  </div>
                </div>
@@ -1673,7 +1674,7 @@ export default function App() {
                   {currentItems.length === 0 ? (
                     <div className="absolute inset-0 flex items-center justify-center flex-col text-stone-400">
                       <span className="material-symbols-outlined text-6xl opacity-20 mb-4">restaurant</span>
-                      <p className="text-sm font-semibold">Chưa có món nào</p>
+                      <p className="text-sm font-semibold">{tt("Chưa có món nào", "Noch keine Gerichte")}</p>
                     </div>
                   ) : currentItems.map((item, idx) => {
                     const sentQty = kitchenSent[currentTable]?.[item.id] || 0;
@@ -1690,7 +1691,7 @@ export default function App() {
                         
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-stone-900 text-sm leading-tight line-clamp-1">{item.name}</h4>
-                          {newQty > 0 && <span className="inline-flex items-center px-1.5 py-px bg-orange-50 text-[9px] font-bold text-orange-600 rounded mt-0.5">+ {newQty} món mới</span>}
+                          {newQty > 0 && <span className="inline-flex items-center px-1.5 py-px bg-orange-50 text-[9px] font-bold text-orange-600 rounded mt-0.5">+ {newQty} {tt("món mới", "neu")}</span>}
                         </div>
                         
                         <div className="flex items-center gap-4 shrink-0">

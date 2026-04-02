@@ -124,6 +124,14 @@ let mongoReady = false;
 let mongoConnectPromise = null;
 let settingsCache = {};
 let printersCache = [];
+/** Cache JSON trả về GET /menu (thực đơn ít đổi — giảm tải Mongo khi nhiều client). */
+let menuListCache = null;
+let menuListCacheAt = 0;
+const MENU_LIST_CACHE_TTL_MS = Math.max(5000, Number(process.env.MENU_LIST_CACHE_TTL_MS || 60000));
+function invalidateMenuListCache() {
+  menuListCache = null;
+  menuListCacheAt = 0;
+}
 const PRINT_BRIDGE_SECRET = (process.env.PRINT_BRIDGE_SECRET || "bbq-pos-bridge-secret-2024").trim();
 const PRINT_DISPATCH_MODE = (process.env.PRINT_DISPATCH_MODE || "queue").trim().toLowerCase();
 const bridgeClients = new Set();
@@ -393,6 +401,18 @@ async function ensureAuthBootstrap() {
   }
 }
 
+async function ensureMongoIndexes() {
+  if (!mongoReady) return;
+  try {
+    await Promise.all([
+      mongoDb.collection("menu").createIndex({ sqlite_id: 1 }, { unique: true }),
+      mongoDb.collection("users").createIndex({ sqlite_id: 1 }, { unique: true }),
+    ]);
+  } catch {
+    // collection rỗng / trùng key — bỏ qua, không chặn boot
+  }
+}
+
 /**
  * Mongo-only boot:
  * - connect Mongo
@@ -409,6 +429,7 @@ async function initMongoOnly() {
 
   await seedMongoMenuIfEmpty();
   await ensureAuthBootstrap();
+  await ensureMongoIndexes();
 
   // Default settings để UI không bị undefined
   const defaultSettings = [
@@ -656,16 +677,28 @@ function startServer() {
   // Lấy toàn bộ menu
   app.get("/menu", authMiddleware, async (req, res) => {
     try {
-      const docs = await mongoDb.collection("menu").find({}).sort({ sqlite_id: 1 }).toArray();
-      res.json(
-        docs.map((d) => ({
-          id: Number(d.sqlite_id ?? d.id ?? 0),
-          name: d.name || "",
-          price: Number(d.price || 0),
-          type: d.type || "FOOD",
-          image: d.image || "",
-        }))
-      );
+      const now = Date.now();
+      if (menuListCache && now - menuListCacheAt < MENU_LIST_CACHE_TTL_MS) {
+        res.set("Cache-Control", "private, max-age=60");
+        return res.json(menuListCache);
+      }
+      const docs = await mongoDb
+        .collection("menu")
+        .find({})
+        .project({ sqlite_id: 1, name: 1, price: 1, type: 1, image: 1 })
+        .sort({ sqlite_id: 1 })
+        .toArray();
+      const payload = docs.map((d) => ({
+        id: Number(d.sqlite_id ?? d.id ?? 0),
+        name: d.name || "",
+        price: Number(d.price || 0),
+        type: d.type || "FOOD",
+        image: d.image || "",
+      }));
+      menuListCache = payload;
+      menuListCacheAt = now;
+      res.set("Cache-Control", "private, max-age=60");
+      res.json(payload);
     } catch (e) {
       res.status(500).json({ error: e.message || String(e) });
     }
@@ -694,6 +727,7 @@ function startServer() {
       };
       if (imageValue) doc.image = imageValue;
       await mongoDb.collection("menu").insertOne(doc);
+      invalidateMenuListCache();
       const isUrl = /^https?:\/\//i.test(imageValue);
       res.json({
         added: true,
@@ -734,6 +768,7 @@ function startServer() {
         { $set: patch }
       );
       if (result.matchedCount === 0) return res.status(404).json({ error: "Không tìm thấy món" });
+      invalidateMenuListCache();
       const isUrl = /^https?:\/\//i.test(imageValue);
       res.json({
         updated: true,
@@ -753,6 +788,7 @@ function startServer() {
     try {
       const result = await mongoDb.collection("menu").deleteOne({ sqlite_id: Number(req.params.id) });
       if (result.deletedCount === 0) return res.status(404).json({ error: "Không tìm thấy món" });
+      invalidateMenuListCache();
       res.json({ deleted: true, mongoSaved: true, mongoError: null });
     } catch (e) {
       res.status(500).json({ error: e.message || String(e) });

@@ -17,6 +17,7 @@ import useTableManagement from "./hooks/useTableManagement";
 import useSettingsPrinterManagement from "./hooks/useSettingsPrinterManagement";
 import useI18n from "./hooks/useI18n";
 import { calcTotal, calcTotalQty, filterMenu, formatMoney, menuImageSrc, removeTones } from "./utils/posHelpers";
+import { readMenuCache, writeMenuCache } from "./utils/menuCache";
 import SidebarItem from "./components/layout/SidebarItem";
 import TablesView from "./components/views/TablesView";
 import HistoryView from "./components/views/HistoryView";
@@ -206,8 +207,8 @@ export default function App() {
   const [bills, setBills]             = useState([]);
   const [historyDate, setHistoryDate] = useState(getLocalDateISO());
   const [statsTab, setStatsTab] = useState("day");
-  const [statsMonth, setStatsMonth] = useState(getLocalMonthISO());
-  const [statsYear, setStatsYear] = useState(() => String(new Date().getFullYear()));
+  const statsMonth = getLocalMonthISO();
+  const statsYear = String(new Date().getFullYear());
   const [statsToday, setStatsToday] = useState({ bill_count: 0, revenue: 0, top_items: [] });
   const [statsMonthlyData, setStatsMonthlyData] = useState({ bill_count: 0, revenue: 0, days: [], top_items: [] });
   const [statsYearlyData, setStatsYearlyData] = useState({ bill_count: 0, revenue: 0, months: [], top_items: [] });
@@ -258,11 +259,12 @@ export default function App() {
   // =============================================
 
   const fetchMenu = useCallback(async () => {
+    const cached = readMenuCache();
+    if (cached?.length) setMenu(cached);
     try {
       const res = await authedFetch(`${API_URL}/menu`, {
         method: "GET",
         headers: { Accept: "application/json" },
-        cache: "no-store",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -274,9 +276,10 @@ export default function App() {
         ? data.data
         : [];
       setMenu(normalized);
+      writeMenuCache(normalized);
     } catch (e) {
       console.error("Lỗi fetch menu:", e);
-      setMenu([]);
+      if (!cached?.length) setMenu([]);
     }
   }, [authedFetch]);
 
@@ -1588,15 +1591,10 @@ export default function App() {
             formatMoney={formatMoney}
             statsTab={statsTab}
             setStatsTab={setStatsTab}
-            statsMonth={statsMonth}
-            setStatsMonth={setStatsMonth}
-            fetchStatsMonthly={fetchStatsMonthly}
-            statsYear={statsYear}
-            setStatsYear={setStatsYear}
-            fetchStatsYearly={fetchStatsYearly}
             statsToday={statsToday}
             statsMonthlyData={statsMonthlyData}
             statsYearlyData={statsYearlyData}
+            menu={menu}
             language={language}
           />
         )}

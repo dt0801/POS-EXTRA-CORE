@@ -687,12 +687,30 @@ export default function App() {
 
         {/* ==================== MOBILE TOP APP BAR ==================== */}
         <header className="md:hidden sticky top-0 z-40 bg-stone-50/90 backdrop-blur-md dark:bg-stone-950/90 shrink-0">
-          <div className="flex justify-between items-center w-full px-4 py-3">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full px-4 py-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <span className="material-symbols-outlined text-orange-600 dark:text-orange-500">restaurant_menu</span>
-              <h1 className="text-lg font-extrabold tracking-tighter text-stone-900 dark:text-stone-50 font-headline">{settings.store_name || "Citrus POS"}</h1>
+              <h1 className="text-lg font-extrabold tracking-tighter text-stone-900 dark:text-stone-50 font-headline truncate">{settings.store_name || "Citrus POS"}</h1>
             </div>
-            <button onClick={toggleLanguage} className="text-orange-600 dark:text-orange-500 active:scale-95 transition-transform duration-200 font-black text-xs px-2 py-1 rounded-lg border border-orange-200/60" title={tr("switchLanguage")}>
+
+            {sidebarView === "order" && (
+              <div className="relative shrink-0 w-[150px]">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 material-symbols-outlined scale-75">search</span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={tt("Tìm món ăn...", "Gericht suchen...")}
+                  className="w-full pl-9 pr-3 py-2 bg-surface-container-high rounded-full border border-outline-variant/30 focus:border-primary outline-none focus:ring-2 focus:ring-primary/20 text-sm transition-all"
+                />
+              </div>
+            )}
+
+            <button
+              onClick={toggleLanguage}
+              className="shrink-0 text-orange-600 dark:text-orange-500 active:scale-95 transition-transform duration-200 font-black text-xs px-2 py-1 rounded-lg border border-orange-200/60"
+              title={tr("switchLanguage")}
+            >
               {language.toUpperCase()}
             </button>
           </div>

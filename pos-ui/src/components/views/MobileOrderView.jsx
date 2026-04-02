@@ -108,33 +108,9 @@ export default function MobileOrderView({
 
   return (
     <div className="flex flex-col h-full relative bg-surface-container font-body text-on-surface antialiased overflow-hidden">
-      {/* TopAppBar */}
-      <header className="bg-orange-50/80 dark:bg-zinc-900/80 backdrop-blur-xl shrink-0 w-full z-40 shadow-sm dark:shadow-none tonal-layering-no-border">
-        <div className="flex items-center justify-between px-6 py-4 w-full">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-orange-600 dark:text-orange-500" style={{ fontVariationSettings: "'FILL' 1" }}>
-              restaurant
-            </span>
-            <h1 className="text-orange-700 dark:text-orange-400 font-black tracking-tighter italic font-headline text-lg md:text-xl">
-              CITRUS TERMINAL
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-orange-100/50 transition-colors active:scale-95 duration-200" onClick={() => {
-              // Toggle search focus or trigger search bar expansion
-            }}>
-              <span className="material-symbols-outlined text-zinc-500">search</span>
-            </button>
-            <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-orange-100/50 transition-colors active:scale-95 duration-200">
-              <span className="material-symbols-outlined text-zinc-500">notifications</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
       <main className="flex-1 overflow-y-auto pb-32">
         {/* Category Filter */}
-        <section className="sticky top-0 z-30 bg-surface-container py-4 shadow-sm">
+        <section className="sticky top-14 z-30 bg-surface-container py-4 shadow-sm">
           <div className="flex overflow-x-auto hide-scrollbar px-6 gap-3">
             {FILTERS.map(f => (
               <button
@@ -227,27 +203,6 @@ export default function MobileOrderView({
         </div>
       )}
 
-      {/* BottomNavBar */}
-      <nav className="bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md fixed bottom-0 w-full z-50 rounded-t-[1.5rem] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] lg:hidden">
-        <div className="flex justify-around items-center w-full px-4 pb-6 pt-3">
-          <button type="button" onClick={() => setSidebarView("tables")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'tables' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
-            <span className="material-symbols-outlined mb-1">layers</span>
-            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">{tr("Bàn", "Tisch")}</span>
-          </button>
-          <button type="button" onClick={() => setSidebarView("order")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'order' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
-            <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: sidebarView === "order" ? "'FILL' 1" : undefined }}>receipt_long</span>
-            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">{tr("Đơn", "Bestellung")}</span>
-          </button>
-          <button type="button" onClick={() => setSidebarView("history")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'history' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
-            <span className="material-symbols-outlined mb-1">outdoor_grill</span>
-            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">{tr("Bếp / HD", "Küche / Rechnung")}</span>
-          </button>
-          <button type="button" onClick={() => setSidebarView("settings")} className={`flex flex-col items-center justify-center px-5 py-2 duration-150 ease-out transition-all ${sidebarView === 'settings' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded-2xl scale-105 shadow-sm' : 'text-zinc-400 dark:text-zinc-500 hover:text-orange-600 active:scale-90'}`}>
-            <span className="material-symbols-outlined mb-1">settings</span>
-            <span className="font-body font-semibold text-[11px] uppercase tracking-wider">{tr("Cấu hình", "Einstellungen")}</span>
-          </button>
-        </div>
-      </nav>
     </div>
   );
 }

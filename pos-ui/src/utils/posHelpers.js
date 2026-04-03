@@ -1,6 +1,10 @@
 import { API_URL } from "../config/api";
 
-export const formatMoney = (n) => new Intl.NumberFormat("vi-VN").format(n * 1000) + "đ";
+// Giá trong DB đang lưu theo đơn vị cent (ví dụ 726 = 7.26€)
+export const formatMoney = (n) =>
+  new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(
+    (Number(n) || 0) / 100
+  );
 
 export const menuImageSrc = (image) => {
   if (!image) return "";

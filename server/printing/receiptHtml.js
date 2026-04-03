@@ -11,10 +11,10 @@ function escapeHtml(input) {
     .replace(/'/g, "&#39;");
 }
 
-/** Giá trong DB/API là đơn vị nghìn (12 = 12.000đ), giống formatMoney ở pos-ui */
+/** Giá trong DB/API là đơn vị cent (726 = 7.26€), giống formatMoney ở pos-ui */
 function formatMoney(value) {
   const n = Number(value) || 0;
-  return new Intl.NumberFormat("vi-VN").format(n * 1000) + "đ";
+  return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n / 100);
 }
 
 function createBuildReceiptHtml(ctx) {

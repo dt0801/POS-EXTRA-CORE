@@ -1113,9 +1113,9 @@ export default function App() {
                                 className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all placeholder:text-on-surface-variant/50 text-lg" 
                                placeholder={tt("VD: Gà nướng muối ớt", "z.B. Gegrilltes Huhn mit Salz und Chili")} />
                           </div>
-                          <div className="grid grid-cols-2 gap-6">
+                             <div className="grid grid-cols-2 gap-6">
                               <div>
-                                 <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Giá (VND)", "Preis (VND)")}</label>
+                                 <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Giá (EUR, cent)", "Preis (EUR, Cent)")}</label>
                                  <input type="number" value={manageTab === "add" ? newItem.price : editItem.price} 
                                     onChange={e => manageTab === "add" ? setNewItem({...newItem, price: e.target.value}) : setEditItem({...editItem, price: e.target.value})}
                                     className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all text-lg" />

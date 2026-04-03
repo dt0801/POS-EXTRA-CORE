@@ -76,7 +76,7 @@ export default function useAuthSession() {
         clearAuthSession();
         setSessionCleared();
       });
-  }, []);
+  }, [setSessionCleared]);
 
   useEffect(() => {
     if (!authToken || !authUser || !authValidated) return;

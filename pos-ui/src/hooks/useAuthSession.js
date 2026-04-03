@@ -13,23 +13,37 @@ function apiToWsUrl(apiBase) {
   }
 }
 
+function readStoredSession() {
+  const token = getAuthToken();
+  const user = getAuthUser();
+  if (!token || !user) return { token: "", user: null };
+  return { token, user };
+}
+
 export default function useAuthSession() {
-  const [authReady, setAuthReady] = useState(false);
-  const [authToken, setAuthToken] = useState("");
-  const [authUser, setAuthUser] = useState(null);
+  const initial = readStoredSession();
+  const [authToken, setAuthToken] = useState(initial.token);
+  const [authUser, setAuthUser] = useState(initial.user);
+  // Có token trong storage → chỉ gọi API có auth sau khi /auth/me xác nhận (tránh 401 + forceLogout hàng loạt).
+  const [authValidated, setAuthValidated] = useState(() => !(initial.token && initial.user));
+
+  const setSessionCleared = useCallback(() => {
+    setAuthToken("");
+    setAuthUser(null);
+    setAuthValidated(true);
+  }, []);
   // Chỉ alert 1 lần sau mỗi lần đăng nhập lại (hoặc reload trang).
   const didAlertForceLogoutRef = useRef(false);
 
   const forceLogout = useCallback((reason) => {
     clearAuthSession();
-    setAuthToken("");
-    setAuthUser(null);
+    setSessionCleared();
     // Chặn spam alert khi nhiều request/WS đồng thời bị 401/FORCE_LOGOUT.
     if (reason && !didAlertForceLogoutRef.current) {
       didAlertForceLogoutRef.current = true;
       alert(reason);
     }
-  }, []);
+  }, [setSessionCleared]);
 
   const authedFetch = useCallback((url, options = {}) => {
     const token = authToken || getAuthToken();
@@ -45,28 +59,27 @@ export default function useAuthSession() {
     });
   }, [authToken, forceLogout]);
 
+  // Xác thực token cache với server; đến khi xong thì mới coi là an toàn để gọi menu/bàn/order-session.
   useEffect(() => {
     const token = getAuthToken();
     const cachedUser = getAuthUser();
     if (!token || !cachedUser) {
-      setAuthReady(true);
+      setAuthValidated(true);
       return;
     }
-    // Use cached session immediately to avoid blocking UI on every reload.
-    setAuthToken(token);
-    setAuthUser(cachedUser);
-    setAuthReady(true);
     fetchMe(token)
-      .then((user) => setAuthUser(user))
+      .then((user) => {
+        setAuthUser(user);
+        setAuthValidated(true);
+      })
       .catch(() => {
         clearAuthSession();
-        setAuthToken("");
-        setAuthUser(null);
+        setSessionCleared();
       });
   }, []);
 
   useEffect(() => {
-    if (!authToken || !authUser) return;
+    if (!authToken || !authUser || !authValidated) return;
     // Khi đăng nhập/refresh thành công thì cho phép alert lại ở lần force logout tiếp theo.
     didAlertForceLogoutRef.current = false;
 
@@ -90,14 +103,15 @@ export default function useAuthSession() {
         ws.close();
       } catch {}
     };
-  }, [authToken, authUser, forceLogout]);
+  }, [authToken, authUser, authValidated, forceLogout]);
 
   return {
-    authReady,
+    authReady: true,
     authToken,
     setAuthToken,
     authUser,
     setAuthUser,
+    authValidated,
     authedFetch,
     forceLogout,
   };

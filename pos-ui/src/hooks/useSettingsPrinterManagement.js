@@ -7,7 +7,7 @@ import {
   fetchWindowsPrinters as fetchWindowsPrintersRequest,
 } from "../services/printerService";
 
-export default function useSettingsPrinterManagement({ authUser, sidebarView, authedFetch }) {
+export default function useSettingsPrinterManagement({ authUser, authValidated, sidebarView, authedFetch }) {
   const [settings, setSettings] = useState({
     printer_ip: "",
     printer_type: "",
@@ -30,11 +30,11 @@ export default function useSettingsPrinterManagement({ authUser, sidebarView, au
   const [settingsPreviewLoading, setSettingsPreviewLoading] = useState(false);
 
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser || !authValidated) return;
     fetchSettings()
       .then((d) => setSettings((prev) => ({ ...prev, ...d })))
       .catch(() => {});
-  }, [authUser]);
+  }, [authUser, authValidated]);
 
   const saveAllSettings = useCallback(async () => {
     await saveAllSettingsRequest(settings);
@@ -97,11 +97,11 @@ export default function useSettingsPrinterManagement({ authUser, sidebarView, au
   }, [authedFetch, fetchDbPrinters]);
 
   useEffect(() => {
-    if (sidebarView === "settings") {
+    if (sidebarView === "settings" && authUser && authValidated) {
       fetchDbPrinters();
       fetchWindowsPrinters();
     }
-  }, [sidebarView, fetchDbPrinters, fetchWindowsPrinters]);
+  }, [sidebarView, authUser, authValidated, fetchDbPrinters, fetchWindowsPrinters]);
 
   const buildSettingsPreviewPayload = useMemo(() => (() => ({
     title: (settings.store_name || "TIỆM NƯỚNG ĐÀ LẠT VÀ EM").toUpperCase(),
@@ -144,10 +144,10 @@ export default function useSettingsPrinterManagement({ authUser, sidebarView, au
   }, [authedFetch, buildSettingsPreviewPayload, settings.bill_css_override, settingsPreviewPaper, sidebarView]);
 
   useEffect(() => {
-    if (sidebarView !== "settings") return;
+    if (sidebarView !== "settings" || !authUser || !authValidated) return;
     const t = setTimeout(() => refreshSettingsBillPreview(), 200);
     return () => clearTimeout(t);
-  }, [sidebarView, settings.bill_css_override, settingsPreviewPaper, settings.store_name, settings.store_address, settings.store_phone, refreshSettingsBillPreview]);
+  }, [sidebarView, authUser, authValidated, settings.bill_css_override, settingsPreviewPaper, settings.store_name, settings.store_address, settings.store_phone, refreshSettingsBillPreview]);
 
   return {
     settings,

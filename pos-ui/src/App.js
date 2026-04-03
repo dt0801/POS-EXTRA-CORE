@@ -6,6 +6,8 @@ import { isPosElectron } from "./services/electronPrint";
 import {
   login as loginRequest,
   logout as logoutRequest,
+  LOGIN_ERR_NETWORK,
+  LOGIN_ERR_TIMEOUT,
 } from "./services/authService";
 import { usePrinterStatus } from "./hooks/usePrinterStatus";
 import useAuthSession from "./hooks/useAuthSession";
@@ -40,11 +42,11 @@ const getLocalMonthISO = () => getLocalDateISO().slice(0, 7);
 // =============================================
 export default function App() {
   const {
-    authReady,
     authToken,
     setAuthToken,
     authUser,
     setAuthUser,
+    authValidated,
     authedFetch,
   } = useAuthSession();
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
@@ -101,7 +103,9 @@ export default function App() {
       setSidebarView("order");
       setLoginForm({ username: "", password: "" });
     } catch (err) {
-      setLoginError(err.message || tr("loginFailed"));
+      if (err?.code === LOGIN_ERR_TIMEOUT) setLoginError(tr("loginTimeout"));
+      else if (err?.code === LOGIN_ERR_NETWORK) setLoginError(tr("loginNetworkError"));
+      else setLoginError(err.message || tr("loginFailed"));
     }
     setLoggingIn(false);
   };
@@ -176,10 +180,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (sidebarView === "users" && isAdmin) {
+    if (sidebarView === "users" && isAdmin && authValidated) {
       fetchUsers();
     }
-  }, [sidebarView, isAdmin, fetchUsers]);
+  }, [sidebarView, isAdmin, authValidated, fetchUsers]);
 
   const {
     tableOrders,
@@ -189,7 +193,7 @@ export default function App() {
     itemNotes,
     setItemNotes,
     orderSessionReady,
-  } = useOrderSession({ authedFetch, authToken });
+  } = useOrderSession({ authedFetch, authToken, authValidated });
 
   // ----- MANAGE STATE -----
   const [manageTab, setManageTab]   = useState("edit");
@@ -234,6 +238,7 @@ export default function App() {
     refreshSettingsBillPreview,
   } = useSettingsPrinterManagement({
     authUser,
+    authValidated,
     sidebarView,
     authedFetch,
   });
@@ -285,11 +290,21 @@ export default function App() {
 
   /** Fetch trạng thái tất cả bàn từ server */
   const fetchTableStatus = useCallback(() => {
-    authedFetch(`${API_URL}/tables`).then(r => r.json()).then(rows => {
-      const map = {};
-      rows.forEach(r => { map[r.table_num] = r.status; });
-      setTableStatus(map);
-    }).catch(e => console.error("Lỗi fetch tables:", e));
+    authedFetch(`${API_URL}/tables`)
+      .then(async (r) => {
+        if (!r.ok) return null;
+        const rows = await r.json();
+        return Array.isArray(rows) ? rows : null;
+      })
+      .then((rows) => {
+        if (!rows) return;
+        const map = {};
+        rows.forEach((r) => {
+          map[r.table_num] = r.status;
+        });
+        setTableStatus(map);
+      })
+      .catch((e) => console.error("Lỗi fetch tables:", e));
   }, [authedFetch]);
 
   /** Fetch lịch sử hóa đơn theo ngày */
@@ -366,52 +381,65 @@ export default function App() {
    */
   const fetchTableList = useCallback(() => {
     Promise.all([
-      authedFetch(`${API_URL}/tables`).then(r => r.json()),
-      authedFetch(`${API_URL}/settings`).then(r => r.json()),
-    ]).then(([rows, cfg]) => {
-      const settingTotal = Number(cfg.total_tables) || 20;
-      // Lấy số bàn lớn nhất trong DB (phòng trường hợp có bàn vượt settings)
-      const dbMax = rows.reduce((max, r) => Math.max(max, r.table_num), 0);
-      const total = Math.max(settingTotal, dbMax);
-      // Tạo map từ DB
-      const dbMap = {};
-      rows.forEach(r => { dbMap[r.table_num] = r.status; });
-      // Tạo danh sách đầy đủ 1..total, merge status từ DB
-      const full = Array.from({ length: total }, (_, i) => ({
-        table_num: i + 1,
-        status: dbMap[i + 1] || "PAID",
-      }));
-      setTableList(full);
-    }).catch(() => {});
+      authedFetch(`${API_URL}/tables`).then(async (r) => {
+        if (!r.ok) throw new Error(`tables ${r.status}`);
+        const data = await r.json();
+        return Array.isArray(data) ? data : [];
+      }),
+      authedFetch(`${API_URL}/settings`).then(async (r) => {
+        if (!r.ok) throw new Error(`settings ${r.status}`);
+        return r.json();
+      }),
+    ])
+      .then(([rows, cfg]) => {
+        const settingTotal = Number(cfg?.total_tables) || 20;
+        const dbMax = rows.reduce((max, r) => Math.max(max, r.table_num), 0);
+        const total = Math.max(settingTotal, dbMax);
+        const dbMap = {};
+        rows.forEach((r) => {
+          dbMap[r.table_num] = r.status;
+        });
+        const full = Array.from({ length: total }, (_, i) => ({
+          table_num: i + 1,
+          status: dbMap[i + 1] || "PAID",
+        }));
+        setTableList(full);
+      })
+      .catch(() => {});
   }, [authedFetch]);
 
-  // Load menu, trạng thái bàn VÀ danh sách bàn đầy đủ ngay khi khởi động
-  useEffect(() => { fetchMenu(); fetchTableStatus(); fetchTableList(); }, [fetchMenu, fetchTableStatus, fetchTableList]);
+  // Chỉ tải dữ liệu POS khi phiên đã được /auth/me xác nhận (tránh race với token hết hạn trong storage)
+  useEffect(() => {
+    if (!authUser || !authValidated) return;
+    fetchMenu();
+    fetchTableStatus();
+    fetchTableList();
+  }, [authUser, authValidated, fetchMenu, fetchTableStatus, fetchTableList]);
 
   // Khi vào tab manage → reload lại danh sách bàn cho chắc
   useEffect(() => {
-    if (sidebarView === "manage") fetchTableList();
-  }, [sidebarView, fetchTableList]);
+    if (sidebarView === "manage" && authUser && authValidated) fetchTableList();
+  }, [sidebarView, authUser, authValidated, fetchTableList]);
 
   // Khi chuyển sang tab history → load bills của ngày đang chọn
   useEffect(() => {
-    if (sidebarView === "history") fetchBills(historyDate);
-  }, [sidebarView, historyDate, fetchBills]);
+    if (sidebarView === "history" && authUser && authValidated) fetchBills(historyDate);
+  }, [sidebarView, authUser, authValidated, historyDate, fetchBills]);
 
   useEffect(() => {
-    if (!authUser || !isAdmin) return;
+    if (!authUser || !isAdmin || !authValidated) return;
     fetchStatsToday();
-  }, [authUser, isAdmin, fetchStatsToday]);
+  }, [authUser, isAdmin, authValidated, fetchStatsToday]);
 
   useEffect(() => {
-    if (!authUser || !isAdmin) return;
+    if (!authUser || !isAdmin || !authValidated) return;
     fetchStatsMonthly(statsMonth);
-  }, [authUser, isAdmin, statsMonth, fetchStatsMonthly]);
+  }, [authUser, isAdmin, authValidated, statsMonth, fetchStatsMonthly]);
 
   useEffect(() => {
-    if (!authUser || !isAdmin) return;
+    if (!authUser || !isAdmin || !authValidated) return;
     fetchStatsYearly(statsYear);
-  }, [authUser, isAdmin, statsYear, fetchStatsYearly]);
+  }, [authUser, isAdmin, authValidated, statsYear, fetchStatsYearly]);
 
   // =============================================
   // TABLE STATUS & ORDER/PRINT FLOW
@@ -496,14 +524,6 @@ export default function App() {
   // =============================================
   // RENDER
   // =============================================
-  if (!authReady) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-surface-container text-on-surface">
-        {tr("checkingSession")}
-      </div>
-    );
-  }
-
   if (!authUser) {
     return (
       <div className="h-screen flex items-center justify-center bg-surface-container p-6">

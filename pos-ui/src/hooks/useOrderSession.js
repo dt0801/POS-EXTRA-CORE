@@ -25,7 +25,7 @@ function writeLocalSession(payload) {
   } catch {}
 }
 
-export default function useOrderSession({ authedFetch, authToken }) {
+export default function useOrderSession({ authedFetch, authToken, authValidated }) {
   const localSnapshot = readLocalSession();
   const [tableOrders, setTableOrders] = useState(localSnapshot?.tableOrders || {});
   const [kitchenSent, setKitchenSent] = useState(localSnapshot?.kitchenSent || {});
@@ -34,7 +34,7 @@ export default function useOrderSession({ authedFetch, authToken }) {
   const [remoteHydrated, setRemoteHydrated] = useState(false);
 
   useEffect(() => {
-    if (!authToken) {
+    if (!authToken || !authValidated) {
       setOrderSessionReady(false);
       setRemoteHydrated(false);
       return;
@@ -58,7 +58,7 @@ export default function useOrderSession({ authedFetch, authToken }) {
     return () => {
       cancelled = true;
     };
-  }, [authedFetch, authToken]);
+  }, [authedFetch, authToken, authValidated]);
 
   useEffect(() => {
     if (!orderSessionReady) return;
@@ -66,7 +66,7 @@ export default function useOrderSession({ authedFetch, authToken }) {
   }, [tableOrders, itemNotes, kitchenSent, orderSessionReady]);
 
   useEffect(() => {
-    if (!authToken || !orderSessionReady || !remoteHydrated) return;
+    if (!authToken || !authValidated || !orderSessionReady || !remoteHydrated) return;
     const t = setTimeout(() => {
       authedFetch(`${API_URL}/order-session`, {
         method: "PUT",
@@ -75,7 +75,7 @@ export default function useOrderSession({ authedFetch, authToken }) {
       }).catch(() => {});
     }, 700);
     return () => clearTimeout(t);
-  }, [tableOrders, itemNotes, kitchenSent, orderSessionReady, remoteHydrated, authedFetch, authToken]);
+  }, [tableOrders, itemNotes, kitchenSent, orderSessionReady, remoteHydrated, authedFetch, authToken, authValidated]);
 
   return {
     tableOrders,

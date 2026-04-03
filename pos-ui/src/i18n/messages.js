@@ -1,13 +1,20 @@
 export const LANGUAGE_STORAGE_KEY = "pos_ui_language";
 
 export const MESSAGES = {
-  checkingSession: { vi: "Đang kiểm tra phiên đăng nhập...", de: "Sitzung wird geprüft..." },
   loginTitle: { vi: "Đăng nhập POS", de: "POS-Anmeldung" },
   username: { vi: "Tên đăng nhập", de: "Benutzername" },
   password: { vi: "Mật khẩu", de: "Passwort" },
   loggingIn: { vi: "Đang đăng nhập...", de: "Anmeldung..." },
   login: { vi: "Đăng nhập", de: "Anmelden" },
   loginFailed: { vi: "Đăng nhập thất bại", de: "Anmeldung fehlgeschlagen" },
+  loginTimeout: {
+    vi: "Hết thời gian chờ server. Nếu dùng cloud, thử lại sau vài giây (server đang khởi động) hoặc đặt API local qua REACT_APP_API_URL.",
+    de: "Zeitüberschreitung. Bei Cloud: erneut versuchen oder lokale API (REACT_APP_API_URL) nutzen.",
+  },
+  loginNetworkError: {
+    vi: "Không kết nối được tới máy chủ. Kiểm tra mạng, URL API (REACT_APP_API_URL) và xem backend đã chạy chưa.",
+    de: "Keine Verbindung zum Server. Netzwerk und API-URL prüfen.",
+  },
   floorMap: { vi: "Sơ đồ bàn", de: "Tischplan" },
   orderMenu: { vi: "Menu Order", de: "Bestellungen" },
   menuManagement: { vi: "Quản lý Thực Đơn", de: "Speisekarte verwalten" },

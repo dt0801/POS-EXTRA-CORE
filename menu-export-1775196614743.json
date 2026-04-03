@@ -1,0 +1,1710 @@
+[
+  {
+    "id": 6,
+    "name": "1. Premium Selection ( Mẹt Vor To )",
+    "price": "726.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 7,
+    "name": "2.Classic Selection ( Mẹt Vor Thịt )",
+    "price": "618.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 8,
+    "name": "3. Snack for 2 ( Mẹt Vor Nhỏ )",
+    "price": "429.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 9,
+    "name": "4.Ha Cao Tom (4 Stk.)",
+    "price": "213.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 10,
+    "name": "5.Gyoza Ga (4 Stk.)",
+    "price": "203.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 11,
+    "name": "6.Gyoza Rau (4 Stk.)",
+    "price": "186.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 12,
+    "name": "7. Dumplings Mix Variation (6 Stk.) ",
+    "price": "294.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 13,
+    "name": "8. Bao Bun Tempura Garnelen (2 Stk.)",
+    "price": "402.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 14,
+    "name": "14. Bao Bun Karamellisiertes Rindfleisch (2 Stk.)",
+    "price": "402.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 15,
+    "name": "14. Bao Bun Tofu (2 Stk.)",
+    "price": "402.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 16,
+    "name": "9. Golden Prawns (3 Stk.)",
+    "price": "267.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 17,
+    "name": "10.Ha Noi Rolls (3 Stk.)",
+    "price": "230.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 18,
+    "name": "11. Grilled Beef Stick (4 Stk.) Lá Lốt Vor",
+    "price": "240.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 19,
+    "name": "13. Edamame",
+    "price": "186.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 20,
+    "name": "12. Panko Chicken",
+    "price": "213.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 21,
+    "name": "14. Avocado Stick ( Bơ Chiên )",
+    "price": "213.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 22,
+    "name": "15. Veggie Rolls (3 Stk.) Nem Chay Chiên",
+    "price": "213.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 23,
+    "name": "16. Sommerrolle Tofu (4 Stk.)",
+    "price": "213.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 24,
+    "name": "16. Sommerrolle Chicken (4 Stk.)",
+    "price": "213.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 25,
+    "name": "16. Sommerrolle Shrimp (4 Stk.)",
+    "price": "240.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 26,
+    "name": "17. Salmon Tatar",
+    "price": "365.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 27,
+    "name": "18. Salmon Tataki Ponzu",
+    "price": "375.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 28,
+    "name": "19. Tuna Tataki Ponzu",
+    "price": "402.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 29,
+    "name": "20. Thai Favourite Tom Yum Tofu",
+    "price": "213.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 30,
+    "name": "20. Thai Favourite Tom Yum Chicken",
+    "price": "230.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 31,
+    "name": "20. Thai Favourite Tom Yum Shrimp",
+    "price": "240.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 32,
+    "name": "21. Gyoza Soup",
+    "price": "230.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 33,
+    "name": "22. Mango Salat",
+    "price": "240.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 34,
+    "name": "23. Seetang-Salat",
+    "price": "186.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 35,
+    "name": "24. Nom Du Du Bo - Papaya Salat mit Rindfleisch",
+    "price": "348.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 36,
+    "name": "30.Pho Ha Noi Chicken",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 37,
+    "name": "30. Pho Ha Noi Beef Bo",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 38,
+    "name": "31. Pho Vegan Tofu",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 39,
+    "name": "31. Pho Vegan Seitan",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 43,
+    "name": "33.Ca Ri Don Tofu - Udon Curry",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 44,
+    "name": "33. Ca Ri Don Crispy Chicken - Udon",
+    "price": "510.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 46,
+    "name": "33.  Ca Ri Don Shrimp - Udon",
+    "price": "564.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 47,
+    "name": "34.Yaki Don Tofu",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 48,
+    "name": "34. Yaki Don Crispy Chicken",
+    "price": "510.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 49,
+    "name": "34. Yaki Don Grilled Duck",
+    "price": "591.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 50,
+    "name": "34. Yaki Don Lachs",
+    "price": "618.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 51,
+    "name": "35. Bun Bo Cha Gio",
+    "price": "510.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 52,
+    "name": "33. Ca Ri Don Bo",
+    "price": "537.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 53,
+    "name": "34. Yaki Don Vịt Chay Seitan",
+    "price": "564.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 55,
+    "name": "37. Bun Dau Gion",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 56,
+    "name": "40. Red Curry Tofu",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 57,
+    "name": "40. Red Curry Crispy Chicken",
+    "price": "510.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 58,
+    "name": "40. Red Curry Grilled Duck",
+    "price": "564.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 59,
+    "name": "40. Red Curry Grilled Salmon",
+    "price": "591.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 60,
+    "name": "41. Kokos Mango Tofu",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 61,
+    "name": "41. Kokos Mango Crispy Chicken",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 62,
+    "name": "41. Kokos Mango Vegan Duck",
+    "price": "537.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 63,
+    "name": "42. Creamy Peanut Tofu",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 64,
+    "name": "42. Creamy Peanut Crispy Chicken",
+    "price": "510.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 65,
+    "name": "42. Creamy Peanut Grilled Duck",
+    "price": "564.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 66,
+    "name": "43. Humami Spicy Tofu",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 67,
+    "name": "43. Humami Spicy Crispy Chicken",
+    "price": "510.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 68,
+    "name": "43. Humami Spicy Beef",
+    "price": "510.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 69,
+    "name": "44. Sai Gon Hoisin Barbarie-Ente",
+    "price": "591.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 70,
+    "name": "44. Sai Gon Hoisin Lachs",
+    "price": "618.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 71,
+    "name": "45. Cashew Duck",
+    "price": "591.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 72,
+    "name": "50.Humami Signature Grill Platte (für 2) Đĩa Nướng Mix",
+    "price": "1944.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 73,
+    "name": "51. Barbarie-Entenbrust Grill",
+    "price": "672.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 74,
+    "name": "52. Rinder Entrecote Grill",
+    "price": "753.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 75,
+    "name": "53. Black-Tiger Garnelen Grill",
+    "price": "699.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 76,
+    "name": "54. Lachsfilet Grill",
+    "price": "699.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 77,
+    "name": "55. Thunfisch Grill",
+    "price": "780.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 78,
+    "name": "60. Best Ocean Bowl",
+    "price": "564.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 79,
+    "name": "61. Toffe Tofu ( Bowl Đậu )",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 81,
+    "name": "M1. Maki Sake Lachs (8 Stk.)",
+    "price": "162.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 82,
+    "name": "M2. Maki Tekka Thunfisch (8 Stk.)",
+    "price": "186.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 83,
+    "name": "M3. Maki Ebi Tempura Garnelen (8 Stk.)",
+    "price": "186.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 84,
+    "name": "M6. Maki Kappa Gurke Philadelphia (8 Stk.)",
+    "price": "149.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 85,
+    "name": "M7. Maki Avocado Philadelphia (8 Stk.)",
+    "price": "149.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 86,
+    "name": "M8. Maki Surimi Avocado (8 Stk.)",
+    "price": "159.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 87,
+    "name": "M9. Maki Lachs Avocado (8 Stk.)",
+    "price": "186.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 88,
+    "name": "M10. Maki Thunfisch Avocado (8 Stk.)",
+    "price": "203.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 89,
+    "name": "N11. Nigiri Sake Lachs (2 Stk.)",
+    "price": "167.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 90,
+    "name": "N12. Nigiri Tuna Thunfisch (2 Stk.)",
+    "price": "176.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 91,
+    "name": "N13. Nigiri Ebi Garnelen (2 Stk.)",
+    "price": "176.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 92,
+    "name": "N15. Nigiri Anago Aal (2 Stk.)",
+    "price": "159.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 93,
+    "name": "N16. Nigiri Sake Flambeed (2 Stk.)",
+    "price": "186.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 94,
+    "name": "N17. Nigiri Tuna Flambeed (2 Stk.)",
+    "price": "186.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 95,
+    "name": "N19. Nigiri Avocado (2 Stk.)",
+    "price": "135.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 96,
+    "name": "U21. Teriyaki Chicken Roll Inside-Out (8 Stk.)",
+    "price": "321.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 97,
+    "name": "U23. Alaska Roll - Lachs Avocado Tobiko (8 Stk.)",
+    "price": "321.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 98,
+    "name": "U25. Maguro Roll - Tuna Gurke (8 Stk.)",
+    "price": "321.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 99,
+    "name": "U26. Ebi Roll - Garnelen Gurke (8 Stk.)",
+    "price": "321.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 100,
+    "name": "U27. Veggie Roll - Avocado Gurke Mango (8 Stk.)",
+    "price": "294.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 101,
+    "name": "U29. Salmonskin Roll (8 Stk.)",
+    "price": "321.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 102,
+    "name": "T1. Chicken Crunchy Roll (6 Stk.)",
+    "price": "321.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 103,
+    "name": "T2. Salmon Crunchy Roll (6 Stk.)",
+    "price": "348.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 104,
+    "name": "T3. Tuna Crunchy Roll (6 Stk.)",
+    "price": "375.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 105,
+    "name": "T4. Ebi Crunchy Roll (6 Stk.)",
+    "price": "348.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 106,
+    "name": "T5. Veggie Crunchy Roll (6 Stk.)",
+    "price": "297.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 107,
+    "name": "T6. Special Crunchy Roll (6 Stk.)",
+    "price": "405.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 108,
+    "name": "S1. Sashimi Sake Lachs (6 Stk.)",
+    "price": "405.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 109,
+    "name": "S2. Sashimi Tuna Thunfisch (6 Stk.)",
+    "price": "459.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 110,
+    "name": "S3. Sashimi Moriawase gemischt (12 Stk.)",
+    "price": "810.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 111,
+    "name": "P1 Surf & Turf Roll (8 Stk.)",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 112,
+    "name": "P2 Humami Fussion Roll (8 Stk.)",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 113,
+    "name": "P3 Green Dragon Roll (8 Stk.)",
+    "price": "429.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 114,
+    "name": "P4 Sake Crown Roll (8 Stk.)",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 115,
+    "name": "P5 Salmon Love Roll (8 Stk.)",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 116,
+    "name": "P6 Mama Ebi Roll (8 Stk.)",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 117,
+    "name": "P7 Chicken Mango Roll (8 Stk.)",
+    "price": "429.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 118,
+    "name": "P8 Sunset Roll (8 Stk.)",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 119,
+    "name": "P9 Color Ebi Roll (8 Stk.)",
+    "price": "429.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 120,
+    "name": "P10 Dragon Fly Roll (8 Stk.)",
+    "price": "510.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 121,
+    "name": "P11 Tuna Red Roll (8 Stk.)",
+    "price": "446.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 122,
+    "name": "V1 Green Crunch Roll (8 Stk.)",
+    "price": "432.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 123,
+    "name": "V2 Veggie Fusion Roll (8 Stk.)",
+    "price": "432.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 124,
+    "name": "V3 Spicy Veggie Roll (8 Stk.)",
+    "price": "432.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 125,
+    "name": "V4 Mango Garden Roll (8 Stk.)",
+    "price": "429.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 126,
+    "name": "V5 Beettroot Roll (8 Stk.)",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 127,
+    "name": "V6 Tofu Teriyaki Roll (8 Stk.)",
+    "price": "456.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 128,
+    "name": "Sushi Menu 1 - Only Salmon",
+    "price": "591.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 129,
+    "name": "Sushi Menu 2 - House of Nigiri",
+    "price": "618.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 130,
+    "name": "Sushi Menu 3 - Just Maki",
+    "price": "591.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 131,
+    "name": "Sushi Menu 4 - Favourite Together (fur 2)",
+    "price": "2049.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 132,
+    "name": "Sushi Menu 5 - Vegan Sharing Platter (fur 2)",
+    "price": "1725.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 133,
+    "name": "Sushi Menu 6 - Humami Signature (fur 3)",
+    "price": "2322.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 134,
+    "name": "Sushi Menu 7 - Humami Signature (fur 4)",
+    "price": "3240.00",
+    "type": "COMBO",
+    "image": null
+  },
+  {
+    "id": 135,
+    "name": "101. Happy Kids - Chicken Popcorn",
+    "price": "240.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 136,
+    "name": "102. Snack for Kids - Avocado & Ebi Maki",
+    "price": "240.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 137,
+    "name": "150. Affogato Matcha",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": null
+  },
+  {
+    "id": 138,
+    "name": "151. Affogato Vanille",
+    "price": "176.00",
+    "type": "DRINK",
+    "image": null
+  },
+  {
+    "id": 139,
+    "name": "152. Mochi Mix",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": null
+  },
+  {
+    "id": 140,
+    "name": "152. Banana Cubes",
+    "price": "213.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 142,
+    "name": "154. Schoko-Souffle mit Vanille Eis",
+    "price": "240.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 143,
+    "name": "155. Pagoda Trilogie - Sesam Matcha Mango Eis",
+    "price": "230.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 144,
+    "name": "Reis extra",
+    "price": "54.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 145,
+    "name": "Sushi Reis extra",
+    "price": "68.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 146,
+    "name": "Udon Nudeln extra",
+    "price": "108.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 147,
+    "name": "Unagi Sauce extra",
+    "price": "54.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 148,
+    "name": "Erdnuss Sauce extra",
+    "price": "54.00",
+    "type": "FOOD",
+    "image": null
+  },
+  {
+    "id": 149,
+    "name": "2. Classic Selection Mẹt Vor Chay",
+    "price": "618.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 150,
+    "name": "3. Snack for 2 ( Mẹt Vor Nhỏ Chay )",
+    "price": "429.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 151,
+    "name": "36. Bun Nem Ha Noi",
+    "price": "483.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 152,
+    "name": "42. Creamy Peanut Vegan Duck ( Vịt Chay )",
+    "price": "537.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 153,
+    "name": "U22. Rucola Salmon Roll",
+    "price": "311.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 154,
+    "name": "U24. California Roll",
+    "price": "294.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 155,
+    "name": "U28. Anago Roll",
+    "price": "321.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 156,
+    "name": "Menu 8 Sushi Freestyle ",
+    "price": "540.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 157,
+    "name": "Menu 8 Sushi Freestyle ",
+    "price": "810.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 158,
+    "name": "Menu 8 Sushi Freestyle ",
+    "price": "1080.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 159,
+    "name": "Menu 8 Sushi Freestyle ",
+    "price": "1350.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 160,
+    "name": "Menu 8 Sushi Freestyle ",
+    "price": "1620.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 161,
+    "name": "Menu 8 Sushi Freestyle ",
+    "price": "1890.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 162,
+    "name": "Menu 8 Sushi Freestyle ",
+    "price": "2160.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 163,
+    "name": "Menu 8 Sushi Freestyle ",
+    "price": "2700.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 164,
+    "name": "Extra Hoisin",
+    "price": "54.00",
+    "type": "FOOD",
+    "image": ""
+  },
+  {
+    "id": 165,
+    "name": "500. Yuzu Magarita",
+    "price": "294.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 166,
+    "name": "501. Lychee Martini",
+    "price": "294.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 167,
+    "name": "502. Sake Mojito",
+    "price": "294.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 168,
+    "name": "503. Basil Martini",
+    "price": "294.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 169,
+    "name": "504. Golden Pead",
+    "price": "294.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 170,
+    "name": "505. Aperol ",
+    "price": "213.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 171,
+    "name": "506. Passion Chili Spritz",
+    "price": "230.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 172,
+    "name": "507. Hugo",
+    "price": "213.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 173,
+    "name": "508. Hugo Nero",
+    "price": "230.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 174,
+    "name": "509. Watermelon Spritz",
+    "price": "240.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 175,
+    "name": "510. Cucumber Spritz",
+    "price": "267.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 176,
+    "name": "511. Campari Yuzu",
+    "price": "230.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 177,
+    "name": "530. Asian Garden",
+    "price": "203.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 178,
+    "name": "531. Mango Coconut Cooler",
+    "price": "203.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 179,
+    "name": "532. Lychee Rose",
+    "price": "203.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 180,
+    "name": "533. Berry Mojito",
+    "price": "203.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 181,
+    "name": "534. Lime on Ice",
+    "price": "162.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 182,
+    "name": "535. Fusion Iced Tea",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 183,
+    "name": "536.Hibiskus Dream",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 184,
+    "name": "537. Hello Vietnam",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 185,
+    "name": "538. Butterfly Effekt",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 186,
+    "name": "400. Hibikus Tea",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 187,
+    "name": "401. Jasmin Tea",
+    "price": "122.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 188,
+    "name": "402. Mint Tea",
+    "price": "122.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 189,
+    "name": "403. Ginger Tea",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 190,
+    "name": "404. Espresso",
+    "price": "59.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 191,
+    "name": "404. Kaffee",
+    "price": "78.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 192,
+    "name": "405. Viet Filter Kaffee",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 193,
+    "name": "406. Pepsi",
+    "price": "105.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 194,
+    "name": "407. Pepsi Zero",
+    "price": "105.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 195,
+    "name": "408. 7Up",
+    "price": "105.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 196,
+    "name": "409. Selters Classic 0,2L 3.9",
+    "price": "105.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 197,
+    "name": "409. Selters Classic 0,4L 3.9",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 198,
+    "name": "410. Selters Nature 0,2L ",
+    "price": "105.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 199,
+    "name": "410. Selters Nature 0,4L ",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 200,
+    "name": "Saft 0,2l",
+    "price": "105.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 201,
+    "name": "Saft 0,4l ",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 202,
+    "name": "411. Apfelschorle deluxe",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 203,
+    "name": "412. Rhabaeberschorler",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 204,
+    "name": "413. Johannisbeereschorle",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 205,
+    "name": "414. Maracujaschorle",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 206,
+    "name": "415. Lychee schorle",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 207,
+    "name": "516. Holunderschorle",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 208,
+    "name": "425. Asahi",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 209,
+    "name": "426. Saigon",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 210,
+    "name": "427. Tiger Beer",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 211,
+    "name": "430 Helles",
+    "price": "135.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 212,
+    "name": "431. Pils Raderberger",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 213,
+    "name": "432. Weizen Bier",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 214,
+    "name": "433. Radler",
+    "price": "135.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 215,
+    "name": "434. Pils Alkoholfrei",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 216,
+    "name": "435. Weizen Alkoholfrei",
+    "price": "135.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 217,
+    "name": "550. Chapeaublanc 0,2l",
+    "price": "203.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 218,
+    "name": "550. Chapeaublanc 0,75l",
+    "price": "699.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 219,
+    "name": "551. Riesling 0,2l",
+    "price": "159.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 220,
+    "name": "551. Riesling 1l",
+    "price": "699.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 221,
+    "name": "552. Grauburgunder 0,2l",
+    "price": "213.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 222,
+    "name": "552. Grauburgunder 0,75l",
+    "price": "726.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 223,
+    "name": "554. Weinschorle",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 224,
+    "name": "555. Rose 0,2l ",
+    "price": "213.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 225,
+    "name": "555. Rose 0,75l",
+    "price": "770.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 226,
+    "name": "556. Sauvignon Shiraz 0,2l ",
+    "price": "203.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 227,
+    "name": "556. Sauvignon Shiraz 0,75l",
+    "price": "770.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 228,
+    "name": "557. Merlot 0,2l",
+    "price": "203.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 229,
+    "name": "557. Merlot 0,75l",
+    "price": "770.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 230,
+    "name": "558. Primitivo 0,2l",
+    "price": "176.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 231,
+    "name": "558. Primitivo 0,75l",
+    "price": "672.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 232,
+    "name": "525. Prosecco 0,1l",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 233,
+    "name": "526. Prosecco 0,75l",
+    "price": "672.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 234,
+    "name": "420. Sake Shirayuki 150ml",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 235,
+    "name": "421. Soto Sake Black Junmai 150ml",
+    "price": "213.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 236,
+    "name": "422. Kizakura Sake Junmai Ginjo 150ml",
+    "price": "213.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 237,
+    "name": "423. Sake Classic 150ml",
+    "price": "203.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 238,
+    "name": "660. Suntory Hibiki 2cl",
+    "price": "257.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 239,
+    "name": "660. Suntory Hibiki 4cl",
+    "price": "446.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 240,
+    "name": "661. Nikka Whiskey 2cl",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 241,
+    "name": "661. Nikka Whiskey 4cl",
+    "price": "270.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 242,
+    "name": "662. Toki Suntory 2cl",
+    "price": "108.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 243,
+    "name": "662. Toki Suntory 4cl",
+    "price": "203.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 244,
+    "name": "440. Reisschnaps 4cl",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 245,
+    "name": "441. Bambusschnapps 4cl",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 246,
+    "name": "442. Mekongschnapps 4cl",
+    "price": "149.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 247,
+    "name": "445. Wodka Shot 4cl",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 248,
+    "name": "446. Monkey 47 Gin Shot 4cl",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 249,
+    "name": "447. Jack Daniels Shot 4cl",
+    "price": "132.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 250,
+    "name": "448. Hendricks Gin Shot 4cl",
+    "price": "186.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 251,
+    "name": "564. Barcardi Cola",
+    "price": "240.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 252,
+    "name": "565. Hendicks Tonic",
+    "price": "267.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 253,
+    "name": "566. Roku Gin Tonic",
+    "price": "267.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 254,
+    "name": "567. Whiskey Cola",
+    "price": "267.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 255,
+    "name": "568. Monkey 47 Tonic",
+    "price": "267.00",
+    "type": "DRINK",
+    "image": ""
+  },
+  {
+    "id": 256,
+    "name": "569. Cuba Libre",
+    "price": "267.00",
+    "type": "DRINK",
+    "image": ""
+  }
+]

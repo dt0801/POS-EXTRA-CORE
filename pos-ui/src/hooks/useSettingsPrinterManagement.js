@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_URL } from "../config/api";
 import { fetchSettings, saveAllSettings as saveAllSettingsRequest } from "../services/settingsService";
+import { DEFAULT_KITCHEN_CATEGORIES_JSON } from "../constants/kitchenCategories";
 import {
   addDbPrinter as addDbPrinterRequest,
   fetchDbPrinters as fetchDbPrintersRequest,
@@ -17,6 +18,7 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     cashier_name: "",
     total_tables: "20",
     bill_css_override: "",
+    kitchen_categories_json: DEFAULT_KITCHEN_CATEGORIES_JSON,
   });
   const [settingsSaved, setSettingsSaved] = useState(false);
 
@@ -38,6 +40,15 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
 
   const saveAllSettings = useCallback(async () => {
     await saveAllSettingsRequest(settings);
+    setSettingsSaved(true);
+    setTimeout(() => setSettingsSaved(false), 2000);
+  }, [settings]);
+
+  /** Gộp partial vào state hiện tại rồi lưu — dùng khi cần persist ngay (vd. kitchen_categories_json). */
+  const mergeAndSaveSettings = useCallback(async (partial) => {
+    const next = { ...settings, ...partial };
+    setSettings(next);
+    await saveAllSettingsRequest(next);
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 2000);
   }, [settings]);
@@ -154,6 +165,7 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     setSettings,
     settingsSaved,
     saveAllSettings,
+    mergeAndSaveSettings,
     windowsPrinters,
     fetchWindowsPrinters,
     dbPrinters,

@@ -12,6 +12,7 @@ export default function useMenuManagement({
   setEditItem,
   setEditFile,
   fetchMenu,
+  defaultKitchenCategoryId = "MAIN",
 }) {
   const addMenu = useCallback(async () => {
     const formData = new FormData();
@@ -23,10 +24,10 @@ export default function useMenuManagement({
     }
     if (file) formData.append("image", file);
     await authedFetch(`${API_URL}/menu`, { method: "POST", body: formData });
-    setNewItem({ name: "", price: "", type: "FOOD", kitchen_category: "MAIN" });
+    setNewItem({ name: "", price: "", type: "FOOD", kitchen_category: defaultKitchenCategoryId });
     setFile(null);
     fetchMenu();
-  }, [authedFetch, fetchMenu, file, newItem.kitchen_category, newItem.name, newItem.price, newItem.type, setFile, setNewItem]);
+  }, [authedFetch, defaultKitchenCategoryId, fetchMenu, file, newItem.kitchen_category, newItem.name, newItem.price, newItem.type, setFile, setNewItem]);
 
   const updateMenu = useCallback(async () => {
     if (!editItem) return;

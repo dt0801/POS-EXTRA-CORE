@@ -2,9 +2,9 @@
 // Prefix settings: bill_ | tamtinh_ | kitchen_
 import { formatMoney } from "../utils/posHelpers";
 import {
-  KITCHEN_PRINT_ORDER,
+  KITCHEN_PRINT_ORDER_FROM_SETTINGS,
   effectiveKitchenCategory,
-  kitchenSectionLabelVi,
+  kitchenCategoryPrintLabelVi,
 } from "../constants/kitchenCategories";
 
 export const BILL_TYPE_PREFIX = { bill: "bill_", tamtinh: "tamtinh_", kitchen: "kitchen_" };
@@ -93,6 +93,7 @@ export function generateBillHTML({
   let bodyHTML = "";
 
   if (type === "kitchen") {
+    const printOrder = KITCHEN_PRINT_ORDER_FROM_SETTINGS(settings);
     const rowHtml = (i) => {
       const note = i.note ? esc(i.note) : "";
       return `
@@ -106,8 +107,8 @@ export function generateBillHTML({
     };
     const sections = [];
     let secIdx = 0;
-    for (const cat of KITCHEN_PRINT_ORDER) {
-      const list = items.filter((i) => effectiveKitchenCategory(i) === cat);
+    for (const cat of printOrder) {
+      const list = items.filter((i) => effectiveKitchenCategory(i, settings) === cat);
       if (!list.length) continue;
       const sep =
         secIdx === 0
@@ -115,11 +116,11 @@ export function generateBillHTML({
           : `margin:10px 0 4px;font-size:${Math.max(11, fs)}px;border-top:1px dashed #ccc;padding-top:6px`;
       secIdx += 1;
       sections.push(
-        `<div class="center bold sub" style="${sep}">${esc(kitchenSectionLabelVi(cat))}</div>${list.map(rowHtml).join("")}`
+        `<div class="center bold sub" style="${sep}">${esc(kitchenCategoryPrintLabelVi(settings, cat))}</div>${list.map(rowHtml).join("")}`
       );
     }
     const uncategorized = items.filter(
-      (i) => !KITCHEN_PRINT_ORDER.includes(effectiveKitchenCategory(i))
+      (i) => !printOrder.includes(effectiveKitchenCategory(i, settings))
     );
     if (uncategorized.length) {
       sections.push(uncategorized.map(rowHtml).join(""));

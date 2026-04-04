@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import "./App.css";
 import { FILTERS } from "./constants/filters";
-import { KITCHEN_CATEGORY_OPTIONS, effectiveKitchenCategory } from "./constants/kitchenCategories";
+import {
+  parseKitchenCategoriesList,
+  firstKitchenCategoryId,
+  kitchenCategoryDisplayLabel,
+  effectiveKitchenCategory,
+} from "./constants/kitchenCategories";
 import { API_URL, isLocalQuayOrigin } from "./config/api";
 import { isPosElectron } from "./services/electronPrint";
 import {
@@ -27,6 +32,7 @@ import HistoryView from "./components/views/HistoryView";
 import StatsView from "./components/views/StatsView";
 import MobileOrderView from "./components/views/MobileOrderView";
 import ReportBillSettingsSection from "./components/views/ReportBillSettingsSection";
+import KitchenCategoriesSettingsSection from "./components/views/KitchenCategoriesSettingsSection";
 import { generateBillHTML } from "./hooks/billHTML";
 import { openBillPrintWindow } from "./utils/openBillPrintWindow";
 
@@ -228,6 +234,7 @@ export default function App() {
     setSettings,
     settingsSaved,
     saveAllSettings,
+    mergeAndSaveSettings,
     windowsPrinters,
     fetchWindowsPrinters,
     dbPrinters,
@@ -248,6 +255,16 @@ export default function App() {
     sidebarView,
     authedFetch,
   });
+
+  const kitchenCategoriesJson = settings.kitchen_categories_json;
+  const kitchenCategoriesList = useMemo(
+    () => parseKitchenCategoriesList({ kitchen_categories_json: kitchenCategoriesJson }),
+    [kitchenCategoriesJson]
+  );
+  const defaultKitchenCategoryId = useMemo(
+    () => firstKitchenCategoryId({ kitchen_categories_json: kitchenCategoriesJson }),
+    [kitchenCategoriesJson]
+  );
 
   // ----- DERIVED -----
   // Danh sách số bàn – lấy từ tableList (đã merge DB + settings)
@@ -536,6 +553,7 @@ export default function App() {
     setEditItem,
     setEditFile,
     fetchMenu,
+    defaultKitchenCategoryId,
   });
 
   const { tableMsg, addTable, renameTable, deleteTable } = useTableManagement({
@@ -1090,7 +1108,14 @@ export default function App() {
                 {/* Bento Grid - Menu Items Section */}
                 <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {/* Add New Item Card */}
-                  <div onClick={() => { setManageTab("add"); setEditItem(null); }} className="group relative flex flex-col items-center justify-center p-8 bg-white/50 border-2 border-dashed border-outline-variant rounded-[2rem] hover:border-primary-container hover:bg-orange-50 transition-all cursor-pointer min-h-[280px]">
+                  <div
+                    onClick={() => {
+                      setManageTab("add");
+                      setEditItem(null);
+                      setNewItem((prev) => ({ ...prev, kitchen_category: defaultKitchenCategoryId }));
+                    }}
+                    className="group relative flex flex-col items-center justify-center p-8 bg-white/50 border-2 border-dashed border-outline-variant rounded-[2rem] hover:border-primary-container hover:bg-orange-50 transition-all cursor-pointer min-h-[280px]"
+                  >
                     <div className="w-16 h-16 rounded-full bg-primary text-white shadow-md shadow-orange-500/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-orange-200/50">
                       <span className="material-symbols-outlined text-3xl">add</span>
                     </div>
@@ -1111,7 +1136,7 @@ export default function App() {
                            {m.type === "FOOD" ? tt("Món ăn", "Essen") : m.type === "DRINK" ? tt("Đồ uống", "Getränk") : "Combo"}
                            {m.type !== "DRINK" && (
                              <span className="block text-[10px] font-semibold text-stone-600 mt-0.5">
-                               {KITCHEN_CATEGORY_OPTIONS.find((o) => o.value === effectiveKitchenCategory(m))?.labelVi || "MAIN"}
+                               {kitchenCategoryDisplayLabel(settings, effectiveKitchenCategory(m, settings), language)}
                              </span>
                            )}
                         </div>
@@ -1163,8 +1188,9 @@ export default function App() {
                                  <select value={manageTab === "add" ? newItem.type : editItem.type} 
                                     onChange={e => {
                                       const v = e.target.value;
+                                      const ids = new Set(kitchenCategoriesList.map((c) => c.id));
                                       const validCat = (c) =>
-                                        c === "APPETIZER" || c === "SUSHI" || c === "MAIN" ? c : "MAIN";
+                                        c && ids.has(c) ? c : defaultKitchenCategoryId;
                                       if (manageTab === "add") {
                                         setNewItem({
                                           ...newItem,
@@ -1194,7 +1220,10 @@ export default function App() {
                                 {tt("Nhóm in bếp", "Küchen-Gruppe")}
                               </label>
                               <select
-                                value={manageTab === "add" ? (newItem.kitchen_category || "MAIN") : (editItem.kitchen_category || "MAIN")}
+                                value={effectiveKitchenCategory(
+                                  manageTab === "add" ? newItem : editItem,
+                                  settings
+                                )}
                                 onChange={(e) =>
                                   manageTab === "add"
                                     ? setNewItem({ ...newItem, kitchen_category: e.target.value })
@@ -1202,14 +1231,17 @@ export default function App() {
                                 }
                                 className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all cursor-pointer text-lg appearance-none"
                               >
-                                {KITCHEN_CATEGORY_OPTIONS.map((o) => (
-                                  <option key={o.value} value={o.value}>
-                                    {language === "de" ? o.labelDe : o.labelVi}
+                                {kitchenCategoriesList.map((o) => (
+                                  <option key={o.id} value={o.id}>
+                                    {language === "de" ? o.labelDe || o.labelVi : o.labelVi}
                                   </option>
                                 ))}
                               </select>
                               <p className="text-xs text-on-surface-variant mt-2">
-                                {tt("Tách phiếu bếp: khai vị / sushi / món chính. Đồ uống in phiếu pha chế riêng.", "Druck: Vorspeise / Sushi / Hauptgericht. Getränke separat.")}
+                                {tt(
+                                  "Thứ tự & tên nhóm chỉnh trong Cấu hình Hệ thống → Danh mục bếp. Đồ uống in phiếu pha chế riêng.",
+                                  "Reihenfolge unter Systemeinstellungen → Küchen-Kategorien. Getränke separat."
+                                )}
                               </p>
                             </div>
                           )}
@@ -1372,6 +1404,13 @@ export default function App() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setSettingsPanel("kitchenCats")}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition ${settingsPanel === "kitchenCats" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
+                  >
+                    {tt("Danh mục bếp", "Küchen-Kategorien")}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setSettingsPanel("reportBill")}
                     className={`px-4 py-2 rounded-lg text-sm font-bold transition ${settingsPanel === "reportBill" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
                   >
@@ -1394,6 +1433,16 @@ export default function App() {
                 tt={tt}
                 toggleLanguage={toggleLanguage}
                 language={language}
+              />
+            ) : null}
+
+            {settingsPanel === "kitchenCats" ? (
+              <KitchenCategoriesSettingsSection
+                settings={settings}
+                setSettings={setSettings}
+                mergeAndSaveSettings={mergeAndSaveSettings}
+                settingsSaved={settingsSaved}
+                tt={tt}
               />
             ) : null}
 

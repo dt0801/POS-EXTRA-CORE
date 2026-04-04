@@ -42,30 +42,29 @@ export default function MobileOrderView({
   };
 
   return (
-    <div className="flex flex-col h-full relative bg-surface-container font-body text-on-surface antialiased overflow-hidden">
-      <main className="flex-1 overflow-y-auto pb-32">
-        {/* Category Filter */}
-        {/* Sticky filter offset should match mobile header height */}
-        <section className="sticky top-[60px] z-30 bg-surface-container py-4 shadow-sm">
-          <div className="flex overflow-x-auto hide-scrollbar px-6 gap-3">
-            {menuPosFilters.map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className={`flex-none px-6 py-2.5 rounded-full font-semibold text-sm transition-all active:scale-95 whitespace-nowrap
-                  ${filter === f.key
-                    ? "bg-primary-container text-on-primary-container"
-                    : "bg-surface-container-lowest text-on-surface-variant hover:bg-orange-100/50"
-                  }`}
-              >
-                {menuPosFilterLabel(f, language)}
-              </button>
-            ))}
-          </div>
-        </section>
+    <div className="flex flex-col flex-1 min-h-0 h-full relative bg-surface-container font-body text-on-surface antialiased">
+      {/* Filter cố định phía trên — không sticky trong scroll (tránh chồng lên lưới món khi tổ tiên overflow-hidden) */}
+      <section className="shrink-0 z-20 bg-surface-container border-b border-stone-200/70 dark:border-stone-700/60 py-3 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+        <div className="flex overflow-x-auto hide-scrollbar px-4 gap-2">
+          {menuPosFilters.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              className={`flex-none px-5 py-2 rounded-full font-semibold text-sm transition-all active:scale-95 whitespace-nowrap
+                ${filter === f.key
+                  ? "bg-primary-container text-on-primary-container shadow-sm"
+                  : "bg-surface-container-lowest text-on-surface-variant border border-outline-variant/25"
+                }`}
+            >
+              {menuPosFilterLabel(f, language)}
+            </button>
+          ))}
+        </div>
+      </section>
 
-        {/* Menu Grid */}
-        <section className="px-6 grid grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-32">
+        <section className="px-4 pt-4 grid grid-cols-2 lg:grid-cols-3 gap-3 pb-2">
           {filteredMenu.map(m => {
             const qty = tableOrders[currentTable]?.[m.id]?.qty || 0;
             return (

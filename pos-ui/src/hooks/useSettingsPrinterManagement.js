@@ -17,7 +17,6 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     store_phone: "",
     cashier_name: "",
     total_tables: "20",
-    bill_css_override: "",
     kitchen_categories_json: DEFAULT_KITCHEN_CATEGORIES_JSON,
   });
   const [settingsSaved, setSettingsSaved] = useState(false);

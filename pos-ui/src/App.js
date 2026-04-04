@@ -820,6 +820,7 @@ export default function App() {
         {/* ===== ORDER VIEW ===== */}
         {sidebarView === "order" && (
           isMobile ? (
+            <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden -mx-2">
             <MobileOrderView
               menu={menu}
               filter={filter}
@@ -841,6 +842,7 @@ export default function App() {
               settings={settings}
               menuPosFilters={menuPosFilters}
             />
+            </div>
           ) : (
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 lg:gap-6 lg:-m-6 lg:p-6">
               
@@ -1633,34 +1635,6 @@ export default function App() {
                       ))}
                     </div>
                   </div>
-                </section>
-
-                <section className="bg-surface-container-lowest p-6 md:p-8 rounded-[2rem] border border-outline-variant/30 shadow-sm">
-                  <h4 className="font-bold text-xl font-headline text-on-surface mb-1">
-                    {tt("Bill CSS Override", "Rechnungs-CSS Override")}
-                  </h4>
-                  <p className="text-sm text-on-surface-variant font-medium mb-4">
-                    {tt(
-                      "Tùy chỉnh CSS áp dụng khi in bill (lưu trong cài đặt).",
-                      "CSS für den Rechnungsdruck (in den Einstellungen gespeichert)."
-                    )}
-                  </p>
-                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-2">
-                    {tt("Mã CSS", "CSS-Code")}
-                  </label>
-                  <textarea
-                    className="w-full h-[360px] bg-surface-container border border-outline-variant/40 rounded-xl p-3 font-mono text-xs text-on-surface outline-none"
-                    value={settings.bill_css_override || ""}
-                    onChange={(e) => setSettings((s) => ({ ...s, bill_css_override: e.target.value }))}
-                    placeholder={`/* ${tt("Ví dụ", "Beispiel")}:
-.item-name { font-size: 15px !important; font-weight: 800 !important; }
-.summary { font-size: 16px !important; }
-*/`}
-                  />
-                  <p className="text-xs text-on-surface-variant mt-3">
-                    {tt("Bấm ", "Klicken Sie ")}<strong>{tt("Lưu thay đổi", "Änderungen speichern")}</strong>
-                    {tt(" để áp dụng CSS này cho toàn bộ bill in thật.", ", um dieses CSS auf alle gedruckten Rechnungen anzuwenden.")}
-                  </p>
                 </section>
               </div>
             </div>

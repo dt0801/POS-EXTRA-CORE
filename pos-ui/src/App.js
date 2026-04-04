@@ -25,6 +25,9 @@ import TablesView from "./components/views/TablesView";
 import HistoryView from "./components/views/HistoryView";
 import StatsView from "./components/views/StatsView";
 import MobileOrderView from "./components/views/MobileOrderView";
+import ReportBillSettingsSection from "./components/views/ReportBillSettingsSection";
+import { generateBillHTML } from "./hooks/billHTML";
+import { openBillPrintWindow } from "./utils/openBillPrintWindow";
 
 // =============================================
 // CONSTANTS
@@ -64,6 +67,8 @@ export default function App() {
 
   // ----- SIDEBAR STATE -----
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  /** Trong màn Cài đặt: chung (máy in, CSS…) | reportBill (mẫu in 3 loại) */
+  const [settingsPanel, setSettingsPanel] = useState("general");
 
   // Trạng thái kết nối máy in: null | "online" | "offline"
   const { printerStatus } = usePrinterStatus();
@@ -427,6 +432,10 @@ export default function App() {
   }, [sidebarView, authUser, authValidated, historyDate, fetchBills]);
 
   useEffect(() => {
+    if (sidebarView !== "settings") setSettingsPanel("general");
+  }, [sidebarView]);
+
+  useEffect(() => {
     if (!authUser || !isAdmin || !authValidated) return;
     fetchStatsToday();
   }, [authUser, isAdmin, authValidated, fetchStatsToday]);
@@ -490,7 +499,30 @@ export default function App() {
     total,
     setKitchenSent,
     updateTableStatus,
+    settings,
   });
+
+  const handleReprintBill = useCallback(
+    async (bill) => {
+      try {
+        await callPrintApi(`/print/bill/${bill.id}`, {});
+      } catch {
+        openBillPrintWindow(
+          generateBillHTML({
+            settings,
+            type: "bill",
+            tableNum: bill.table_num,
+            items: bill.items || [],
+            total: bill.total,
+            billId: bill.id,
+            createdAt: bill.created_at,
+            isReprint: true,
+          })
+        );
+      }
+    },
+    [callPrintApi, settings]
+  );
 
   const { addMenu, updateMenu, deleteMenu } = useMenuManagement({
     authedFetch,
@@ -1265,28 +1297,58 @@ export default function App() {
             fetchBillDetail={fetchBillDetail}
             formatMoney={formatMoney}
             callPrintApi={callPrintApi}
+            onReprintBill={handleReprintBill}
             language={language}
           />
         )}
 
         {/* ===== SETTINGS VIEW ===== */}
         {sidebarView === "settings" && (
-          <div className="p-4 md:p-8 space-y-8 overflow-y-auto w-full max-w-7xl mx-auto h-full">
+          <div className="p-4 md:p-8 space-y-8 overflow-y-auto w-full max-w-7xl mx-auto h-full flex flex-col">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
               <div>
                 <h3 className="text-3xl font-extrabold text-on-surface tracking-tight font-headline">{tt("Cấu hình Hệ thống", "Systemeinstellungen")}</h3>
                 <p className="text-on-surface-variant mt-1 font-medium">{tt("Quản lý thông tin cửa hàng, máy in và bảo mật tài khoản.", "Verwalten Sie Shop-Infos, Drucker und Kontosicherheit.")}</p>
               </div>
-              <div className="flex gap-3">
-                 <button onClick={saveAllSettings} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm ${settingsSaved ? "bg-green-500 text-white" : "bg-primary text-white shadow-primary/20 hover:opacity-90 active:scale-95"}`}>
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <div className="flex rounded-xl p-1 bg-surface-container-high border border-outline-variant/30">
+                  <button
+                    type="button"
+                    onClick={() => setSettingsPanel("general")}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition ${settingsPanel === "general" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
+                  >
+                    {tt("Chung & máy in", "Allgemein & Drucker")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSettingsPanel("reportBill")}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition ${settingsPanel === "reportBill" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
+                  >
+                    Report Bill
+                  </button>
+                </div>
+                 <button onClick={saveAllSettings} className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm ${settingsSaved ? "bg-green-500 text-white" : "bg-primary text-white shadow-primary/20 hover:opacity-90 active:scale-95"}`}>
                     <span className="material-symbols-outlined text-[20px]">{settingsSaved ? "check_circle" : "save"}</span>
                     {settingsSaved ? tt("Đã lưu cài đặt", "Einstellungen gespeichert") : tt("Lưu thay đổi", "Änderungen speichern")}
                  </button>
               </div>
             </div>
 
+            {settingsPanel === "reportBill" ? (
+              <ReportBillSettingsSection
+                settings={settings}
+                setSettings={setSettings}
+                saveAllSettings={saveAllSettings}
+                settingsSaved={settingsSaved}
+                tt={tt}
+                toggleLanguage={toggleLanguage}
+                language={language}
+              />
+            ) : null}
+
             {/* Grid Content */}
+            {settingsPanel === "general" && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-8">
               {/* Left Column: Store Info & Security */}
               <div className="lg:col-span-4 space-y-6 flex flex-col">
@@ -1532,6 +1594,7 @@ export default function App() {
                 </section>
               </div>
             </div>
+            )}
           </div>
         )}
 

@@ -10,6 +10,7 @@ export default function HistoryView({
   fetchBillDetail,
   formatMoney,
   callPrintApi,
+  onReprintBill,
   language = "vi",
 }) {
   const tr = (vi, de) => (language === "de" ? de : vi);
@@ -217,6 +218,14 @@ export default function HistoryView({
               <div className="px-6 pt-5 pb-8 mb-safe md:pb-6">
                 <button 
                   onClick={async () => { 
+                    if (typeof onReprintBill === "function") {
+                      try {
+                        await onReprintBill(selectedBill);
+                      } catch (err) {
+                        alert(err.message || tr("Không thể in lại hóa đơn", "Rechnung kann nicht erneut gedruckt werden"));
+                      }
+                      return;
+                    }
                     try { 
                       await callPrintApi(`/print/bill/${selectedBill.id}`, {}); 
                     } catch (err) { 

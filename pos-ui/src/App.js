@@ -94,6 +94,12 @@ export default function App() {
   const [splitModal,    setSplitModal]    = useState(false);
   const [splitTarget,   setSplitTarget]   = useState("");
   const [splitSelected, setSplitSelected] = useState([]);
+  const [customLineModal, setCustomLineModal] = useState(false);
+  const [customLineName, setCustomLineName] = useState("");
+  const [customLinePrice, setCustomLinePrice] = useState("");
+  const [customLineType, setCustomLineType] = useState("FOOD");
+  const [customLineKitchenCat, setCustomLineKitchenCat] = useState("MAIN");
+  const [customLineQty, setCustomLineQty] = useState("1");
   const [users, setUsers] = useState([]);
   const [userLoading, setUserLoading] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -495,13 +501,14 @@ export default function App() {
     });
   };
 
-  const { addItem, updateQty, removeItem, resetTable, transferTable, executeSplit } = useTableActions({
+  const { addItem, addCustomLineItem, updateQty, removeItem, resetTable, transferTable, executeSplit } = useTableActions({
     orderSessionReady,
     currentTable,
     tableStatus,
     currentItems,
     splitTarget,
     splitSelected,
+    defaultKitchenCategoryId,
     setTableOrders,
     setKitchenSent,
     setItemNotes,
@@ -696,6 +703,128 @@ export default function App() {
                 <button onClick={() => setSplitModal(false)}
                   className="px-8 bg-surface-container-highest hover:bg-outline-variant/50 text-on-surface-variant hover:text-on-surface py-4 rounded-2xl font-black text-lg transition-all active:scale-95">
                   {tt("Hủy", "Abbrechen")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL MÓN NGOÀI MENU (không lưu thực đơn) ==================== */}
+      {customLineModal && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest rounded-[2rem] p-6 md:p-8 border border-outline-variant/30 shadow-2xl max-w-md w-full relative">
+            <button
+              type="button"
+              onClick={() => setCustomLineModal(false)}
+              className="absolute top-4 right-4 w-10 h-10 bg-surface-container-high hover:bg-outline-variant/30 text-on-surface flex items-center justify-center rounded-full transition-colors"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+            <h3 className="text-xl font-black font-headline mb-1 text-on-surface flex items-center gap-2 pr-10">
+              <span className="material-symbols-outlined text-primary">post_add</span>
+              {tt("Món ngoài menu", "Außerhalb Speisekarte")}
+            </h3>
+            <p className="text-xs text-on-surface-variant mb-5 leading-relaxed">
+              {tt(
+                "Chỉ thêm vào bill hiện tại — không tạo món trong thực đơn hay database.",
+                "Nur für diese Rechnung — kein Menüeintrag in der Datenbank."
+              )}
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">{tt("Tên món", "Gerichtname")}</label>
+                <input
+                  value={customLineName}
+                  onChange={(e) => setCustomLineName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-semibold outline-none focus:ring-2 focus:ring-primary/25"
+                  placeholder={tt("VD: Phụ thu, món lẻ…", "z.B. Zuschlag…")}
+                  autoFocus
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">{tt("Giá (EUR)", "Preis (EUR)")}</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={customLinePrice}
+                    onChange={(e) => setCustomLinePrice(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-semibold outline-none focus:ring-2 focus:ring-primary/25"
+                    placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">{tt("SL", "Menge")}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={customLineQty}
+                    onChange={(e) => setCustomLineQty(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-semibold outline-none focus:ring-2 focus:ring-primary/25"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">{tt("Loại", "Typ")}</label>
+                <select
+                  value={customLineType}
+                  onChange={(e) => setCustomLineType(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-semibold outline-none focus:ring-2 focus:ring-primary/25"
+                >
+                  <option value="FOOD">{tt("Đồ ăn (bếp)", "Essen (Küche)")}</option>
+                  <option value="DRINK">{tt("Đồ uống (pha chế)", "Getränk (Bar)")}</option>
+                </select>
+              </div>
+              {customLineType === "FOOD" && (
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">{tt("Nhóm in bếp", "Küchen-Gruppe")}</label>
+                  <select
+                    value={customLineKitchenCat}
+                    onChange={(e) => setCustomLineKitchenCat(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-semibold outline-none focus:ring-2 focus:ring-primary/25"
+                  >
+                    {kitchenCategoriesList.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {language === "de" ? o.labelDe || o.labelVi : o.labelVi}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCustomLineModal(false)}
+                  className="flex-1 py-3 rounded-xl font-bold bg-surface-container-highest text-on-surface-variant"
+                >
+                  {tt("Hủy", "Abbrechen")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const euro = parseFloat(String(customLinePrice).replace(",", ".").trim(), 10);
+                    if (!customLineName.trim()) {
+                      alert(tt("Nhập tên món.", "Gerichtname eingeben."));
+                      return;
+                    }
+                    if (!Number.isFinite(euro) || euro < 0) {
+                      alert(tt("Giá không hợp lệ.", "Ungültiger Preis."));
+                      return;
+                    }
+                    addCustomLineItem({
+                      name: customLineName,
+                      priceCents: Math.round(euro * 100),
+                      type: customLineType,
+                      kitchen_category: customLineType === "DRINK" ? "" : customLineKitchenCat,
+                      qty: Math.max(1, Math.min(99, parseInt(customLineQty, 10) || 1)),
+                    });
+                    setCustomLineModal(false);
+                  }}
+                  className="flex-1 py-3 rounded-xl font-bold bg-primary text-white shadow-md"
+                >
+                  {tt("Thêm vào bill", "Zur Rechnung")}
                 </button>
               </div>
             </div>
@@ -949,6 +1078,22 @@ export default function App() {
                       >
                          <span className="material-symbols-outlined text-[20px]">sync_alt</span>
                        </button>
+                       <button
+                         type="button"
+                         onClick={() => {
+                           setCustomLineName("");
+                           setCustomLinePrice("");
+                           setCustomLineType("FOOD");
+                           setCustomLineKitchenCat(defaultKitchenCategoryId);
+                           setCustomLineQty("1");
+                           setCustomLineModal(true);
+                         }}
+                         disabled={!currentTable}
+                         className="w-10 h-10 bg-violet-100 rounded-[1.2rem] flex items-center justify-center text-violet-700 hover:bg-violet-200 transition-all disabled:opacity-50 shadow-sm border border-violet-200/60"
+                         title={tt("Món ngoài menu", "Außerhalb Speisekarte")}
+                       >
+                         <span className="material-symbols-outlined text-[20px]">post_add</span>
+                       </button>
                        <button onClick={() => { setSplitSelected([]); setSplitTarget(""); setSplitModal(true); }} disabled={currentItems.length === 0} className="w-10 h-10 bg-stone-100 rounded-[1.2rem] flex items-center justify-center text-stone-500 hover:bg-stone-200 hover:text-stone-800 transition-all disabled:opacity-50 shadow-sm border border-stone-200" title={tt("Tách bàn", "Tisch aufteilen")}>
                          <span className="material-symbols-outlined text-[20px]">call_split</span>
                        </button>
@@ -981,6 +1126,11 @@ export default function App() {
                           {/* Name + Tag */}
                           <div className="flex-1 min-w-0">
                             <h4 className="font-bold text-stone-900 text-[13px] leading-tight line-clamp-1">{item.name}</h4>
+                            {item.is_custom_line && (
+                              <span className="inline-flex w-fit items-center px-1.5 py-px bg-violet-50 text-[9px] font-bold text-violet-700 rounded mt-0.5">
+                                {tt("Ngoài menu", "Extra")}
+                              </span>
+                            )}
                             {newQty > 0 && (
                               <span className="inline-flex w-fit items-center px-1.5 py-px bg-orange-50 text-[9px] font-bold text-orange-600 rounded mt-0.5">
                                 + {newQty} {tt("món mới", "neu")}
@@ -1854,16 +2004,63 @@ export default function App() {
 
           <div className="flex-1 overflow-hidden flex flex-col">
             <aside className="flex-1 flex flex-col bg-white px-6 pb-0 min-h-0">
-               <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100 shrink-0">
-                 <div className="flex items-center gap-2">
+               <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100 shrink-0 gap-2">
+                 <div className="flex items-center gap-2 min-w-0">
                    <h2 className="font-headline font-black text-xl text-stone-900">{tt("Bàn", "Tisch")} {currentTable || "--"}</h2>
-                   <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">
+                   <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1 truncate">
                      {currentTable ? (
                         tableStatus[currentTable] === "OPEN" ? `ORDER #${new Date().getTime().toString().slice(-4)}` :
                         tableStatus[currentTable] === "PAYING" ? "CHỜ RESET" : "TRỐNG"
                      ) : tt("Chưa chọn bàn", "Kein Tisch gewählt")}
                    </span>
                  </div>
+                 {tableStatus[currentTable] === "OPEN" && (
+                   <div className="flex gap-1.5 shrink-0">
+                     <button
+                       type="button"
+                       onClick={() => {
+                         const raw = window.prompt(tt("Nhập số bàn muốn chuyển tới:", "Ziel-Tischnummer eingeben:"));
+                         const target = Number(raw);
+                         if (!raw) return;
+                         if (!Number.isInteger(target) || target <= 0) {
+                           alert(tt("Số bàn không hợp lệ.", "Ungültige Tischnummer."));
+                           return;
+                         }
+                         transferTable(target);
+                       }}
+                       disabled={currentItems.length === 0}
+                       className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 disabled:opacity-40 active:scale-95 border border-orange-200/50"
+                       title={tt("Chuyển bàn", "Tisch wechseln")}
+                     >
+                       <span className="material-symbols-outlined text-[18px]">sync_alt</span>
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => {
+                         setCustomLineName("");
+                         setCustomLinePrice("");
+                         setCustomLineType("FOOD");
+                         setCustomLineKitchenCat(defaultKitchenCategoryId);
+                         setCustomLineQty("1");
+                         setCustomLineModal(true);
+                       }}
+                       disabled={!currentTable}
+                       className="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center text-violet-700 disabled:opacity-40 active:scale-95 border border-violet-200/60"
+                       title={tt("Món ngoài menu", "Außerhalb Speisekarte")}
+                     >
+                       <span className="material-symbols-outlined text-[18px]">post_add</span>
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => { setSplitSelected([]); setSplitTarget(""); setSplitModal(true); }}
+                       disabled={currentItems.length === 0}
+                       className="w-9 h-9 bg-stone-100 rounded-xl flex items-center justify-center text-stone-600 disabled:opacity-40 active:scale-95 border border-stone-200"
+                       title={tt("Tách bàn", "Tisch aufteilen")}
+                     >
+                       <span className="material-symbols-outlined text-[18px]">call_split</span>
+                     </button>
+                   </div>
+                 )}
                </div>
 
                   <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar mb-4 pr-1 relative">
@@ -1887,6 +2084,11 @@ export default function App() {
                         
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-stone-900 text-sm leading-tight line-clamp-1">{item.name}</h4>
+                          {item.is_custom_line && (
+                            <span className="inline-flex items-center px-1.5 py-px bg-violet-50 text-[9px] font-bold text-violet-700 rounded mt-0.5">
+                              {tt("Ngoài menu", "Extra")}
+                            </span>
+                          )}
                           {newQty > 0 && <span className="inline-flex items-center px-1.5 py-px bg-orange-50 text-[9px] font-bold text-orange-600 rounded mt-0.5">+ {newQty} {tt("món mới", "neu")}</span>}
                         </div>
                         

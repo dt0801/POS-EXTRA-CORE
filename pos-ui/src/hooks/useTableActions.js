@@ -7,6 +7,7 @@ export default function useTableActions({
   currentItems,
   splitTarget,
   splitSelected,
+  defaultKitchenCategoryId = "MAIN",
   setTableOrders,
   setKitchenSent,
   setItemNotes,
@@ -37,6 +38,52 @@ export default function useTableActions({
       updateTableStatus(currentTable, "OPEN");
     }
   }, [currentTable, orderSessionReady, setTableOrders, tableStatus, updateTableStatus]);
+
+  /** Một dòng món không có trong menu — chỉ tồn tại trên đơn / bill, không POST menu. */
+  const addCustomLineItem = useCallback(
+    ({ name, priceCents, type = "FOOD", kitchen_category, qty = 1 }) => {
+      if (!orderSessionReady) return alert("Dang tai du lieu don, thu lai sau vai giay.");
+      if (!currentTable) return alert("Vui long chon ban truoc!");
+      const trimmed = String(name || "").trim();
+      if (!trimmed) return alert("Vui long nhap ten mon.");
+      const cents = Math.round(Number(priceCents) || 0);
+      if (!Number.isFinite(cents) || cents < 0) return alert("Gia khong hop le.");
+      const q = Math.max(1, Math.min(99, Math.round(Number(qty) || 1)));
+      const id = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      const isDrink = type === "DRINK";
+      const cat = isDrink ? "" : kitchen_category || defaultKitchenCategoryId || "MAIN";
+      const item = {
+        id,
+        name: trimmed,
+        price: cents,
+        type: isDrink ? "DRINK" : "FOOD",
+        kitchen_category: cat,
+        image: "",
+        is_custom_line: true,
+      };
+      setTableOrders((prev) => {
+        const table = prev[currentTable] || {};
+        return {
+          ...prev,
+          [currentTable]: {
+            ...table,
+            [id]: { ...item, qty: q },
+          },
+        };
+      });
+      if (!tableStatus[currentTable] || tableStatus[currentTable] === "PAID") {
+        updateTableStatus(currentTable, "OPEN");
+      }
+    },
+    [
+      currentTable,
+      defaultKitchenCategoryId,
+      orderSessionReady,
+      setTableOrders,
+      tableStatus,
+      updateTableStatus,
+    ]
+  );
 
   const updateQty = useCallback((itemId, action) => {
     if (!orderSessionReady) return;
@@ -173,6 +220,7 @@ export default function useTableActions({
 
   return {
     addItem,
+    addCustomLineItem,
     updateQty,
     removeItem,
     resetTable,

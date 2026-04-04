@@ -273,7 +273,12 @@ export default function ReportBillSettingsSection({
           }}
         >
           <div className="shadow-2xl rounded-sm overflow-hidden" style={{ maxWidth: 320, width: "100%" }}>
-            <BillPreview settings={settings} billType={billType} titleHint={`${reportBillCfg.font_size}px · ${reportBillCfg.font_style}`} />
+            <BillPreview
+              settings={settings}
+              billType={billType}
+              language={language}
+              titleHint={`${reportBillCfg.font_size}px · ${reportBillCfg.font_style}`}
+            />
           </div>
         </div>
       </div>

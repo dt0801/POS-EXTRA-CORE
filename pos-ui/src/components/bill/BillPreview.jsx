@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { generateBillHTML } from "../../hooks/billHTML";
+import { parseKitchenCategoriesList } from "../../constants/kitchenCategories";
 
 export const PREVIEW_TABLE_NUM = 5;
 
@@ -10,6 +11,7 @@ export const SAMPLE_ITEMS_BILL = [
   { name: "Nước ngọt lon", qty: 3, price: 150 },
 ];
 
+/** Mẫu cố định (legacy); preview phiếu bếp dùng buildKitchenPreviewSampleItems theo settings. */
 export const SAMPLE_ITEMS_KITCHEN = [
   { name: "Salad trứng", qty: 1, note: "", kitchen_category: "APPETIZER", type: "FOOD" },
   { name: "California roll", qty: 2, note: "Không wasabi", kitchen_category: "SUSHI", type: "FOOD" },
@@ -18,14 +20,29 @@ export const SAMPLE_ITEMS_KITCHEN = [
 
 export const SAMPLE_TOTAL_BILL = SAMPLE_ITEMS_BILL.reduce((s, i) => s + i.price * i.qty, 0);
 
-export default function BillPreview({ settings, billType, titleHint }) {
+/**
+ * Một dòng mẫu / nhóm — đúng thứ tự & id như Danh mục bếp trong settings (kể cả danh mục mới tạo).
+ */
+export function buildKitchenPreviewSampleItems(settings, language = "vi") {
+  const list = parseKitchenCategoriesList(settings);
+  const note = language === "de" ? "(Vorschau)" : "(mẫu preview)";
+  return list.map((row) => ({
+    name: language === "de" ? row.labelDe || row.labelVi || row.id : row.labelVi || row.id,
+    qty: 1,
+    note,
+    kitchen_category: row.id,
+    type: "FOOD",
+  }));
+}
+
+export default function BillPreview({ settings, billType, titleHint, language = "vi" }) {
   const html = useMemo(() => {
     if (billType === "kitchen") {
       return generateBillHTML({
         settings,
         type: "kitchen",
         tableNum: PREVIEW_TABLE_NUM,
-        items: SAMPLE_ITEMS_KITCHEN,
+        items: buildKitchenPreviewSampleItems(settings, language),
         total: 0,
       });
     }
@@ -45,7 +62,7 @@ export default function BillPreview({ settings, billType, titleHint }) {
       items: SAMPLE_ITEMS_BILL,
       total: SAMPLE_TOTAL_BILL,
     });
-  }, [settings, billType]);
+  }, [settings, billType, language]);
 
   return (
     <div className="w-full overflow-auto rounded-b-lg bg-white" style={{ maxHeight: "min(65vh, 560px)" }}>

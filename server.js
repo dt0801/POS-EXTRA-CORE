@@ -685,16 +685,24 @@ function startServer() {
       const docs = await mongoDb
         .collection("menu")
         .find({})
-        .project({ sqlite_id: 1, name: 1, price: 1, type: 1, image: 1 })
+        .project({ sqlite_id: 1, name: 1, price: 1, type: 1, image: 1, kitchen_category: 1 })
         .sort({ sqlite_id: 1 })
         .toArray();
-      const payload = docs.map((d) => ({
-        id: Number(d.sqlite_id ?? d.id ?? 0),
-        name: d.name || "",
-        price: Number(d.price || 0),
-        type: d.type || "FOOD",
-        image: d.image || "",
-      }));
+      const payload = docs.map((d) => {
+        const type = d.type || "FOOD";
+        const kitchen =
+          type === "DRINK"
+            ? d.kitchen_category || ""
+            : d.kitchen_category || "MAIN";
+        return {
+          id: Number(d.sqlite_id ?? d.id ?? 0),
+          name: d.name || "",
+          price: Number(d.price || 0),
+          type,
+          image: d.image || "",
+          kitchen_category: kitchen,
+        };
+      });
       menuListCache = payload;
       menuListCacheAt = now;
       res.set("Cache-Control", "private, max-age=60");
@@ -706,7 +714,7 @@ function startServer() {
 
   // Thêm món mới
   app.post("/menu", authMiddleware, requireRole("admin"), menuUpload.single("image"), async (req, res) => {
-    const { name, price, type } = req.body;
+    const { name, price, type, kitchen_category } = req.body;
     try {
       let imageValue = "";
       if (req.file?.buffer) {
@@ -719,12 +727,19 @@ function startServer() {
         }
       }
       const nextId = await getNextMongoId("menu");
+      const itemType = type || "FOOD";
       const doc = {
         sqlite_id: nextId,
         name: name || "",
         price: Number(price || 0),
-        type: type || "FOOD",
+        type: itemType,
       };
+      if (itemType !== "DRINK") {
+        const k = String(kitchen_category || "MAIN")
+          .trim()
+          .slice(0, 64);
+        doc.kitchen_category = k || "MAIN";
+      }
       if (imageValue) doc.image = imageValue;
       await mongoDb.collection("menu").insertOne(doc);
       invalidateMenuListCache();
@@ -744,7 +759,7 @@ function startServer() {
 
   // Cập nhật món
   app.put("/menu/:id", authMiddleware, requireRole("admin"), menuUpload.single("image"), async (req, res) => {
-    const { name, price, type } = req.body;
+    const { name, price, type, kitchen_category } = req.body;
     const { id } = req.params;
     try {
       let imageValue = "";
@@ -757,15 +772,25 @@ function startServer() {
           });
         }
       }
+      const itemType = type || "FOOD";
       const patch = {
         name: name || "",
         price: Number(price || 0),
-        type: type || "FOOD",
+        type: itemType,
       };
       if (imageValue) patch.image = imageValue;
+      const updateOps = { $set: patch };
+      if (itemType === "DRINK") {
+        updateOps.$unset = { kitchen_category: "" };
+      } else {
+        const k = String(kitchen_category || "MAIN")
+          .trim()
+          .slice(0, 64);
+        patch.kitchen_category = k || "MAIN";
+      }
       const result = await mongoDb.collection("menu").updateOne(
         { sqlite_id: Number(id) },
-        { $set: patch }
+        updateOps
       );
       if (result.matchedCount === 0) return res.status(404).json({ error: "Không tìm thấy món" });
       invalidateMenuListCache();

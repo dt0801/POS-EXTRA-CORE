@@ -11,9 +11,9 @@ export const SAMPLE_ITEMS_BILL = [
 ];
 
 export const SAMPLE_ITEMS_KITCHEN = [
-  { name: "Gà nướng muối ớt", qty: 2, note: "Ít cay" },
-  { name: "Bò lúc lắc tỏi đen", qty: 1, note: "" },
-  { name: "Nước ngọt lon", qty: 3, note: "" },
+  { name: "Salad trứng", qty: 1, note: "", kitchen_category: "APPETIZER", type: "FOOD" },
+  { name: "California roll", qty: 2, note: "Không wasabi", kitchen_category: "SUSHI", type: "FOOD" },
+  { name: "Gà nướng muối ớt", qty: 1, note: "Ít cay", kitchen_category: "MAIN", type: "FOOD" },
 ];
 
 export const SAMPLE_TOTAL_BILL = SAMPLE_ITEMS_BILL.reduce((s, i) => s + i.price * i.qty, 0);

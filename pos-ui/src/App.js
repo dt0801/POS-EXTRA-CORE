@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import "./App.css";
 import { FILTERS } from "./constants/filters";
+import { KITCHEN_CATEGORY_OPTIONS, effectiveKitchenCategory } from "./constants/kitchenCategories";
 import { API_URL, isLocalQuayOrigin } from "./config/api";
 import { isPosElectron } from "./services/electronPrint";
 import {
@@ -202,7 +203,7 @@ export default function App() {
 
   // ----- MANAGE STATE -----
   const [manageTab, setManageTab]   = useState("edit");
-  const [newItem, setNewItem]       = useState({ name: "", price: "", type: "FOOD" });
+  const [newItem, setNewItem]       = useState({ name: "", price: "", type: "FOOD", kitchen_category: "MAIN" });
   const [file, setFile]             = useState(null);
   const [editItem, setEditItem]     = useState(null);
   const [editFile, setEditFile]     = useState(null);
@@ -1106,8 +1107,13 @@ export default function App() {
                         ) : (
                            <div className="w-full h-full flex items-center justify-center text-on-surface-variant"><span className="material-symbols-outlined text-4xl opacity-50">restaurant</span></div>
                         )}
-                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-orange-700 shadow-sm">
+                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-orange-700 shadow-sm text-right max-w-[70%]">
                            {m.type === "FOOD" ? tt("Món ăn", "Essen") : m.type === "DRINK" ? tt("Đồ uống", "Getränk") : "Combo"}
+                           {m.type !== "DRINK" && (
+                             <span className="block text-[10px] font-semibold text-stone-600 mt-0.5">
+                               {KITCHEN_CATEGORY_OPTIONS.find((o) => o.value === effectiveKitchenCategory(m))?.labelVi || "MAIN"}
+                             </span>
+                           )}
                         </div>
                       </div>
                       <div className="p-5 flex-1 flex flex-col">
@@ -1155,7 +1161,26 @@ export default function App() {
                               <div>
                                  <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Loại", "Typ")}</label>
                                  <select value={manageTab === "add" ? newItem.type : editItem.type} 
-                                    onChange={e => manageTab === "add" ? setNewItem({...newItem, type: e.target.value}) : setEditItem({...editItem, type: e.target.value})}
+                                    onChange={e => {
+                                      const v = e.target.value;
+                                      const validCat = (c) =>
+                                        c === "APPETIZER" || c === "SUSHI" || c === "MAIN" ? c : "MAIN";
+                                      if (manageTab === "add") {
+                                        setNewItem({
+                                          ...newItem,
+                                          type: v,
+                                          kitchen_category:
+                                            v === "DRINK" ? newItem.kitchen_category : validCat(newItem.kitchen_category),
+                                        });
+                                      } else {
+                                        setEditItem({
+                                          ...editItem,
+                                          type: v,
+                                          kitchen_category:
+                                            v === "DRINK" ? editItem.kitchen_category : validCat(editItem.kitchen_category),
+                                        });
+                                      }
+                                    }}
                                     className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all cursor-pointer text-lg appearance-none">
                                    <option value="FOOD">{tt("Đồ ăn", "Essen")}</option>
                                     <option value="DRINK">{tt("Đồ uống", "Getränk")}</option>
@@ -1163,6 +1188,31 @@ export default function App() {
                                  </select>
                               </div>
                           </div>
+                          {(manageTab === "add" ? newItem.type : editItem.type) !== "DRINK" && (
+                            <div>
+                              <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">
+                                {tt("Nhóm in bếp", "Küchen-Gruppe")}
+                              </label>
+                              <select
+                                value={manageTab === "add" ? (newItem.kitchen_category || "MAIN") : (editItem.kitchen_category || "MAIN")}
+                                onChange={(e) =>
+                                  manageTab === "add"
+                                    ? setNewItem({ ...newItem, kitchen_category: e.target.value })
+                                    : setEditItem({ ...editItem, kitchen_category: e.target.value })
+                                }
+                                className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all cursor-pointer text-lg appearance-none"
+                              >
+                                {KITCHEN_CATEGORY_OPTIONS.map((o) => (
+                                  <option key={o.value} value={o.value}>
+                                    {language === "de" ? o.labelDe : o.labelVi}
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="text-xs text-on-surface-variant mt-2">
+                                {tt("Tách phiếu bếp: khai vị / sushi / món chính. Đồ uống in phiếu pha chế riêng.", "Druck: Vorspeise / Sushi / Hauptgericht. Getränke separat.")}
+                              </p>
+                            </div>
+                          )}
                           <div>
                              <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Ảnh đại diện", "Titelbild")}</label>
                              <div className="flex items-center gap-4">

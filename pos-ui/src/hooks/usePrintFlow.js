@@ -68,6 +68,8 @@ export default function usePrintFlow({
           name: i.name,
           qty: i.qty,
           note: i.note || "",
+          type: i.type || "FOOD",
+          kitchen_category: i.kitchen_category,
         }));
         openBillPrintWindow(
           generateBillHTML({

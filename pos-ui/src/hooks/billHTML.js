@@ -1,6 +1,11 @@
 // Generate HTML bill / tạm tính / phiếu bếp — dùng chung preview & in trình duyệt
 // Prefix settings: bill_ | tamtinh_ | kitchen_
 import { formatMoney } from "../utils/posHelpers";
+import {
+  KITCHEN_PRINT_ORDER,
+  effectiveKitchenCategory,
+  kitchenSectionLabelVi,
+} from "../constants/kitchenCategories";
 
 export const BILL_TYPE_PREFIX = { bill: "bill_", tamtinh: "tamtinh_", kitchen: "kitchen_" };
 
@@ -88,14 +93,9 @@ export function generateBillHTML({
   let bodyHTML = "";
 
   if (type === "kitchen") {
-    bodyHTML = `
-      <div class="center bold" style="font-size:${fs + 3}px;margin-bottom:4px">KITCHEN</div>
-      <div class="center sub" style="margin-bottom:8px">Bàn <b>${esc(tableNum)}</b> | ${esc(timeStr)}</div>
-      <div class="hr"></div>
-      ${items
-        .map((i) => {
-          const note = i.note ? esc(i.note) : "";
-          return `
+    const rowHtml = (i) => {
+      const note = i.note ? esc(i.note) : "";
+      return `
         <div style="margin-bottom:6px">
           <div class="row" style="font-size:${fs + 1}px">
             <span>${esc(i.name)}</span>
@@ -103,8 +103,32 @@ export function generateBillHTML({
           </div>
           ${note ? `<div style="font-size:${Math.max(9, fs - 2)}px;color:#c00;margin-left:12px">${note}</div>` : ""}
         </div>`;
-        })
-        .join("")}
+    };
+    const sections = [];
+    let secIdx = 0;
+    for (const cat of KITCHEN_PRINT_ORDER) {
+      const list = items.filter((i) => effectiveKitchenCategory(i) === cat);
+      if (!list.length) continue;
+      const sep =
+        secIdx === 0
+          ? `margin:4px 0 4px;font-size:${Math.max(11, fs)}px`
+          : `margin:10px 0 4px;font-size:${Math.max(11, fs)}px;border-top:1px dashed #ccc;padding-top:6px`;
+      secIdx += 1;
+      sections.push(
+        `<div class="center bold sub" style="${sep}">${esc(kitchenSectionLabelVi(cat))}</div>${list.map(rowHtml).join("")}`
+      );
+    }
+    const uncategorized = items.filter(
+      (i) => !KITCHEN_PRINT_ORDER.includes(effectiveKitchenCategory(i))
+    );
+    if (uncategorized.length) {
+      sections.push(uncategorized.map(rowHtml).join(""));
+    }
+    bodyHTML = `
+      <div class="center bold" style="font-size:${fs + 3}px;margin-bottom:4px">PHIẾU BẾP</div>
+      <div class="center sub" style="margin-bottom:8px">Bàn <b>${esc(tableNum)}</b> | ${esc(timeStr)}</div>
+      <div class="hr"></div>
+      ${sections.join("")}
       <div class="hr"></div>
       ${cfg.footer ? `<div class="center sub" style="font-style:italic;white-space:pre-wrap">${esc(cfg.footer)}</div>` : ""}
     `;

@@ -18,12 +18,15 @@ export default function useMenuManagement({
     formData.append("name", newItem.name);
     formData.append("price", newItem.price);
     formData.append("type", newItem.type);
+    if (newItem.type !== "DRINK") {
+      formData.append("kitchen_category", newItem.kitchen_category || "MAIN");
+    }
     if (file) formData.append("image", file);
     await authedFetch(`${API_URL}/menu`, { method: "POST", body: formData });
-    setNewItem({ name: "", price: "", type: "FOOD" });
+    setNewItem({ name: "", price: "", type: "FOOD", kitchen_category: "MAIN" });
     setFile(null);
     fetchMenu();
-  }, [authedFetch, fetchMenu, file, newItem.name, newItem.price, newItem.type, setFile, setNewItem]);
+  }, [authedFetch, fetchMenu, file, newItem.kitchen_category, newItem.name, newItem.price, newItem.type, setFile, setNewItem]);
 
   const updateMenu = useCallback(async () => {
     if (!editItem) return;
@@ -31,12 +34,15 @@ export default function useMenuManagement({
     formData.append("name", editItem.name);
     formData.append("price", editItem.price);
     formData.append("type", editItem.type);
+    if (editItem.type !== "DRINK") {
+      formData.append("kitchen_category", editItem.kitchen_category || "MAIN");
+    }
     if (editFile) formData.append("image", editFile);
     await authedFetch(`${API_URL}/menu/${editItem.id}`, { method: "PUT", body: formData });
     setEditItem(null);
     setEditFile(null);
     fetchMenu();
-  }, [authedFetch, editFile, editItem, fetchMenu, setEditFile, setEditItem]);
+  }, [authedFetch, editFile, editItem, editItem?.kitchen_category, editItem?.type, fetchMenu, setEditFile, setEditItem]);
 
   const deleteMenu = useCallback(async (id) => {
     if (!window.confirm("Xóa món này?")) return;

@@ -1401,7 +1401,7 @@ export default function App() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
               <div>
                 <h3 className="text-3xl font-extrabold text-on-surface tracking-tight font-headline">{tt("Cấu hình Hệ thống", "Systemeinstellungen")}</h3>
-                <p className="text-on-surface-variant mt-1 font-medium">{tt("Quản lý thông tin cửa hàng, máy in và bảo mật tài khoản.", "Verwalten Sie Shop-Infos, Drucker und Kontosicherheit.")}</p>
+                <p className="text-on-surface-variant mt-1 font-medium">{tt("Máy in, số bàn, danh mục bếp, mẫu in bill. Thông tin cửa hàng trên bill: tab Report Bill.", "Drucker, Tische, Küchen-Kategorien, Belegvorlagen. Shopdaten auf dem Beleg: Report Bill.")}</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                 <div className="flex rounded-xl p-1 bg-surface-container-high border border-outline-variant/30">
@@ -1461,38 +1461,29 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-8">
               {/* Left Column: Store Info & Security */}
               <div className="lg:col-span-4 space-y-6 flex flex-col">
-                {/* 1. Thông tin quán */}
-                <section className="bg-surface-container-lowest p-6 rounded-[2rem] space-y-6 border border-outline-variant/30 shadow-sm flex-1">
+                <section className="bg-surface-container-lowest p-6 rounded-[2rem] space-y-4 border border-outline-variant/30 shadow-sm shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-secondary-container/20 text-secondary rounded-xl flex items-center justify-center">
-                      <span className="material-symbols-outlined">store</span>
+                      <span className="material-symbols-outlined">table_restaurant</span>
                     </div>
-                    <h4 className="font-bold text-lg font-headline text-on-surface">{tt("Thông tin quán", "Ladeninformationen")}</h4>
+                    <h4 className="font-bold text-lg font-headline text-on-surface">{tt("Số bàn tối đa", "Maximale Tische")}</h4>
                   </div>
-                  
-                  <div className="space-y-4">
-                    {[
-                      { label: tt("Tên cửa hàng", "Shopname"), key: "store_name", icon: "storefront", placeholder: tt("VD: Tiệm Nướng Đà Lạt Và Em", "z.B. Dalat Grill & You") },
-                      { label: tt("Địa chỉ", "Adresse"), key: "store_address", icon: "location_on", placeholder: tt("Nhập địa chỉ...", "Adresse eingeben...") },
-                      { label: "Hotline", key: "store_phone", icon: "call", placeholder: tt("VD: 0988 123 456", "z.B. 0988 123 456") }
-                    ].map(({ label, key, icon, placeholder }) => (
-                      <div key={key} className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{label}</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">{icon}</span>
-                          <input className="w-full bg-surface-container border-none rounded-xl pl-11 pr-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none" type="text" 
-                             value={settings[key] || ""} onChange={e => setSettings(s => ({ ...s, [key]: e.target.value }))} placeholder={placeholder} />
-                        </div>
-                      </div>
-                    ))}
-                    <div className="space-y-1.5">
-                       <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Số bàn tối đa", "Maximale Tische")}</label>
-                       <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">table_restaurant</span>
-                          <input className="w-full bg-surface-container border-none rounded-xl pl-11 pr-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none" type="number" min="1" max="100"
-                             value={settings.total_tables || "20"} onChange={e => setSettings(s => ({ ...s, total_tables: e.target.value }))} />
-                       </div>
-                    </div>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    {tt(
+                      "Tên cửa hàng, địa chỉ, hotline: chỉnh trong tab Report Bill → Thông tin cửa hàng (chung).",
+                      "Shopname, Adresse, Hotline: unter Report Bill → gemeinsame Shop-Daten."
+                    )}
+                  </p>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">numbers</span>
+                    <input
+                      className="w-full bg-surface-container border-none rounded-xl pl-11 pr-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={settings.total_tables || "20"}
+                      onChange={(e) => setSettings((s) => ({ ...s, total_tables: e.target.value }))}
+                    />
                   </div>
                 </section>
 

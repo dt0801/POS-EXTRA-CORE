@@ -245,11 +245,6 @@ export default function App() {
     addDbPrinter,
     updateDbPrinter,
     deleteDbPrinter,
-    settingsPreviewHtml,
-    settingsPreviewPaper,
-    setSettingsPreviewPaper,
-    settingsPreviewLoading,
-    refreshSettingsBillPreview,
   } = useSettingsPrinterManagement({
     authUser,
     authValidated,
@@ -1641,68 +1636,31 @@ export default function App() {
                 </section>
 
                 <section className="bg-surface-container-lowest p-6 md:p-8 rounded-[2rem] border border-outline-variant/30 shadow-sm">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-                    <div>
-                      <h4 className="font-bold text-xl font-headline text-on-surface">{tt("Live Preview Bill", "Live-Rechnungsvorschau")}</h4>
-                      <p className="text-sm text-on-surface-variant font-medium mt-0.5">{tt("Chỉnh CSS bill và xem ngay bản in thực tế.", "Rechnungs-CSS anpassen und Live-Vorschau sehen.")}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <select
-                        className="bg-surface-container-high border border-outline-variant/40 rounded-xl px-3 py-2 text-sm font-semibold"
-                        value={settingsPreviewPaper}
-                        onChange={(e) => setSettingsPreviewPaper(Number(e.target.value))}
-                      >
-                        <option value={58}>{tt("Khổ 58mm", "58mm Papier")}</option>
-                        <option value={80}>{tt("Khổ 80mm", "80mm Papier")}</option>
-                      </select>
-                      <button
-                        onClick={refreshSettingsBillPreview}
-                        className="flex items-center gap-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors px-4 py-2 rounded-xl text-sm font-bold text-on-surface"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">refresh</span>
-                        {tt("Làm mới preview", "Vorschau aktualisieren")}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                        {tt("Bill CSS Override (lưu trong cài đặt)", "Rechnungs-CSS Override (in Einstellungen gespeichert)")}
-                      </label>
-                      <textarea
-                        className="w-full h-[360px] bg-surface-container border border-outline-variant/40 rounded-xl p-3 font-mono text-xs text-on-surface outline-none"
-                        value={settings.bill_css_override || ""}
-                        onChange={(e) => setSettings((s) => ({ ...s, bill_css_override: e.target.value }))}
-                        placeholder={`/* ${tt("Ví dụ", "Beispiel")}:
+                  <h4 className="font-bold text-xl font-headline text-on-surface mb-1">
+                    {tt("Bill CSS Override", "Rechnungs-CSS Override")}
+                  </h4>
+                  <p className="text-sm text-on-surface-variant font-medium mb-4">
+                    {tt(
+                      "Tùy chỉnh CSS áp dụng khi in bill (lưu trong cài đặt).",
+                      "CSS für den Rechnungsdruck (in den Einstellungen gespeichert)."
+                    )}
+                  </p>
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-2">
+                    {tt("Mã CSS", "CSS-Code")}
+                  </label>
+                  <textarea
+                    className="w-full h-[360px] bg-surface-container border border-outline-variant/40 rounded-xl p-3 font-mono text-xs text-on-surface outline-none"
+                    value={settings.bill_css_override || ""}
+                    onChange={(e) => setSettings((s) => ({ ...s, bill_css_override: e.target.value }))}
+                    placeholder={`/* ${tt("Ví dụ", "Beispiel")}:
 .item-name { font-size: 15px !important; font-weight: 800 !important; }
 .summary { font-size: 16px !important; }
 */`}
-                      />
-                      <p className="text-xs text-on-surface-variant">
-                        {tt("Bấm ", "Klicken Sie ")}<strong>{tt("Lưu thay đổi", "Änderungen speichern")}</strong>{tt(" để áp dụng CSS này cho toàn bộ bill in thật.", ", um dieses CSS auf alle gedruckten Rechnungen anzuwenden.")}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                        {tt("Preview theo template in thật", "Vorschau nach echtem Druck-Template")}
-                      </label>
-                      <div className="bg-surface-container rounded-xl border border-outline-variant/40 p-3 h-[360px]">
-                        {settingsPreviewLoading ? (
-                          <div className="h-full flex items-center justify-center text-on-surface-variant font-medium">
-                            {tt("Đang render preview...", "Vorschau wird gerendert...")}
-                          </div>
-                        ) : (
-                          <iframe
-                            title="settings-bill-preview"
-                            className="w-full h-full bg-white rounded-lg"
-                            srcDoc={settingsPreviewHtml}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  />
+                  <p className="text-xs text-on-surface-variant mt-3">
+                    {tt("Bấm ", "Klicken Sie ")}<strong>{tt("Lưu thay đổi", "Änderungen speichern")}</strong>
+                    {tt(" để áp dụng CSS này cho toàn bộ bill in thật.", ", um dieses CSS auf alle gedruckten Rechnungen anzuwenden.")}
+                  </p>
                 </section>
               </div>
             </div>

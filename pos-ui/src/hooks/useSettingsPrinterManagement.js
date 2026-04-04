@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API_URL } from "../config/api";
 import { fetchSettings, saveAllSettings as saveAllSettingsRequest } from "../services/settingsService";
 import { DEFAULT_KITCHEN_CATEGORIES_JSON } from "../constants/kitchenCategories";
@@ -26,10 +26,6 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
   const [dbPrinters, setDbPrinters] = useState([]);
   const [newPrinter, setNewPrinter] = useState({ name: "", type: "ALL", paper_size: 80, is_enabled: 1 });
   const [loadingDbPrinters, setLoadingDbPrinters] = useState(false);
-
-  const [settingsPreviewHtml, setSettingsPreviewHtml] = useState("");
-  const [settingsPreviewPaper, setSettingsPreviewPaper] = useState(80);
-  const [settingsPreviewLoading, setSettingsPreviewLoading] = useState(false);
 
   useEffect(() => {
     if (!authUser || !authValidated) return;
@@ -114,52 +110,6 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     }
   }, [sidebarView, authUser, authValidated, fetchDbPrinters, fetchWindowsPrinters]);
 
-  const buildSettingsPreviewPayload = useMemo(() => (() => ({
-    title: (settings.store_name || "TIỆM NƯỚNG ĐÀ LẠT VÀ EM").toUpperCase(),
-    subtitle: `${settings.store_address || "Địa chỉ"} - Hotline ${settings.store_phone || "0000 000 000"}`,
-    tableNum: "12",
-    billNo: "9999",
-    timeLabel: "Ngày",
-    timeValue: new Date().toLocaleString("vi-VN"),
-    items: [
-      { name: "Combo Nọng Tây Đầu", qty: 1, price: 359, note: "Không hành" },
-      { name: "Coca Cola", qty: 2, price: 25, note: "" },
-      { name: "Khoai Tây Lắc Phô Mai", qty: 1, price: 79, note: "" },
-    ],
-    totalLabel: "THÀNH TIỀN",
-    totalValue: 488,
-    cashier: settings.cashier_name || "Nhân viên",
-    footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
-  })), [settings.store_name, settings.store_address, settings.store_phone, settings.cashier_name]);
-
-  const refreshSettingsBillPreview = useCallback(async () => {
-    if (sidebarView !== "settings") return;
-    setSettingsPreviewLoading(true);
-    try {
-      const res = await authedFetch(`${API_URL}/print/preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          receipt: buildSettingsPreviewPayload(),
-          paper_size: settingsPreviewPaper,
-          css_override: settings.bill_css_override || "",
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không tạo được preview");
-      setSettingsPreviewHtml(data.html || "");
-    } catch (err) {
-      console.error(err);
-    }
-    setSettingsPreviewLoading(false);
-  }, [authedFetch, buildSettingsPreviewPayload, settings.bill_css_override, settingsPreviewPaper, sidebarView]);
-
-  useEffect(() => {
-    if (sidebarView !== "settings" || !authUser || !authValidated) return;
-    const t = setTimeout(() => refreshSettingsBillPreview(), 200);
-    return () => clearTimeout(t);
-  }, [sidebarView, authUser, authValidated, settings.bill_css_override, settingsPreviewPaper, settings.store_name, settings.store_address, settings.store_phone, refreshSettingsBillPreview]);
-
   return {
     settings,
     setSettings,
@@ -175,10 +125,5 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     addDbPrinter,
     updateDbPrinter,
     deleteDbPrinter,
-    settingsPreviewHtml,
-    settingsPreviewPaper,
-    setSettingsPreviewPaper,
-    settingsPreviewLoading,
-    refreshSettingsBillPreview,
   };
 }

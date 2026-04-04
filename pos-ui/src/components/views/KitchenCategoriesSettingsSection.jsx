@@ -211,15 +211,6 @@ export default function KitchenCategoriesSettingsSection({
         </div>
       </div>
 
-      <details className="bg-surface-container-low rounded-2xl border border-outline-variant/30 p-4">
-        <summary className="font-bold cursor-pointer text-on-surface">{tt("JSON thô (nâng cao)", "JSON (fortg.)")}</summary>
-        <textarea
-          className="w-full mt-3 h-40 font-mono text-xs p-3 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface"
-          value={jsonText}
-          onChange={(e) => setJsonText(e.target.value)}
-        />
-      </details>
-
       <button
         type="button"
         onClick={applyToSettingsAndSave}

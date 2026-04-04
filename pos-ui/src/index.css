@@ -4,8 +4,15 @@
 
 /* ===== POS DASHBOARD ===== */
 
+/* Mobile: hạn chế pinch/double-tap zoom (kèm viewport user-scalable=no) */
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
 body{
  background:#0f172a;
+ touch-action: manipulation;
 }
 
 button{

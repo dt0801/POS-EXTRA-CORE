@@ -43,7 +43,7 @@ export default function useMenuManagement({
     setEditItem(null);
     setEditFile(null);
     fetchMenu();
-  }, [authedFetch, editFile, editItem, editItem?.kitchen_category, editItem?.type, fetchMenu, setEditFile, setEditItem]);
+  }, [authedFetch, editFile, editItem, fetchMenu, setEditFile, setEditItem]);
 
   const deleteMenu = useCallback(async (id) => {
     if (!window.confirm("Xóa món này?")) return;

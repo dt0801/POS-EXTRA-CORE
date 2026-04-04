@@ -14,26 +14,28 @@ export default function useMenuManagement({
   fetchMenu,
   defaultKitchenCategoryId = "MAIN",
 }) {
-  const addMenu = useCallback(async () => {
+  const addMenu = useCallback(async (priceCents) => {
+    const cents = Math.max(0, Math.round(Number(priceCents) || 0));
     const formData = new FormData();
     formData.append("name", newItem.name);
-    formData.append("price", newItem.price);
+    formData.append("price", String(cents));
     formData.append("type", newItem.type);
     if (newItem.type !== "DRINK") {
       formData.append("kitchen_category", newItem.kitchen_category || "MAIN");
     }
     if (file) formData.append("image", file);
     await authedFetch(`${API_URL}/menu`, { method: "POST", body: formData });
-    setNewItem({ name: "", price: "", type: "FOOD", kitchen_category: defaultKitchenCategoryId });
+    setNewItem({ name: "", type: "FOOD", kitchen_category: defaultKitchenCategoryId });
     setFile(null);
     fetchMenu();
-  }, [authedFetch, defaultKitchenCategoryId, fetchMenu, file, newItem.kitchen_category, newItem.name, newItem.price, newItem.type, setFile, setNewItem]);
+  }, [authedFetch, defaultKitchenCategoryId, fetchMenu, file, newItem.kitchen_category, newItem.name, newItem.type, setFile, setNewItem]);
 
-  const updateMenu = useCallback(async () => {
+  const updateMenu = useCallback(async (priceCents) => {
     if (!editItem) return;
+    const cents = Math.max(0, Math.round(Number(priceCents) || 0));
     const formData = new FormData();
     formData.append("name", editItem.name);
-    formData.append("price", editItem.price);
+    formData.append("price", String(cents));
     formData.append("type", editItem.type);
     if (editItem.type !== "DRINK") {
       formData.append("kitchen_category", editItem.kitchen_category || "MAIN");

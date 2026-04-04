@@ -26,6 +26,7 @@ import useTableManagement from "./hooks/useTableManagement";
 import useSettingsPrinterManagement from "./hooks/useSettingsPrinterManagement";
 import useI18n from "./hooks/useI18n";
 import { calcTotal, calcTotalQty, filterMenu, formatMoney, menuImageSrc, removeTones } from "./utils/posHelpers";
+import { centsToEuroInputString, parseEuroInputToCents } from "./utils/menuPriceInput";
 import { readMenuCache, writeMenuCache } from "./utils/menuCache";
 import SidebarItem from "./components/layout/SidebarItem";
 import TablesView from "./components/views/TablesView";
@@ -216,7 +217,8 @@ export default function App() {
 
   // ----- MANAGE STATE -----
   const [manageTab, setManageTab]   = useState("edit");
-  const [newItem, setNewItem]       = useState({ name: "", price: "", type: "FOOD", kitchen_category: "MAIN" });
+  const [newItem, setNewItem]       = useState({ name: "", type: "FOOD", kitchen_category: "MAIN" });
+  const [menuManagePriceEuro, setMenuManagePriceEuro] = useState("");
   const [file, setFile]             = useState(null);
   const [editItem, setEditItem]     = useState(null);
   const [editFile, setEditFile]     = useState(null);
@@ -1272,6 +1274,7 @@ export default function App() {
                     onClick={() => {
                       setManageTab("add");
                       setEditItem(null);
+                      setMenuManagePriceEuro("");
                       setNewItem((prev) => ({ ...prev, kitchen_category: defaultKitchenCategoryId }));
                     }}
                     className="group relative flex flex-col items-center justify-center p-8 bg-white/50 border-2 border-dashed border-outline-variant rounded-[2rem] hover:border-primary-container hover:bg-orange-50 transition-all cursor-pointer min-h-[280px]"
@@ -1285,7 +1288,7 @@ export default function App() {
 
                   {/* Menu Item Cards */}
                   {menu.map(m => (
-                    <div key={m.id} onClick={() => { setManageTab("edit"); setEditItem({...m}); setEditFile(null); }} className={`group relative overflow-hidden rounded-[2rem] bg-surface-container-lowest border ${editItem?.id === m.id ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/50'} shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer flex flex-col min-h-[280px]`}>
+                    <div key={m.id} onClick={() => { setManageTab("edit"); setEditItem({...m}); setEditFile(null); setMenuManagePriceEuro(centsToEuroInputString(m.price)); }} className={`group relative overflow-hidden rounded-[2rem] bg-surface-container-lowest border ${editItem?.id === m.id ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/50'} shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer flex flex-col min-h-[280px]`}>
                       <div className="h-40 w-full overflow-hidden bg-surface-container-high relative">
                         {m.image ? (
                            <img src={menuImageSrc(m.image)} alt={m.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -1338,10 +1341,16 @@ export default function App() {
                           </div>
                              <div className="grid grid-cols-2 gap-6">
                               <div>
-                                 <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Giá (EUR, cent)", "Preis (EUR, Cent)")}</label>
-                                 <input type="number" value={manageTab === "add" ? newItem.price : editItem.price} 
-                                    onChange={e => manageTab === "add" ? setNewItem({...newItem, price: e.target.value}) : setEditItem({...editItem, price: e.target.value})}
-                                    className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all text-lg" />
+                                 <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Giá (€)", "Preis (€)")}</label>
+                                 <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={menuManagePriceEuro}
+                                    onChange={(e) => setMenuManagePriceEuro(e.target.value)}
+                                    placeholder={tt("VD: 26,90 hoặc 26.90", "z.B. 26,90 oder 26.90")}
+                                    className="w-full px-5 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold border-2 border-transparent focus:border-primary focus:bg-white focus:shadow-sm outline-none transition-all text-lg"
+                                  />
+                                 <p className="text-xs text-on-surface-variant mt-1.5">{tt("Nhập đúng số euro (dấu phẩy hoặc chấm đều được).", "Betrag in Euro (Komma oder Punkt).")}</p>
                               </div>
                               <div>
                                  <label className="block text-sm font-bold text-on-surface-variant mb-2 uppercase tracking-wider">{tt("Loại", "Typ")}</label>
@@ -1421,7 +1430,19 @@ export default function App() {
                           </div>
 
                           <div className="flex gap-4 pt-4 mt-8">
-                             <button onClick={manageTab === "add" ? addMenu : updateMenu} className="flex-1 bg-gradient-to-br from-primary to-orange-600 hover:scale-[1.02] text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-xl shadow-orange-300/40 active:scale-95 transition-all">
+                             <button
+                               type="button"
+                               onClick={() => {
+                                 const cents = parseEuroInputToCents(menuManagePriceEuro);
+                                 if (cents === null) {
+                                   alert(tt("Nhập giá hợp lệ (ví dụ 26,90).", "Bitte gültigen Preis eingeben (z.B. 26,90)."));
+                                   return;
+                                 }
+                                 if (manageTab === "add") addMenu(cents);
+                                 else updateMenu(cents);
+                               }}
+                               className="flex-1 bg-gradient-to-br from-primary to-orange-600 hover:scale-[1.02] text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-xl shadow-orange-300/40 active:scale-95 transition-all"
+                             >
                                 <span className="material-symbols-outlined text-2xl">{manageTab === "add" ? 'add_circle' : 'save_as'}</span>
                                 <span>{manageTab === "add" ? tt("Tạo món mới", "Gericht anlegen") : tt("Lưu thay đổi", "Änderungen speichern")}</span>
                              </button>

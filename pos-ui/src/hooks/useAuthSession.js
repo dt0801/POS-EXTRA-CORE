@@ -94,7 +94,7 @@ export default function useAuthSession() {
       try {
         const payload = JSON.parse(evt.data);
         if (payload?.event === "FORCE_LOGOUT") {
-          forceLogout(payload.reason || "Phien dang nhap da bi thay the.");
+          forceLogout(payload.reason || "Phien dang nhap da bi thay the tu dong.");
         }
       } catch {}
     };

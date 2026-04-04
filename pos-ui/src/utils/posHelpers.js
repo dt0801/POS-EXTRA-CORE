@@ -1,4 +1,5 @@
 import { API_URL } from "../config/api";
+import { effectiveKitchenCategory, parseKitchenCategoriesList } from "../constants/kitchenCategories";
 
 // Giá trong DB đang lưu theo đơn vị cent (ví dụ 726 = 7.26€)
 export const formatMoney = (n) =>
@@ -32,15 +33,28 @@ export const removeTones = (str) => {
   return str.toLowerCase().split("").map((c) => map[c] || c).join("");
 };
 
-export const filterMenu = (menu, filter) => {
+/**
+ * @param {object[]} menu
+ * @param {string} filter — ALL | COMBO | DRINK | id danh mục bếp | (legacy) KHAI_VI…
+ * @param {object} [settings] — cần để lọc theo kitchen_category / effectiveKitchenCategory
+ */
+export const filterMenu = (menu, filter, settings) => {
   if (filter === "ALL") return menu;
+  if (filter === "COMBO") return menu.filter((m) => m.type === "COMBO");
+  if (filter === "DRINK") return menu.filter((m) => m.type === "DRINK");
+
+  if (settings) {
+    const kitchenIds = new Set(parseKitchenCategoriesList(settings).map((c) => c.id));
+    if (kitchenIds.has(filter)) {
+      return menu.filter((m) => effectiveKitchenCategory(m, settings) === filter);
+    }
+  }
+
   const r = (m) => removeTones(m.name);
   const has = (m, ...keys) => keys.some((k) => r(m).includes(removeTones(k)));
   const hasN = (m, ...keys) => !keys.some((k) => r(m).includes(removeTones(k)));
 
   const map = {
-    COMBO: (m) => m.type === "COMBO",
-    DRINK: (m) => m.type === "DRINK",
     KHAI_VI: (m) => has(m, "xuc xich", "khoai tay", "salad"),
     SIGNATURE: (m) => has(m, "oc nhoi", "heo moi", "nai xao", "nai xong", "dat vang", "tieu xanh"),
     NHAU: (m) => has(m, "sun ga chien", "chan ga chien", "canh ga chien", "ech chien gion", "ca trung chien"),

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import "./App.css";
-import { FILTERS } from "./constants/filters";
 import {
   parseKitchenCategoriesList,
   firstKitchenCategoryId,
   kitchenCategoryDisplayLabel,
   effectiveKitchenCategory,
+  buildMenuPosFilterChips,
+  menuPosFilterLabel,
 } from "./constants/kitchenCategories";
 import { API_URL, isLocalQuayOrigin } from "./config/api";
 import { isPosElectron } from "./services/electronPrint";
@@ -68,7 +69,7 @@ export default function App() {
   const [menu, setMenu]               = useState([]);
   const [currentTable, setCurrentTable] = useState(null);
   const [tableStatus, setTableStatus] = useState({});       // { [tableNum]: "OPEN" | "PAID" }
-  const [filter, setFilter]           = useState("ALL");  // key từ FILTERS
+  const [filter, setFilter]           = useState("ALL"); // key từ buildMenuPosFilterChips(settings)
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarView, setSidebarView] = useState("order");  // "order" | "manage" | "history" | "stats"
 
@@ -266,6 +267,16 @@ export default function App() {
     [kitchenCategoriesJson]
   );
 
+  const menuPosFilters = useMemo(
+    () => buildMenuPosFilterChips({ kitchen_categories_json: kitchenCategoriesJson }),
+    [kitchenCategoriesJson]
+  );
+
+  useEffect(() => {
+    const valid = new Set(menuPosFilters.map((f) => f.key));
+    if (!valid.has(filter)) setFilter("ALL");
+  }, [menuPosFilters, filter, setFilter]);
+
   // ----- DERIVED -----
   // Danh sách số bàn – lấy từ tableList (đã merge DB + settings)
   // fallback về 1..20 nếu tableList chưa load xong
@@ -276,11 +287,11 @@ export default function App() {
   const currentItems  = Object.values(tableOrders[currentTable] || {});
   const total         = calcTotal(tableOrders[currentTable]);
   const filteredMenu = useMemo(() => {
-    const byTab = filterMenu(menu, filter);
+    const byTab = filterMenu(menu, filter, settings);
     if (!searchQuery) return byTab;
     const queryStr = removeTones(searchQuery);
     return byTab.filter(m => removeTones(m.name).includes(queryStr));
-  }, [menu, filter, searchQuery]);
+  }, [menu, filter, searchQuery, settings]);
   
   // =============================================
   // DATA FETCHING
@@ -832,6 +843,8 @@ export default function App() {
               setSidebarView={setSidebarView}
               setShowMobileCart={setShowMobileCart}
               language={language}
+              settings={settings}
+              menuPosFilters={menuPosFilters}
             />
           ) : (
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 lg:gap-6 lg:-m-6 lg:p-6">
@@ -852,11 +865,11 @@ export default function App() {
                      />
                    </div>
                    {/* Tabs */}
-                   {FILTERS.map(f => (
+                   {menuPosFilters.map((f) => (
                      <button key={f.key} onClick={() => setFilter(f.key)}
                        className={`px-4 lg:px-6 py-2 lg:py-2.5 font-headline font-semibold lg:font-bold rounded-xl shadow-sm transition-all whitespace-nowrap text-sm lg:text-base
                          ${filter === f.key ? "bg-primary text-white shadow-md shadow-orange-500/30" : "bg-surface-container-lowest text-on-surface-variant hover:bg-orange-50 dark:hover:bg-stone-800"}`}
-                     >{f.label}</button>
+                     >{menuPosFilterLabel(f, language)}</button>
                    ))}
                  </div>
 

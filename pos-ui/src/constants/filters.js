@@ -1,3 +1,7 @@
+/**
+ * @deprecated Các nút lọc màn đặt món dùng `buildMenuPosFilterChips(settings)` (Cấu hình → Danh mục bếp).
+ * Giữ mảng này chỉ để tham chiếu logic keyword cũ trong `filterMenu` (fallback).
+ */
 export const FILTERS = [
   { key: "ALL", label: "Tất cả" },
   { key: "COMBO", label: "Combo" },

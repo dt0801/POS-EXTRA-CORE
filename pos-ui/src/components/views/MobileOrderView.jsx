@@ -1,51 +1,6 @@
 import React, { useMemo } from "react";
-import { FILTERS } from "../../constants/filters";
-
-const removeTones = (str) => {
-  const map = {
-    'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
-    'ă': 'a', 'ắ': 'a', 'ằ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
-    'â': 'a', 'ấ': 'a', 'ầ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
-    'đ': 'd', 'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
-    'ê': 'e', 'ế': 'e', 'ề': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
-    'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
-    'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
-    'ô': 'o', 'ố': 'o', 'ồ': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
-    'ơ': 'o', 'ớ': 'o', 'ờ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
-    'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
-    'ư': 'u', 'ứ': 'u', 'ừ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
-    'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
-  };
-  return str.toLowerCase().split('').map(c => map[c] || c).join('');
-};
-
-const filterMenu = (menu, filter) => {
-  if (filter === "ALL") return menu;
-  const r = (m) => removeTones(m.name);
-  const has = (m, ...keys) => keys.some(k => r(m).includes(removeTones(k)));
-  const hasN = (m, ...keys) => !keys.some(k => r(m).includes(removeTones(k)));
-
-  const map = {
-    COMBO: (m) => m.type === "COMBO",
-    DRINK: (m) => m.type === "DRINK",
-    KHAI_VI: (m) => has(m, "xuc xich", "khoai tay", "salad"),
-    SIGNATURE: (m) => has(m, "oc nhoi", "heo moi", "nai xao", "nai xong", "dat vang", "tieu xanh"),
-    NHAU: (m) => has(m, "sun ga chien", "chan ga chien", "canh ga chien", "ech chien gion", "ca trung chien"),
-    GA: (m) => has(m, "ga") && hasN(m, "chien man", "sun ga", "ca trum", "ra lau"),
-    BO: (m) => has(m, "bo") && hasN(m, "bun bo", "ra bo"),
-    HEO: (m) => has(m, "heo", "nai", "suon heo"),
-    ECH: (m) => has(m, "ech"),
-    CA: (m) => has(m, "ca trung nuong", "ca tam nuong"),
-    LUON: (m) => has(m, "luon ngong"),
-    SO_DIEP: (m) => has(m, "so diep"),
-    HAISAN: (m) => has(m, "tom", "muc", "bach tuoc"),
-    RAU: (m) => has(m, "rau muong", "rau cu xao", "rau rung", "mang tay xao"),
-    LAU: (m) => has(m, "lau", "dia lau", "nam kim cham", "mi goi", "rau lau") && hasN(m, "ca tau mang"),
-    COM_MI: (m) => has(m, "com chien", "mi xao", "com lam"),
-  };
-  const fn = map[filter];
-  return fn ? menu.filter(fn) : menu;
-};
+import { menuPosFilterLabel } from "../../constants/kitchenCategories";
+import { filterMenu, removeTones } from "../../utils/posHelpers";
 
 export default function MobileOrderView({
   menu,
@@ -65,36 +20,16 @@ export default function MobileOrderView({
   setSidebarView,
   setShowMobileCart,
   language = "vi",
+  settings,
+  menuPosFilters = [],
 }) {
   const tr = (vi, de) => (language === "de" ? de : vi);
-  const filterLabel = (f) => {
-    const map = {
-      ALL: tr("Tất cả", "Alle"),
-      COMBO: "Combo",
-      DRINK: tr("Đồ uống", "Getränk"),
-      KHAI_VI: tr("Khai vị", "Vorspeise"),
-      SIGNATURE: tr("Signature", "Signature"),
-      NHAU: tr("Nhậu", "Snacks"),
-      GA: tr("Gà", "Huhn"),
-      BO: tr("Bò", "Rind"),
-      HEO: tr("Heo", "Schwein"),
-      ECH: tr("Ếch", "Frosch"),
-      CA: tr("Cá", "Fisch"),
-      LUON: tr("Lươn", "Aal"),
-      SO_DIEP: tr("Sò điệp", "Jakobsmuschel"),
-      HAISAN: tr("Hải sản", "Meeresfrüchte"),
-      RAU: tr("Rau", "Gemüse"),
-      LAU: tr("Lẩu", "Hotpot"),
-      COM_MI: tr("Cơm/Mì", "Reis/Nudeln"),
-    };
-    return map[f.key] || f.label;
-  };
   const filteredMenu = useMemo(() => {
-    const byTab = filterMenu(menu, filter);
+    const byTab = filterMenu(menu, filter, settings);
     if (!searchQuery) return byTab;
     const queryStr = removeTones(searchQuery);
     return byTab.filter(m => removeTones(m.name).includes(queryStr));
-  }, [menu, filter, searchQuery]);
+  }, [menu, filter, searchQuery, settings]);
 
   // Derived state for the footer summary
   const totalQty = calcTotalQty(tableOrders[currentTable]);
@@ -113,7 +48,7 @@ export default function MobileOrderView({
         {/* Sticky filter offset should match mobile header height */}
         <section className="sticky top-[60px] z-30 bg-surface-container py-4 shadow-sm">
           <div className="flex overflow-x-auto hide-scrollbar px-6 gap-3">
-            {FILTERS.map(f => (
+            {menuPosFilters.map((f) => (
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
@@ -123,7 +58,7 @@ export default function MobileOrderView({
                     : "bg-surface-container-lowest text-on-surface-variant hover:bg-orange-100/50"
                   }`}
               >
-                {filterLabel(f)}
+                {menuPosFilterLabel(f, language)}
               </button>
             ))}
           </div>

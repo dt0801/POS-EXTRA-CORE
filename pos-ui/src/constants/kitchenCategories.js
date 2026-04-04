@@ -64,3 +64,23 @@ export function kitchenCategoryPrintLabelVi(settings, categoryId) {
 }
 
 export const KITCHEN_PRINT_ORDER_FROM_SETTINGS = (settings) => parseKitchenCategoriesList(settings).map((c) => c.id);
+
+/** Nút lọc màn hình đặt món: Tất cả + Combo + từng danh mục bếp + Đồ uống */
+export function buildMenuPosFilterChips(settings) {
+  const list = parseKitchenCategoriesList(settings);
+  return [
+    { key: "ALL", labelVi: "Tất cả", labelDe: "Alle" },
+    { key: "COMBO", labelVi: "Combo", labelDe: "Combo" },
+    ...list.map((c) => ({
+      key: c.id,
+      labelVi: c.labelVi,
+      labelDe: c.labelDe || c.labelVi,
+    })),
+    { key: "DRINK", labelVi: "Đồ uống", labelDe: "Getränke" },
+  ];
+}
+
+export function menuPosFilterLabel(chip, language) {
+  if (!chip) return "";
+  return language === "de" ? chip.labelDe || chip.labelVi : chip.labelVi;
+}

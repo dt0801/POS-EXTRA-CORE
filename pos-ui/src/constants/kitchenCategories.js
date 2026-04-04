@@ -20,11 +20,17 @@ export function parseKitchenCategoriesList(settings) {
           .replace(/\s+/g, "_")
           .slice(0, 64) || `CAT_${i}`;
         const ord = Number(c.order);
+        const labelVi = String(c.labelVi ?? id);
+        const labelDe = String(c.labelDe ?? "");
+        let subtitleVi;
+        if (c.subtitleVi != null) subtitleVi = String(c.subtitleVi);
+        else if (c.labelVi != null) subtitleVi = String(c.labelVi);
+        else subtitleVi = String(id);
         return {
           id,
-          labelVi: String(c.labelVi || id),
-          labelDe: String(c.labelDe || ""),
-          subtitleVi: String(c.subtitleVi || c.labelVi || id).toUpperCase(),
+          labelVi,
+          labelDe,
+          subtitleVi: subtitleVi.toUpperCase(),
           order: Number.isFinite(ord) ? ord : i,
         };
       })

@@ -67,7 +67,7 @@ export default function KitchenCategoriesSettingsSection({
       id,
       labelVi: tt("Danh mục mới", "Neue Kategorie"),
       labelDe: "",
-      subtitleVi: id,
+      subtitleVi: String(tt("Danh mục mới", "Neue Kategorie")).toUpperCase(),
       order: list.length,
     });
     updateRows(list);
@@ -86,11 +86,29 @@ export default function KitchenCategoriesSettingsSection({
     updateRows(list);
   };
 
-  const patchRow = (id, field, value) => {
-    const list = parseKitchenCategoriesList({ kitchen_categories_json: jsonText }).map((r) =>
-      r.id === id ? { ...r, [field]: value } : r
-    );
-    updateRows(list);
+  const normalizeCategoryId = (raw) =>
+    String(raw ?? "")
+      .trim()
+      .replace(/\s+/g, "_")
+      .slice(0, 64);
+
+  const patchRow = (rowId, field, value) => {
+    const list = parseKitchenCategoriesList({ kitchen_categories_json: jsonText });
+    const idx = list.findIndex((r) => r.id === rowId);
+    if (idx < 0) return;
+
+    if (field === "id") {
+      const nextId = normalizeCategoryId(value);
+      if (!nextId) return;
+      if (list.some((r, i) => r.id === nextId && i !== idx)) {
+        alert(tt("ID này đã được dùng cho danh mục khác.", "Diese ID wird bereits verwendet."));
+        return;
+      }
+      updateRows(list.map((r, i) => (i === idx ? { ...r, id: nextId } : r)));
+      return;
+    }
+
+    updateRows(list.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)));
   };
 
   const applyToSettingsAndSave = async () => {
@@ -108,8 +126,8 @@ export default function KitchenCategoriesSettingsSection({
         <p className="font-bold mb-1">{tt("Danh mục in bếp", "Küchen-Kategorien")}</p>
         <p className="opacity-90 leading-relaxed">
           {tt(
-            "Mỗi danh mục = một phiếu bếp riêng (theo thứ tự). Đồ uống vẫn in phiếu pha chế. Mã (id) không đổi sau khi tạo để tránh lệch dữ liệu món.",
-            "Jede Kategorie = eigenes Küchenticket. Getränke separat. ID nach dem Anlegen nicht ändern."
+            "Mỗi danh mục = một phiếu bếp riêng (theo thứ tự). Đồ uống vẫn in phiếu pha chế. Đổi mã (id) thì cần cập nhật kitchen_category của các món đang trỏ id cũ.",
+            "Jede Kategorie = eigenes Küchenticket. Getränke separat. Bei ID-Änderung Gerichte mit alter kitchen_category anpassen."
           )}
         </p>
       </div>
@@ -163,9 +181,9 @@ export default function KitchenCategoriesSettingsSection({
                 <div>
                   <label className="text-[10px] font-bold text-on-surface-variant uppercase block mb-1">ID</label>
                   <input
-                    readOnly
                     value={r.id}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-container-high text-on-surface text-sm font-mono opacity-90"
+                    onChange={(e) => patchRow(r.id, "id", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface text-sm font-mono"
                   />
                 </div>
                 <div>

@@ -307,6 +307,7 @@ export default function App() {
       const res = await authedFetch(`${API_URL}/menu`, {
         method: "GET",
         headers: { Accept: "application/json" },
+        cache: "no-store",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();

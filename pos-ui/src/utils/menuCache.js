@@ -22,3 +22,12 @@ export function writeMenuCache(items) {
     // quota / private mode
   }
 }
+
+/** Xóa cache menu (sau POST/PUT/DELETE để không hiển thị giá cũ trước khi API trả về). */
+export function clearMenuCache() {
+  try {
+    sessionStorage.removeItem(MENU_CACHE_KEY);
+  } catch {
+    // ignore
+  }
+}

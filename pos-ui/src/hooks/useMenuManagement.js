@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { API_URL } from "../config/api";
+import { clearMenuCache } from "../utils/menuCache";
 
 export default function useMenuManagement({
   authedFetch,
@@ -24,7 +25,13 @@ export default function useMenuManagement({
       formData.append("kitchen_category", newItem.kitchen_category || "MAIN");
     }
     if (file) formData.append("image", file);
-    await authedFetch(`${API_URL}/menu`, { method: "POST", body: formData });
+    const res = await authedFetch(`${API_URL}/menu`, { method: "POST", body: formData });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || `HTTP ${res.status}`);
+      return;
+    }
+    clearMenuCache();
     setNewItem({ name: "", type: "FOOD", kitchen_category: defaultKitchenCategoryId });
     setFile(null);
     fetchMenu();
@@ -41,7 +48,13 @@ export default function useMenuManagement({
       formData.append("kitchen_category", editItem.kitchen_category || "MAIN");
     }
     if (editFile) formData.append("image", editFile);
-    await authedFetch(`${API_URL}/menu/${editItem.id}`, { method: "PUT", body: formData });
+    const res = await authedFetch(`${API_URL}/menu/${editItem.id}`, { method: "PUT", body: formData });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || `HTTP ${res.status}`);
+      return;
+    }
+    clearMenuCache();
     setEditItem(null);
     setEditFile(null);
     fetchMenu();
@@ -49,7 +62,13 @@ export default function useMenuManagement({
 
   const deleteMenu = useCallback(async (id) => {
     if (!window.confirm("Xóa món này?")) return;
-    await authedFetch(`${API_URL}/menu/${id}`, { method: "DELETE" });
+    const res = await authedFetch(`${API_URL}/menu/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || `HTTP ${res.status}`);
+      return;
+    }
+    clearMenuCache();
     fetchMenu();
   }, [authedFetch, fetchMenu]);
 

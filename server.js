@@ -1,9 +1,9 @@
 const express = require("express");
-const cors    = require("cors");
-const multer  = require("multer");
-const http    = require("http");
-const path    = require("path");
-const fs      = require("fs");
+const cors = require("cors");
+const multer = require("multer");
+const http = require("http");
+const path = require("path");
+const fs = require("fs");
 const { exec } = require("child_process");
 const { WebSocketServer, WebSocket } = require("ws");
 const bcrypt = require("bcryptjs");
@@ -1268,7 +1268,7 @@ function startServer() {
   async function createPrinter(ip) {
     const printerIP = ip || getPrinterIP();
     return createSafePrinter({
-      type:      PrinterTypes.EPSON,
+      type: PrinterTypes.EPSON,
       interface: `tcp://${printerIP}`,
       characterSet: CharacterSet.TCVN_3_VIETNAMESE,
       removeSpecialCharacters: false,
@@ -1393,7 +1393,7 @@ function startServer() {
       const trimmedIp = ip.trim();
       try {
         console.log(`🔌 [${label}] Đang kết nối TCP → ${trimmedIp}...`);
-        const printer   = await createPrinter(trimmedIp);
+        const printer = await createPrinter(trimmedIp);
         const connected = await printer.isPrinterConnected();
         if (connected) {
           console.log(`✅ [${label}] Kết nối TCP thành công: ${trimmedIp}`);
@@ -1538,7 +1538,7 @@ function startServer() {
   // =============================================
   // LEGACY PRINT BRIDGE COMPAT (giống server cũ)
   // =============================================
-  app.get("/print/printers", authMiddleware, async (req, res) => {
+  app.get("/print/printers", async (req, res) => {
     try {
       res.json(printersCache.map(mapToLegacyPrinter));
     } catch (e) {
@@ -1970,40 +1970,40 @@ function startServer() {
         .find({ bill_id: billId })
         .sort({ sqlite_id: 1 })
         .toArray();
-    if (useBridgeQueue()) {
-      try {
-        const job = await createPrintJob("BILL", billId, {
-          bill_id: billId,
-          table_num: Number(bill.table_num || 0),
-          items,
-          total: Number(bill.total || 0),
-          reprint: true,
-        });
-        return res.json({ success: true, job_id: Number(job.sqlite_id || 0) });
-      } catch (err) {
-        return res.status(500).json({ error: err.message || String(err) });
+      if (useBridgeQueue()) {
+        try {
+          const job = await createPrintJob("BILL", billId, {
+            bill_id: billId,
+            table_num: Number(bill.table_num || 0),
+            items,
+            total: Number(bill.total || 0),
+            reprint: true,
+          });
+          return res.json({ success: true, job_id: Number(job.sqlite_id || 0) });
+        } catch (err) {
+          return res.status(500).json({ error: err.message || String(err) });
+        }
       }
-    }
-    try {
-      const store = getStoreProfile();
-      const sent = dispatchReceiptToType("BILL", {
-        title: store.storeName,
-        subtitle: store.storeSubtitle,
-        tableNum: Number(bill.table_num || 0),
-        timeLabel: "Ngày",
-        timeValue: new Date(bill.created_at).toLocaleString("vi-VN"),
-        items,
-        totalLabel: "THÀNH TIỀN",
-        totalValue: Number(bill.total || 0),
-        billNo: Number(bill.sqlite_id ?? bill.id ?? billId),
-        cashier: store.cashierName,
-        footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
-        groupItemsByType: true,
-      });
-      res.json({ success: true, queued: sent });
-    } catch (err) {
-      res.status(err.statusCode || 500).json({ error: err.message });
-    }
+      try {
+        const store = getStoreProfile();
+        const sent = dispatchReceiptToType("BILL", {
+          title: store.storeName,
+          subtitle: store.storeSubtitle,
+          tableNum: Number(bill.table_num || 0),
+          timeLabel: "Ngày",
+          timeValue: new Date(bill.created_at).toLocaleString("vi-VN"),
+          items,
+          totalLabel: "THÀNH TIỀN",
+          totalValue: Number(bill.total || 0),
+          billNo: Number(bill.sqlite_id ?? bill.id ?? billId),
+          cashier: store.cashierName,
+          footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
+          groupItemsByType: true,
+        });
+        res.json({ success: true, queued: sent });
+      } catch (err) {
+        res.status(err.statusCode || 500).json({ error: err.message });
+      }
     } catch (e) {
       res.status(500).json({ error: e.message || String(e) });
     }
@@ -2020,21 +2020,21 @@ function startServer() {
     }
     const printers = printersCache.filter((p) => Number(p.is_enabled) === 1);
     if (printers.length === 0) return res.json({ connected: false });
-    
+
     let allConnected = false;
     for (const p of printers) {
-       try {
-         const pt = createSafePrinter({ 
-            type: PrinterTypes.EPSON, 
-            interface: `printer:${p.name}`,
-            driver: customDriver
-         });
-         if (await pt.isPrinterConnected()) {
-            allConnected = true; break;
-         }
-       } catch (e) {
-         // skip
-       }
+      try {
+        const pt = createSafePrinter({
+          type: PrinterTypes.EPSON,
+          interface: `printer:${p.name}`,
+          driver: customDriver
+        });
+        if (await pt.isPrinterConnected()) {
+          allConnected = true; break;
+        }
+      } catch (e) {
+        // skip
+      }
     }
     res.json({ connected: allConnected, count: printers.length, bridge_count: bridgeClients.size, mode: "local" });
   });

@@ -95,6 +95,9 @@ export default function App() {
   const [splitModal,    setSplitModal]    = useState(false);
   const [splitTarget,   setSplitTarget]   = useState("");
   const [splitSelected, setSplitSelected] = useState([]);
+  const [transferModal, setTransferModal] = useState(false);
+  const [transferDest, setTransferDest] = useState("");
+  const [transferSubmitting, setTransferSubmitting] = useState(false);
   const [customLineModal, setCustomLineModal] = useState(false);
   const [customLineName, setCustomLineName] = useState("");
   const [customLinePrice, setCustomLinePrice] = useState("");
@@ -724,6 +727,119 @@ export default function App() {
         </div>
       )}
 
+      {/* ==================== MODAL CHUYỂN BÀN (toàn bộ đơn) ==================== */}
+      {transferModal && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest rounded-[2.5rem] p-8 md:p-10 border border-outline-variant/30 shadow-2xl max-w-2xl w-full relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              disabled={transferSubmitting}
+              onClick={() => {
+                if (transferSubmitting) return;
+                setTransferModal(false);
+                setTransferDest("");
+              }}
+              className="absolute top-6 right-6 w-12 h-12 bg-surface-container-high hover:bg-outline-variant/30 text-on-surface flex items-center justify-center rounded-full transition-colors shadow-sm disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-2xl">close</span>
+            </button>
+
+            <h3 className="text-3xl font-black font-headline mb-2 text-on-surface flex items-center gap-3 pr-14">
+              <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-3xl">sync_alt</span>
+              </div>
+              {tt("Chuyển bàn", "Tisch wechseln")}
+            </h3>
+            <p className="text-sm text-on-surface-variant mb-6 pl-[4.5rem] md:pl-0">
+              {tt(
+                "Chuyển toàn bộ món và ghi chú sang bàn trống. Bàn hiện tại sẽ được giải phóng.",
+                "Gesamte Bestellung und Notizen an einen freien Tisch. Aktueller Tisch wird frei."
+              )}
+            </p>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-on-surface-variant mb-4 uppercase tracking-widest">
+                  {tt("Chọn bàn đích", "Zieltisch wählen")}
+                </label>
+                <div className="grid grid-cols-5 sm:grid-cols-8 gap-3 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                  {tables
+                    .filter((t) => t !== currentTable)
+                    .map((t) => {
+                      const busy = tableStatus[t] === "OPEN" || tableStatus[t] === "PAYING";
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          disabled={busy || transferSubmitting}
+                          onClick={() => {
+                            if (busy || transferSubmitting) return;
+                            setTransferDest(t);
+                          }}
+                          className={`h-12 rounded-2xl font-black text-sm transition-all border-2 relative
+                            ${busy
+                              ? "border-stone-100 bg-stone-100 text-stone-300 cursor-not-allowed opacity-60"
+                              : transferDest === t
+                                ? "bg-primary border-primary text-white shadow-lg shadow-orange-300/40 scale-105"
+                                : "border-stone-200 bg-white text-stone-600 hover:border-primary/30 hover:text-primary"}`}
+                        >
+                          {t}
+                          {busy && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-stone-400 rounded-full border-2 border-white" title={tt("Đang có khách", "Besetzt")} />
+                          )}
+                        </button>
+                      );
+                    })}
+                </div>
+                <p className="text-xs text-on-surface-variant mt-3">
+                  {tt("Chỉ chọn bàn trống (không đang ORDER).", "Nur freie Tische (nicht in Bedienung).")}
+                </p>
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                <button
+                  type="button"
+                  disabled={!transferDest || transferSubmitting}
+                  onClick={async () => {
+                    if (!transferDest || transferSubmitting) return;
+                    setTransferSubmitting(true);
+                    try {
+                      await transferTable(transferDest);
+                      setTransferModal(false);
+                      setTransferDest("");
+                      if (isMobile) setShowMobileCart(false);
+                    } finally {
+                      setTransferSubmitting(false);
+                    }
+                  }}
+                  className={`flex-1 py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95
+                    ${transferDest && !transferSubmitting
+                      ? "bg-gradient-to-br from-primary to-orange-600 text-white shadow-orange-300/40"
+                      : "bg-stone-200 text-stone-400 cursor-not-allowed shadow-none"}`}
+                >
+                  <span className={`material-symbols-outlined text-2xl ${transferSubmitting ? "animate-spin" : ""}`}>
+                    {transferSubmitting ? "progress_activity" : "sync_alt"}
+                  </span>
+                  {transferSubmitting ? tt("Đang chuyển...", "Wird verschoben...") : tt("Xác nhận chuyển bàn", "Verschieben bestätigen")}
+                </button>
+                <button
+                  type="button"
+                  disabled={transferSubmitting}
+                  onClick={() => {
+                    if (transferSubmitting) return;
+                    setTransferModal(false);
+                    setTransferDest("");
+                  }}
+                  className="px-8 bg-surface-container-highest hover:bg-outline-variant/50 text-on-surface-variant hover:text-on-surface py-4 rounded-2xl font-black text-lg transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {tt("Hủy", "Abbrechen")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ==================== MODAL MÓN NGOÀI MENU (không lưu thực đơn) ==================== */}
       {customLineModal && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
@@ -1076,15 +1192,10 @@ export default function App() {
                    {tableStatus[currentTable] === "OPEN" && (
                      <div className="flex gap-2">
                       <button
+                        type="button"
                         onClick={() => {
-                          const raw = window.prompt(tt("Nhập số bàn muốn chuyển tới:", "Ziel-Tischnummer eingeben:"));
-                          const target = Number(raw);
-                          if (!raw) return;
-                          if (!Number.isInteger(target) || target <= 0) {
-                            alert(tt("Số bàn không hợp lệ.", "Ungültige Tischnummer."));
-                            return;
-                          }
-                          transferTable(target);
+                          setTransferDest("");
+                          setTransferModal(true);
                         }}
                         disabled={currentItems.length === 0}
                         className="w-10 h-10 bg-orange-100 rounded-[1.2rem] flex items-center justify-center text-orange-600 hover:bg-orange-200 transition-all disabled:opacity-50 shadow-sm border border-orange-200/50 group/btn"
@@ -2082,14 +2193,8 @@ export default function App() {
                      <button
                        type="button"
                        onClick={() => {
-                         const raw = window.prompt(tt("Nhập số bàn muốn chuyển tới:", "Ziel-Tischnummer eingeben:"));
-                         const target = Number(raw);
-                         if (!raw) return;
-                         if (!Number.isInteger(target) || target <= 0) {
-                           alert(tt("Số bàn không hợp lệ.", "Ungültige Tischnummer."));
-                           return;
-                         }
-                         transferTable(target);
+                         setTransferDest("");
+                         setTransferModal(true);
                        }}
                        disabled={currentItems.length === 0}
                        className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 disabled:opacity-40 active:scale-95 border border-orange-200/50"

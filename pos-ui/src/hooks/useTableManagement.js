@@ -13,6 +13,7 @@ export default function useTableManagement({
   fetchTableStatus,
 }) {
   const [tableMsg, setTableMsg] = useState(null);
+  const [tableSaving, setTableSaving] = useState(false);
 
   const showTableMsg = useCallback((type, text) => {
     setTableMsg({ type, text });
@@ -27,25 +28,30 @@ export default function useTableManagement({
       return showTableMsg("err", `Bàn ${num} đã tồn tại`);
     }
 
-    await authedFetch(`${API_URL}/tables`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ table_num: num }),
-    });
-
-    const currentTotal = tableList.length;
-    if (num > currentTotal) {
-      await authedFetch(`${API_URL}/settings`, {
+    setTableSaving(true);
+    try {
+      await authedFetch(`${API_URL}/tables`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "total_tables", value: String(num) }),
+        body: JSON.stringify({ table_num: num }),
       });
-    }
 
-    setNewTableNum("");
-    showTableMsg("ok", `Đã thêm Bàn ${num}`);
-    fetchTableList();
-    fetchTableStatus();
+      const currentTotal = tableList.length;
+      if (num > currentTotal) {
+        await authedFetch(`${API_URL}/settings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "total_tables", value: String(num) }),
+        });
+      }
+
+      setNewTableNum("");
+      showTableMsg("ok", `Đã thêm Bàn ${num}`);
+      fetchTableList();
+      fetchTableStatus();
+    } finally {
+      setTableSaving(false);
+    }
   }, [authedFetch, fetchTableList, fetchTableStatus, newTableNum, setNewTableNum, showTableMsg, tableList]);
 
   const renameTable = useCallback(async () => {
@@ -57,36 +63,47 @@ export default function useTableManagement({
       return;
     }
 
-    const res = await authedFetch(`${API_URL}/tables/${table_num}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ new_num: Number(new_num) }),
-    });
-    const data = await res.json();
-    if (!res.ok) return showTableMsg("err", data.error);
+    setTableSaving(true);
+    try {
+      const res = await authedFetch(`${API_URL}/tables/${table_num}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_num: Number(new_num) }),
+      });
+      const data = await res.json();
+      if (!res.ok) return showTableMsg("err", data.error);
 
-    setEditingTable(null);
-    showTableMsg("ok", `Đã đổi Bàn ${table_num} → Bàn ${new_num}`);
-    fetchTableList();
-    fetchTableStatus();
+      setEditingTable(null);
+      showTableMsg("ok", `Đã đổi Bàn ${table_num} → Bàn ${new_num}`);
+      fetchTableList();
+      fetchTableStatus();
+    } finally {
+      setTableSaving(false);
+    }
   }, [authedFetch, editingTable, fetchTableList, fetchTableStatus, setEditingTable, showTableMsg]);
 
   const deleteTable = useCallback(async (num) => {
     if (!window.confirm(`Xóa Bàn ${num}? Bàn sẽ bị xóa khỏi danh sách.`)) return;
-    const inDb = tableList.find((t) => t.table_num === num);
-    if (inDb) {
-      const res = await authedFetch(`${API_URL}/tables/${num}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) return showTableMsg("err", data.error);
-    }
+    setTableSaving(true);
+    try {
+      const inDb = tableList.find((t) => t.table_num === num);
+      if (inDb) {
+        const res = await authedFetch(`${API_URL}/tables/${num}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok) return showTableMsg("err", data.error);
+      }
 
-    setTableList((prev) => prev.filter((t) => t.table_num !== num));
-    showTableMsg("ok", `Đã xóa Bàn ${num}`);
-    fetchTableStatus();
+      setTableList((prev) => prev.filter((t) => t.table_num !== num));
+      showTableMsg("ok", `Đã xóa Bàn ${num}`);
+      fetchTableStatus();
+    } finally {
+      setTableSaving(false);
+    }
   }, [authedFetch, fetchTableStatus, setTableList, showTableMsg, tableList]);
 
   return {
     tableMsg,
+    tableSaving,
     addTable,
     renameTable,
     deleteTable,

@@ -20,6 +20,7 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     kitchen_categories_json: DEFAULT_KITCHEN_CATEGORIES_JSON,
   });
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   const [windowsPrinters, setWindowsPrinters] = useState([]);
   const [dbPrinters, setDbPrinters] = useState([]);
@@ -34,18 +35,28 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
   }, [authUser, authValidated]);
 
   const saveAllSettings = useCallback(async () => {
-    await saveAllSettingsRequest(settings);
-    setSettingsSaved(true);
-    setTimeout(() => setSettingsSaved(false), 2000);
+    setSettingsSaving(true);
+    try {
+      await saveAllSettingsRequest(settings);
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 2000);
+    } finally {
+      setSettingsSaving(false);
+    }
   }, [settings]);
 
   /** Gộp partial vào state hiện tại rồi lưu — dùng khi cần persist ngay (vd. kitchen_categories_json). */
   const mergeAndSaveSettings = useCallback(async (partial) => {
     const next = { ...settings, ...partial };
     setSettings(next);
-    await saveAllSettingsRequest(next);
-    setSettingsSaved(true);
-    setTimeout(() => setSettingsSaved(false), 2000);
+    setSettingsSaving(true);
+    try {
+      await saveAllSettingsRequest(next);
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 2000);
+    } finally {
+      setSettingsSaving(false);
+    }
   }, [settings]);
 
   const fetchWindowsPrinters = useCallback(async () => {
@@ -113,6 +124,7 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     settings,
     setSettings,
     settingsSaved,
+    settingsSaving,
     saveAllSettings,
     mergeAndSaveSettings,
     windowsPrinters,

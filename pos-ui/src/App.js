@@ -103,6 +103,7 @@ export default function App() {
   const [customLineQty, setCustomLineQty] = useState("1");
   const [users, setUsers] = useState([]);
   const [userLoading, setUserLoading] = useState(false);
+  const [userSaving, setUserSaving] = useState(false);
   const [newUser, setNewUser] = useState({
     username: "",
     password: "",
@@ -157,6 +158,7 @@ export default function App() {
       alert(tt("Nhập username và password", "Benutzername und Passwort eingeben"));
       return;
     }
+    setUserSaving(true);
     try {
       const res = await authedFetch(`${API_URL}/users`, {
         method: "POST",
@@ -169,10 +171,13 @@ export default function App() {
       fetchUsers();
     } catch (e) {
       alert(e.message || tt("Không tạo được user", "Benutzer kann nicht erstellt werden"));
+    } finally {
+      setUserSaving(false);
     }
   };
 
   const updateUser = async (u, patch) => {
+    setUserSaving(true);
     try {
       const res = await authedFetch(`${API_URL}/users/${u.id}`, {
         method: "PUT",
@@ -184,11 +189,14 @@ export default function App() {
       fetchUsers();
     } catch (e) {
       alert(e.message || tt("Không cập nhật được user", "Benutzer kann nicht aktualisiert werden"));
+    } finally {
+      setUserSaving(false);
     }
   };
 
   const deleteUser = async (u) => {
     if (!window.confirm(`${tt("Xóa user", "Benutzer löschen")} ${u.username}?`)) return;
+    setUserSaving(true);
     try {
       const res = await authedFetch(`${API_URL}/users/${u.id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
@@ -196,6 +204,8 @@ export default function App() {
       fetchUsers();
     } catch (e) {
       alert(e.message || tt("Không xóa được user", "Benutzer kann nicht gelöscht werden"));
+    } finally {
+      setUserSaving(false);
     }
   };
 
@@ -242,6 +252,7 @@ export default function App() {
     settings,
     setSettings,
     settingsSaved,
+    settingsSaving,
     saveAllSettings,
     mergeAndSaveSettings,
     windowsPrinters,
@@ -558,7 +569,7 @@ export default function App() {
     [callPrintApi, settings]
   );
 
-  const { addMenu, updateMenu, deleteMenu } = useMenuManagement({
+  const { addMenu, updateMenu, deleteMenu, menuSaving } = useMenuManagement({
     authedFetch,
     newItem,
     file,
@@ -572,7 +583,7 @@ export default function App() {
     defaultKitchenCategoryId,
   });
 
-  const { tableMsg, addTable, renameTable, deleteTable } = useTableManagement({
+  const { tableMsg, tableSaving, addTable, renameTable, deleteTable } = useTableManagement({
     authedFetch,
     tableList,
     setTableList,
@@ -1256,10 +1267,10 @@ export default function App() {
                 <p className="text-on-surface-variant font-medium">{tt("Điều chỉnh thực đơn và sơ đồ bàn nướng theo thời gian thực.", "Menü und Tischplan in Echtzeit verwalten.")}</p>
               </div>
               <div className="flex bg-surface-container-high p-1.5 rounded-2xl">
-                <button onClick={() => { setManageTab("edit"); setEditItem(null); }} className={`px-6 py-2.5 font-bold rounded-xl transition-all ${manageTab !== "table" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
+                <button type="button" disabled={menuSaving || tableSaving} onClick={() => { if (menuSaving || tableSaving) return; setManageTab("edit"); setEditItem(null); }} className={`px-6 py-2.5 font-bold rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none ${manageTab !== "table" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
                   {tt("Món ăn & Đồ uống", "Essen & Getränke")}
                 </button>
-                <button onClick={() => { setManageTab("table"); setEditingTable(null); }} className={`px-6 py-2.5 font-bold rounded-xl transition-all ${manageTab === "table" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
+                <button type="button" disabled={menuSaving || tableSaving} onClick={() => { if (menuSaving || tableSaving) return; setManageTab("table"); setEditingTable(null); }} className={`px-6 py-2.5 font-bold rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none ${manageTab === "table" ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
                   {tt("Quản lý Bàn", "Tischverwaltung")}
                 </button>
               </div>
@@ -1267,18 +1278,25 @@ export default function App() {
 
             <div className="flex-1 overflow-y-auto pb-8 pr-2">
             {manageTab !== "table" && (
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-6 relative min-h-[120px]">
+                {menuSaving && !(manageTab === "add" || editItem) && (
+                  <div className="absolute inset-0 z-20 rounded-[2rem] bg-surface-container-lowest/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                    <span className="font-bold text-on-surface text-lg">{tt("Đang lưu...", "Wird gespeichert...")}</span>
+                  </div>
+                )}
                 {/* Bento Grid - Menu Items Section */}
                 <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {/* Add New Item Card */}
                   <div
                     onClick={() => {
+                      if (menuSaving) return;
                       setManageTab("add");
                       setEditItem(null);
                       setMenuManagePriceEuro("");
                       setNewItem((prev) => ({ ...prev, kitchen_category: defaultKitchenCategoryId }));
                     }}
-                    className="group relative flex flex-col items-center justify-center p-8 bg-white/50 border-2 border-dashed border-outline-variant rounded-[2rem] hover:border-primary-container hover:bg-orange-50 transition-all cursor-pointer min-h-[280px]"
+                    className={`group relative flex flex-col items-center justify-center p-8 bg-white/50 border-2 border-dashed border-outline-variant rounded-[2rem] hover:border-primary-container hover:bg-orange-50 transition-all min-h-[280px] ${menuSaving ? "opacity-50 pointer-events-none cursor-default" : "cursor-pointer"}`}
                   >
                     <div className="w-16 h-16 rounded-full bg-primary text-white shadow-md shadow-orange-500/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-orange-200/50">
                       <span className="material-symbols-outlined text-3xl">add</span>
@@ -1289,7 +1307,7 @@ export default function App() {
 
                   {/* Menu Item Cards */}
                   {menu.map(m => (
-                    <div key={m.id} onClick={() => { setManageTab("edit"); setEditItem({...m}); setEditFile(null); setMenuManagePriceEuro(centsToEuroInputString(m.price)); }} className={`group relative overflow-hidden rounded-[2rem] bg-surface-container-lowest border ${editItem?.id === m.id ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/50'} shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer flex flex-col min-h-[280px]`}>
+                    <div key={m.id} onClick={() => { if (menuSaving) return; setManageTab("edit"); setEditItem({...m}); setEditFile(null); setMenuManagePriceEuro(centsToEuroInputString(m.price)); }} className={`group relative overflow-hidden rounded-[2rem] bg-surface-container-lowest border ${editItem?.id === m.id ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/50'} shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 flex flex-col min-h-[280px] ${menuSaving ? "opacity-50 pointer-events-none cursor-default" : "cursor-pointer"}`}>
                       <div className="h-40 w-full overflow-hidden bg-surface-container-high relative">
                         {m.image ? (
                            <img src={menuImageSrc(m.image)} alt={m.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -1309,7 +1327,7 @@ export default function App() {
                         <h3 className="text-lg font-bold text-on-surface mb-1 group-hover:text-primary transition-colors">{m.name}</h3>
                         <div className="mt-auto flex items-center justify-between pt-4">
                            <span className="text-xl font-black text-primary">{formatMoney(m.price)}</span>
-                           <button onClick={(e) => { e.stopPropagation(); deleteMenu(m.id); }} className="w-10 h-10 rounded-full bg-error-container text-error flex items-center justify-center hover:scale-110 transition-transform shadow-sm">
+                           <button type="button" disabled={menuSaving} onClick={(e) => { e.stopPropagation(); if (menuSaving) return; deleteMenu(m.id); }} className="w-10 h-10 rounded-full bg-error-container text-error flex items-center justify-center hover:scale-110 transition-transform shadow-sm disabled:opacity-40 disabled:pointer-events-none">
                               <span className="material-symbols-outlined text-[20px]">delete</span>
                            </button>
                         </div>
@@ -1322,9 +1340,15 @@ export default function App() {
                 {(manageTab === "add" || editItem) && (
                    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 md:p-8 overflow-y-auto">
                      <div className="bg-surface-container-lowest rounded-[2.5rem] p-8 md:p-10 border border-outline-variant/30 shadow-2xl max-w-2xl w-full relative animate-in fade-in zoom-in-95 duration-200 mt-auto mb-auto">
-                       
+                       {menuSaving && (
+                         <div className="absolute inset-0 z-20 rounded-[2.5rem] bg-surface-container-lowest/85 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-8">
+                           <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                           <span className="font-bold text-on-surface text-lg text-center">{tt("Đang lưu...", "Wird gespeichert...")}</span>
+                           <span className="text-sm text-on-surface-variant text-center">{tt("Vui lòng đợi trong giây lát.", "Bitte kurz warten.")}</span>
+                         </div>
+                       )}
                        {/* Close Button */}
-                       <button onClick={() => { setManageTab("edit"); setEditItem(null); setFile(null); setEditFile(null); }} className="absolute top-6 right-6 w-12 h-12 bg-surface-container-high hover:bg-outline-variant/30 text-on-surface flex items-center justify-center rounded-full transition-colors shadow-sm">
+                       <button type="button" disabled={menuSaving} onClick={() => { if (menuSaving) return; setManageTab("edit"); setEditItem(null); setFile(null); setEditFile(null); }} className="absolute top-6 right-6 w-12 h-12 bg-surface-container-high hover:bg-outline-variant/30 text-on-surface flex items-center justify-center rounded-full transition-colors shadow-sm disabled:opacity-40 disabled:pointer-events-none">
                          <span className="material-symbols-outlined text-2xl">close</span>
                        </button>
 
@@ -1433,7 +1457,9 @@ export default function App() {
                           <div className="flex gap-4 pt-4 mt-8">
                              <button
                                type="button"
+                               disabled={menuSaving}
                                onClick={() => {
+                                 if (menuSaving) return;
                                  const cents = parseEuroInputToCents(menuManagePriceEuro);
                                  if (cents === null) {
                                    alert(tt("Nhập giá hợp lệ (ví dụ 26,90).", "Bitte gültigen Preis eingeben (z.B. 26,90)."));
@@ -1442,12 +1468,12 @@ export default function App() {
                                  if (manageTab === "add") addMenu(cents);
                                  else updateMenu(cents);
                                }}
-                               className="flex-1 bg-gradient-to-br from-primary to-orange-600 hover:scale-[1.02] text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-xl shadow-orange-300/40 active:scale-95 transition-all"
+                               className="flex-1 bg-gradient-to-br from-primary to-orange-600 hover:scale-[1.02] text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-xl shadow-orange-300/40 active:scale-95 transition-all disabled:opacity-70 disabled:pointer-events-none disabled:hover:scale-100"
                              >
-                                <span className="material-symbols-outlined text-2xl">{manageTab === "add" ? 'add_circle' : 'save_as'}</span>
-                                <span>{manageTab === "add" ? tt("Tạo món mới", "Gericht anlegen") : tt("Lưu thay đổi", "Änderungen speichern")}</span>
+                                <span className={`material-symbols-outlined text-2xl ${menuSaving ? "animate-spin" : ""}`}>{menuSaving ? "progress_activity" : manageTab === "add" ? "add_circle" : "save_as"}</span>
+                                <span>{menuSaving ? tt("Đang lưu...", "Wird gespeichert...") : manageTab === "add" ? tt("Tạo món mới", "Gericht anlegen") : tt("Lưu thay đổi", "Änderungen speichern")}</span>
                              </button>
-                             <button onClick={() => { setManageTab("edit"); setEditItem(null); setFile(null); setEditFile(null); }} className="px-8 bg-surface-container-highest hover:bg-outline-variant/50 text-on-surface-variant hover:text-on-surface py-4 rounded-2xl font-black text-lg transition-all active:scale-95">
+                             <button type="button" disabled={menuSaving} onClick={() => { if (menuSaving) return; setManageTab("edit"); setEditItem(null); setFile(null); setEditFile(null); }} className="px-8 bg-surface-container-highest hover:bg-outline-variant/50 text-on-surface-variant hover:text-on-surface py-4 rounded-2xl font-black text-lg transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
                                 {tt("Hủy Bỏ", "Abbrechen")}
                              </button>
                           </div>
@@ -1460,7 +1486,13 @@ export default function App() {
             
             {/* ---- Tab Quản lý bàn ---- */}
             {manageTab === "table" && (
-              <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
+              <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full relative min-h-[160px]">
+                {tableSaving && (
+                  <div className="absolute inset-0 z-20 rounded-[2rem] bg-surface-container-lowest/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                    <span className="font-bold text-on-surface text-lg">{tt("Đang lưu...", "Wird gespeichert...")}</span>
+                  </div>
+                )}
                 {tableMsg && (
                    <div className={`p-4 rounded-2xl font-semibold flex items-center gap-3 ${tableMsg.type === "ok" ? "bg-green-50 text-green-700" : "bg-error-container text-error"}`}>
                       <span className="material-symbols-outlined">{tableMsg.type === "ok" ? "check_circle" : "error"}</span>
@@ -1477,11 +1509,11 @@ export default function App() {
                       <div className="flex flex-col gap-4">
                          <div className="relative">
                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50 select-none font-bold">{tt("BÀN", "TISCH")}</span>
-                           <input type="number" min="1" placeholder={tt("Số (VD: 21)", "Nummer (z.B. 21)")} value={newTableNum} onChange={e => setNewTableNum(e.target.value)} onKeyDown={e => e.key === "Enter" && addTable()}
-                               className="w-full pl-14 pr-4 py-4 rounded-xl bg-surface-container text-on-surface border border-outline-variant/50 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-lg transition-all" />
+                           <input type="number" min="1" placeholder={tt("Số (VD: 21)", "Nummer (z.B. 21)")} value={newTableNum} onChange={e => setNewTableNum(e.target.value)} onKeyDown={e => e.key === "Enter" && !tableSaving && addTable()} disabled={tableSaving}
+                               className="w-full pl-14 pr-4 py-4 rounded-xl bg-surface-container text-on-surface border border-outline-variant/50 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-lg transition-all disabled:opacity-60" />
                          </div>
-                         <button onClick={addTable} className="w-full py-4 bg-primary hover:bg-orange-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-200/50 active:scale-95 transition-all">
-                           <span className="material-symbols-outlined">add</span> {tt("Thêm bàn mới", "Neuen Tisch hinzufügen")}
+                         <button type="button" disabled={tableSaving} onClick={() => { if (!tableSaving) addTable(); }} className="w-full py-4 bg-primary hover:bg-orange-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-200/50 active:scale-95 transition-all disabled:opacity-60 disabled:pointer-events-none">
+                           <span className={`material-symbols-outlined ${tableSaving ? "animate-spin" : ""}`}>{tableSaving ? "progress_activity" : "add"}</span> {tableSaving ? tt("Đang lưu...", "Wird gespeichert...") : tt("Thêm bàn mới", "Neuen Tisch hinzufügen")}
                          </button>
                       </div>
                    </div>
@@ -1516,8 +1548,11 @@ export default function App() {
                                      <input type="number" min="1" value={editingTable.new_num} onChange={e => setEditingTable({ ...editingTable, new_num: e.target.value })} onKeyDown={e => { if (e.key === "Enter") renameTable(); if (e.key === "Escape") setEditingTable(null); }} autoFocus
                                         className="w-full text-lg font-bold px-3 py-2 rounded-xl border-2 border-primary focus:outline-none bg-white text-on-surface" />
                                      <div className="flex gap-2">
-                                       <button onClick={renameTable} className="flex-1 py-2 bg-primary text-white rounded-lg text-sm font-bold active:scale-95 transition-transform">{tt("Lưu", "Speichern")}</button>
-                                       <button onClick={() => setEditingTable(null)} className="flex-1 py-2 bg-surface-container-highest text-on-surface-variant hover:text-on-surface rounded-lg text-sm font-bold active:scale-95 transition-transform">{tt("Huỷ", "Abbrechen")}</button>
+                                       <button type="button" disabled={tableSaving} onClick={() => { if (!tableSaving) renameTable(); }} className="flex-1 py-2 bg-primary text-white rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:opacity-60 flex items-center justify-center gap-1">
+                                         {tableSaving ? <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> : null}
+                                         {tableSaving ? tt("Đang lưu...", "Speichern...") : tt("Lưu", "Speichern")}
+                                       </button>
+                                       <button type="button" disabled={tableSaving} onClick={() => { if (!tableSaving) setEditingTable(null); }} className="flex-1 py-2 bg-surface-container-highest text-on-surface-variant hover:text-on-surface rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:opacity-50">{tt("Huỷ", "Abbrechen")}</button>
                                      </div>
                                   </div>
                                ) : (
@@ -1525,10 +1560,10 @@ export default function App() {
                                      <div className="flex justify-between items-start mb-4">
                                         <div className="font-headline font-black text-2xl text-on-surface">{tt("Bàn", "Tisch")} {t.table_num}</div>
                                         <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                                           <button onClick={() => setEditingTable({ table_num: t.table_num, new_num: String(t.table_num) })} className="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface hover:bg-primary hover:text-white flex items-center justify-center transition-colors">
+                                           <button type="button" disabled={tableSaving} onClick={() => { if (!tableSaving) setEditingTable({ table_num: t.table_num, new_num: String(t.table_num) }); }} className="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface hover:bg-primary hover:text-white flex items-center justify-center transition-colors disabled:opacity-40 disabled:pointer-events-none">
                                               <span className="material-symbols-outlined text-[16px]">edit</span>
                                            </button>
-                                           <button onClick={() => deleteTable(t.table_num)} disabled={t.status === "OPEN"} className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${t.status === "OPEN" ? "bg-surface-container-highest text-outline-variant cursor-not-allowed" : "bg-surface-container-highest text-error hover:bg-error hover:text-white"}`}>
+                                           <button type="button" onClick={() => { if (!tableSaving) deleteTable(t.table_num); }} disabled={t.status === "OPEN" || tableSaving} className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${t.status === "OPEN" || tableSaving ? "bg-surface-container-highest text-outline-variant cursor-not-allowed" : "bg-surface-container-highest text-error hover:bg-error hover:text-white"}`}>
                                               <span className="material-symbols-outlined text-[16px]">delete</span>
                                            </button>
                                         </div>
@@ -1579,29 +1614,32 @@ export default function App() {
                 <div className="flex rounded-xl p-1 bg-surface-container-high border border-outline-variant/30">
                   <button
                     type="button"
-                    onClick={() => setSettingsPanel("general")}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition ${settingsPanel === "general" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
+                    disabled={settingsSaving}
+                    onClick={() => { if (!settingsSaving) setSettingsPanel("general"); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition disabled:opacity-50 ${settingsPanel === "general" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
                   >
                     {tt("Chung & máy in", "Allgemein & Drucker")}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSettingsPanel("kitchenCats")}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition ${settingsPanel === "kitchenCats" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
+                    disabled={settingsSaving}
+                    onClick={() => { if (!settingsSaving) setSettingsPanel("kitchenCats"); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition disabled:opacity-50 ${settingsPanel === "kitchenCats" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
                   >
                     {tt("Danh mục bếp", "Küchen-Kategorien")}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSettingsPanel("reportBill")}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition ${settingsPanel === "reportBill" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
+                    disabled={settingsSaving}
+                    onClick={() => { if (!settingsSaving) setSettingsPanel("reportBill"); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition disabled:opacity-50 ${settingsPanel === "reportBill" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:bg-surface-container"}`}
                   >
                     Report Bill
                   </button>
                 </div>
-                 <button onClick={saveAllSettings} className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm ${settingsSaved ? "bg-green-500 text-white" : "bg-primary text-white shadow-primary/20 hover:opacity-90 active:scale-95"}`}>
-                    <span className="material-symbols-outlined text-[20px]">{settingsSaved ? "check_circle" : "save"}</span>
-                    {settingsSaved ? tt("Đã lưu cài đặt", "Einstellungen gespeichert") : tt("Lưu thay đổi", "Änderungen speichern")}
+                 <button type="button" disabled={settingsSaving} onClick={() => { if (!settingsSaving) saveAllSettings(); }} className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm disabled:opacity-60 disabled:pointer-events-none ${settingsSaved ? "bg-green-500 text-white" : "bg-primary text-white shadow-primary/20 hover:opacity-90 active:scale-95"}`}>
+                    <span className={`material-symbols-outlined text-[20px] ${settingsSaving ? "animate-spin" : ""}`}>{settingsSaving ? "progress_activity" : settingsSaved ? "check_circle" : "save"}</span>
+                    {settingsSaving ? tt("Đang lưu...", "Wird gespeichert...") : settingsSaved ? tt("Đã lưu cài đặt", "Einstellungen gespeichert") : tt("Lưu thay đổi", "Änderungen speichern")}
                  </button>
               </div>
             </div>
@@ -1612,6 +1650,7 @@ export default function App() {
                 setSettings={setSettings}
                 saveAllSettings={saveAllSettings}
                 settingsSaved={settingsSaved}
+                settingsSaving={settingsSaving}
                 tt={tt}
                 toggleLanguage={toggleLanguage}
                 language={language}
@@ -1624,6 +1663,7 @@ export default function App() {
                 setSettings={setSettings}
                 mergeAndSaveSettings={mergeAndSaveSettings}
                 settingsSaved={settingsSaved}
+                settingsSaving={settingsSaving}
                 tt={tt}
               />
             ) : null}
@@ -1836,8 +1876,9 @@ export default function App() {
                       <option value="admin">{tt("Quản trị (Admin)", "Administrator (Admin)")}</option>
                     </select>
                   </div>
-                  <button onClick={createUser} className="w-full rounded-2xl bg-primary text-white py-4 font-black text-lg shadow-xl shadow-orange-300/40 active:scale-95 transition-all mt-4">
-                    {tt("Tạo tài khoản", "Konto erstellen")}
+                  <button type="button" disabled={userSaving} onClick={() => { if (!userSaving) createUser(); }} className="w-full rounded-2xl bg-primary text-white py-4 font-black text-lg shadow-xl shadow-orange-300/40 active:scale-95 transition-all mt-4 flex items-center justify-center gap-2 disabled:opacity-60 disabled:pointer-events-none">
+                    <span className={`material-symbols-outlined ${userSaving ? "animate-spin" : ""}`}>{userSaving ? "progress_activity" : "person_add"}</span>
+                    {userSaving ? tt("Đang lưu...", "Wird gespeichert...") : tt("Tạo tài khoản", "Konto erstellen")}
                   </button>
                 </div>
               </section>
@@ -1849,7 +1890,7 @@ export default function App() {
                     <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><span className="material-symbols-outlined">group</span></div>
                     {tt("Danh sách nhân viên", "Mitarbeiterliste")}
                   </h3>
-                  <button onClick={fetchUsers} className="px-5 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest font-bold text-sm transition-all flex items-center gap-2">
+                  <button type="button" disabled={userSaving} onClick={() => { if (!userSaving) fetchUsers(); }} className="px-5 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50">
                     <span className="material-symbols-outlined text-[18px]">refresh</span> {tt("Làm mới", "Aktualisieren")}
                   </button>
                 </div>
@@ -1872,14 +1913,14 @@ export default function App() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-4 border-t border-outline-variant/10">
-                          <button onClick={() => updateUser(u, { is_active: Number(u.is_active) ? 0 : 1 })} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${Number(u.is_active) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                          <button type="button" disabled={userSaving} onClick={() => { if (!userSaving) updateUser(u, { is_active: Number(u.is_active) ? 0 : 1 }); }} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${Number(u.is_active) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                             {Number(u.is_active) ? tt("Kích hoạt", "Aktiv") : tt("Đã khóa", "Gesperrt")}
                           </button>
                           <div className="flex gap-2">
-                            <button onClick={() => { const pw = window.prompt(tt("Đặt mật khẩu mới cho", "Neues Passwort setzen für") + ` ${u.username}`); if (pw) updateUser(u, { password: pw }); }} className="w-8 h-8 rounded-full bg-white text-amber-600 flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all shadow-sm border border-amber-100">
+                            <button type="button" disabled={userSaving} onClick={() => { if (userSaving) return; const pw = window.prompt(tt("Đặt mật khẩu mới cho", "Neues Passwort setzen für") + ` ${u.username}`); if (pw) updateUser(u, { password: pw }); }} className="w-8 h-8 rounded-full bg-white text-amber-600 flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all shadow-sm border border-amber-100 disabled:opacity-40 disabled:pointer-events-none">
                               <span className="material-symbols-outlined text-[16px]">key</span>
                             </button>
-                            <button onClick={() => deleteUser(u)} className="w-8 h-8 rounded-full bg-white text-error flex items-center justify-center hover:bg-error hover:text-white transition-all shadow-sm border border-red-100">
+                            <button type="button" disabled={userSaving} onClick={() => { if (!userSaving) deleteUser(u); }} className="w-8 h-8 rounded-full bg-white text-error flex items-center justify-center hover:bg-error hover:text-white transition-all shadow-sm border border-red-100 disabled:opacity-40 disabled:pointer-events-none">
                               <span className="material-symbols-outlined text-[16px]">delete</span>
                             </button>
                           </div>

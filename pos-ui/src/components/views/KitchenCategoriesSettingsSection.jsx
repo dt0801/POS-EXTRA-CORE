@@ -21,6 +21,7 @@ export default function KitchenCategoriesSettingsSection({
   setSettings,
   mergeAndSaveSettings,
   settingsSaved,
+  settingsSaving = false,
   tt,
 }) {
   const initialJson = settings.kitchen_categories_json || DEFAULT_KITCHEN_CATEGORIES_JSON;
@@ -232,10 +233,17 @@ export default function KitchenCategoriesSettingsSection({
       <button
         type="button"
         onClick={applyToSettingsAndSave}
-        disabled={!!parseError}
-        className={`w-full sm:w-auto px-8 py-3 rounded-xl font-bold text-white ${parseError ? "bg-outline-variant" : settingsSaved ? "bg-green-600" : "bg-primary"}`}
+        disabled={!!parseError || settingsSaving}
+        className={`w-full sm:w-auto px-8 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 disabled:opacity-60 ${parseError ? "bg-outline-variant" : settingsSaved ? "bg-green-600" : "bg-primary"}`}
       >
-        {settingsSaved ? tt("Đã lưu", "Gespeichert") : tt("Lưu danh mục & đồng bộ", "Kategorien speichern")}
+        <span className={`material-symbols-outlined text-[22px] ${settingsSaving ? "animate-spin" : ""}`}>
+          {settingsSaving ? "progress_activity" : "save"}
+        </span>
+        {settingsSaving
+          ? tt("Đang lưu...", "Wird gespeichert...")
+          : settingsSaved
+            ? tt("Đã lưu", "Gespeichert")
+            : tt("Lưu danh mục & đồng bộ", "Kategorien speichern")}
       </button>
     </div>
   );

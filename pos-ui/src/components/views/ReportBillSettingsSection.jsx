@@ -10,6 +10,7 @@ export default function ReportBillSettingsSection({
   setSettings,
   saveAllSettings,
   settingsSaved,
+  settingsSaving = false,
   tt,
   toggleLanguage,
   language,
@@ -246,12 +247,22 @@ export default function ReportBillSettingsSection({
 
         <button
           type="button"
-          onClick={saveAllSettings}
-          className={`w-full py-3 rounded-xl font-bold text-white transition shadow-md ${
+          disabled={settingsSaving}
+          onClick={() => {
+            if (!settingsSaving) saveAllSettings();
+          }}
+          className={`w-full py-3 rounded-xl font-bold text-white transition shadow-md flex items-center justify-center gap-2 disabled:opacity-60 disabled:pointer-events-none ${
             settingsSaved ? "bg-green-600" : "bg-primary hover:opacity-95"
           }`}
         >
-          {settingsSaved ? tt("Đã lưu", "Gespeichert") : tt("Lưu toàn bộ cài đặt", "Alle Einstellungen speichern")}
+          <span className={`material-symbols-outlined text-[22px] ${settingsSaving ? "animate-spin" : ""}`}>
+            {settingsSaving ? "progress_activity" : "save"}
+          </span>
+          {settingsSaving
+            ? tt("Đang lưu...", "Wird gespeichert...")
+            : settingsSaved
+              ? tt("Đã lưu", "Gespeichert")
+              : tt("Lưu toàn bộ cài đặt", "Alle Einstellungen speichern")}
         </button>
       </div>
 

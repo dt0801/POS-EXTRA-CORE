@@ -24,7 +24,7 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
 
   const [windowsPrinters, setWindowsPrinters] = useState([]);
   const [dbPrinters, setDbPrinters] = useState([]);
-  const [newPrinter, setNewPrinter] = useState({ name: "", type: "ALL", paper_size: 80, is_enabled: 1 });
+  const [newPrinter, setNewPrinter] = useState({ name: "", type: "KITCHEN", paper_size: 80, is_enabled: 1 });
   const [loadingDbPrinters, setLoadingDbPrinters] = useState(false);
 
   useEffect(() => {
@@ -80,13 +80,18 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
   }, []);
 
   const addDbPrinter = useCallback(async () => {
-    if (!newPrinter.name) return alert("Vui lòng chọn tên máy in");
+    const name = String(newPrinter.name || "").trim();
+    if (!name) return alert("Vui lòng nhập tên máy in");
+    const paper = Math.min(120, Math.max(40, Number(newPrinter.paper_size) || 80));
+    let type = String(newPrinter.type || "ALL").toUpperCase();
+    if (type === "DRINK") type = "BILL";
+    const payload = { name, type, paper_size: paper, is_enabled: newPrinter.is_enabled !== 0 ? 1 : 0 };
     try {
-      await addDbPrinterRequest(newPrinter);
-      setNewPrinter({ name: "", type: "ALL", paper_size: 80, is_enabled: 1 });
+      await addDbPrinterRequest(payload);
+      setNewPrinter({ name: "", type: "KITCHEN", paper_size: 80, is_enabled: 1 });
       fetchDbPrinters();
     } catch (e) {
-      alert("Lỗi thêm máy in");
+      alert(e?.message || "Lỗi thêm máy in");
     }
   }, [fetchDbPrinters, newPrinter]);
 
@@ -129,6 +134,7 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     mergeAndSaveSettings,
     windowsPrinters,
     fetchWindowsPrinters,
+    fetchDbPrinters,
     dbPrinters,
     loadingDbPrinters,
     newPrinter,

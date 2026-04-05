@@ -260,6 +260,7 @@ export default function App() {
     mergeAndSaveSettings,
     windowsPrinters,
     fetchWindowsPrinters,
+    fetchDbPrinters,
     dbPrinters,
     loadingDbPrinters,
     newPrinter,
@@ -1842,61 +1843,113 @@ export default function App() {
                         <span className="material-symbols-outlined text-[24px]">print</span>
                       </div>
                       <div>
-                        <h4 className="font-bold text-xl font-headline text-on-surface">{tt("Cấu hình Máy in mạng", "Netzwerkdrucker")}</h4>
-                        <p className="text-sm text-on-surface-variant font-medium mt-0.5">{dbPrinters.length} {tt("thiết bị đang hoạt động", "aktive Geräte")}</p>
+                        <h4 className="font-bold text-xl font-headline text-on-surface">{tt("Quản lý máy in", "Druckerverwaltung")}</h4>
+                        <p className="text-sm text-on-surface-variant font-medium mt-0.5">{dbPrinters.length} {tt("máy in đã cấu hình", "konfigurierte Drucker")}</p>
                       </div>
                     </div>
-                    <button onClick={fetchWindowsPrinters} className="flex items-center gap-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors px-4 py-2 rounded-xl text-sm font-bold text-on-surface-variant">
-                       <span className="material-symbols-outlined text-[18px]">sync</span>
-                       {tt("Làm mới Windows API", "Windows-API aktualisieren")}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        fetchDbPrinters();
+                        fetchWindowsPrinters();
+                      }}
+                      className="flex items-center gap-2 bg-surface-container-high hover:bg-surface-container-highest transition-colors px-4 py-2 rounded-xl text-sm font-bold text-on-surface-variant"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">sync</span>
+                      {tt("Làm mới", "Aktualisieren")}
                     </button>
                   </div>
 
                   {!isLocalQuayOrigin() && !isPosElectron() && (
                     <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                      <p className="font-bold mb-1">{tt("Tại sao không thấy máy in?", "Warum werden keine Drucker angezeigt?")}</p>
+                      <p className="font-bold mb-1">{tt("Thêm máy in trên cloud", "Drucker in der Cloud anlegen")}</p>
                       <p className="text-amber-900/90 leading-relaxed">
-                        {tt("Bạn đang mở POS trên trang ", "Sie öffnen POS auf ")}<strong>cloud</strong>{tt(" (vd: Vercel). Để lấy máy in Windows và in từ cloud, cần ", " (z.B. Vercel). Für Windows-Drucker aus der Cloud benötigen Sie ")}
-                        <strong>POS_PrintBridge.exe</strong>{tt(" chạy trên máy quầy rồi kết nối tới backend.", " auf dem Kassen-PC mit Verbindung zum Backend.")}
+                        {tt(
+                          "Nhập đúng tên máy in như trong Windows trên máy quầy (vd: EPSON TM-T82). Print Bridge sẽ in tới đúng tên đó.",
+                          "Geben Sie den exakten Windows-Druckernamen am Kassen-PC ein (z.B. EPSON TM-T82)."
+                        )}
                       </p>
                       <p className="mt-2 text-amber-900/90 leading-relaxed">
-                        {tt("Hãy chạy ", "Starten Sie ")}<code className="rounded bg-amber-100/80 px-1">POS_PrintBridge.exe</code>{tt(" với ", " mit ")}<code className="rounded bg-amber-100/80 px-1">server_url</code>{tt(" trỏ ", " auf ")}
-                        <code className="rounded bg-amber-100/80 px-1">wss://&lt;backend&gt;/bridge?secret=...</code>{tt(" và ", " und ")}
-                        <code className="rounded bg-amber-100/80 px-1">api_url</code>{tt(" trỏ ", " auf ")}<code className="rounded bg-amber-100/80 px-1">https://&lt;backend&gt;</code>.
+                        {tt("Chạy ", "Starten Sie ")}<strong>POS_PrintBridge.exe</strong>
+                        {tt(" với ", " mit ")}
+                        <code className="rounded bg-amber-100/80 px-1">wss://&lt;backend&gt;/bridge?secret=...</code>
+                        {tt(" và ", " und ")}
+                        <code className="rounded bg-amber-100/80 px-1">api_url</code>
+                        {tt(" (không có / cuối) để nhận job in.", " (ohne Slash am Ende) für Druckaufträge.")}
                       </p>
                     </div>
                   )}
 
+                  {(isLocalQuayOrigin() || isPosElectron()) && windowsPrinters.length > 0 && (
+                    <p className="mb-4 text-xs text-on-surface-variant">
+                      {tt("Gợi ý từ máy quầy:", "Vorschläge vom Kassen-PC:")}{" "}
+                      {windowsPrinters.map((p) => p.name).filter(Boolean).join(", ")}
+                    </p>
+                  )}
+
                   {/* Form thêm máy in */}
                   <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/30 mb-8 shrink-0">
-                     <h5 className="font-bold text-sm text-on-surface mb-4 uppercase tracking-wider">{tt("Thêm thiết bị in mới", "Neues Druckgerät hinzufügen")}</h5>
-                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div className="md:col-span-2 space-y-1.5">
-                           <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Chọn máy in hệ thống", "Systemdrucker wählen")}</label>
-                           <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">print_add</span>
-                              <select value={newPrinter.name} onChange={e => setNewPrinter(s => ({ ...s, name: e.target.value }))}
-                                 className="w-full bg-white border border-outline-variant/50 rounded-xl pl-10 pr-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm appearance-none">
-                                 <option value="">{tt("-- Chọn máy in Windows --", "-- Windows-Drucker wählen --")}</option>
-                                 {windowsPrinters.map((p, i) => <option key={i} value={p.name}>{p.name}</option>)}
-                              </select>
-                           </div>
+                    <h5 className="font-bold text-base text-on-surface mb-4">{tt("Thêm máy in mới", "Neuen Drucker hinzufügen")}</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                      <div className="md:col-span-5 space-y-1.5">
+                        <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Tên máy in", "Druckername")}</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">print</span>
+                          <input
+                            type="text"
+                            value={newPrinter.name}
+                            onChange={(e) => setNewPrinter((s) => ({ ...s, name: e.target.value }))}
+                            placeholder={tt("VD: EPSON TM-T88VI", "z.B. EPSON TM-T88VI")}
+                            list="pos-windows-printer-hints"
+                            className="w-full bg-white border border-outline-variant/50 rounded-xl pl-10 pr-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm"
+                          />
+                          <datalist id="pos-windows-printer-hints">
+                            {windowsPrinters.map((p, i) => (
+                              <option key={i} value={p.name} />
+                            ))}
+                          </datalist>
                         </div>
-                        <div className="space-y-1.5">
-                           <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Vai trò in", "Druckrolle")}</label>
-                           <select value={newPrinter.type} onChange={e => setNewPrinter(s => ({ ...s, type: e.target.value }))}
-                              className="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm appearance-none">
-                              <option value="ALL">{tt("Tất cả", "Alle")}</option>
-                              <option value="KITCHEN">{tt("Bếp (Đồ ăn)", "Küche (Essen)")}</option>
-                              <option value="DRINK">{tt("Pha chế", "Getränke")}</option>
-                              <option value="BILL">{tt("Máy POS (Thanh toán)", "POS (Kasse)")}</option>
-                           </select>
-                        </div>
-                        <button onClick={addDbPrinter} disabled={!newPrinter.name}
-                           className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${newPrinter.name ? "bg-primary text-white hover:bg-orange-600 active:scale-95 shadow-md shadow-primary/20" : "bg-surface-container-highest text-outline-variant cursor-not-allowed"}`}>
-                           <span className="material-symbols-outlined text-[20px]">add</span>{tt("Thêm", "Hinzufügen")}
-                        </button>
-                     </div>
+                      </div>
+                      <div className="md:col-span-4 space-y-1.5">
+                        <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Loại phiếu", "Belegtyp")}</label>
+                        <select
+                          value={newPrinter.type}
+                          onChange={(e) => setNewPrinter((s) => ({ ...s, type: e.target.value }))}
+                          className="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm appearance-none"
+                        >
+                          <option value="KITCHEN">{tt("Bếp (KITCHEN)", "Küche (KITCHEN)")}</option>
+                          <option value="BILL">{tt("Hóa đơn / pha chế (BILL)", "Rechnung / Bar (BILL)")}</option>
+                          <option value="TAMTINH">{tt("Tạm tính (TAMTINH)", "Zwischenrechnung (TAMTINH)")}</option>
+                          <option value="ALL">{tt("Tất cả loại phiếu (ALL)", "Alle Belege (ALL)")}</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-3 space-y-1.5">
+                        <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{tt("Khổ giấy (mm)", "Papierbreite (mm)")}</label>
+                        <input
+                          type="number"
+                          min={40}
+                          max={120}
+                          value={newPrinter.paper_size}
+                          onChange={(e) =>
+                            setNewPrinter((s) => ({ ...s, paper_size: Number(e.target.value) || 80 }))
+                          }
+                          className="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addDbPrinter}
+                      disabled={!String(newPrinter.name || "").trim()}
+                      className={`mt-4 w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                        String(newPrinter.name || "").trim()
+                          ? "bg-primary text-white hover:bg-orange-600 active:scale-[0.99] shadow-md shadow-primary/20"
+                          : "bg-surface-container-highest text-outline-variant cursor-not-allowed"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[22px]">add</span>
+                      {tt("Thêm máy in mới", "Neuen Drucker hinzufügen")}
+                    </button>
                   </div>
 
                   {/* Printer List Grid */}
@@ -1910,14 +1963,14 @@ export default function App() {
                       ) : dbPrinters.length === 0 ? (
                          <div className="col-span-full border-2 border-dashed border-outline-variant/50 rounded-2xl flex flex-col items-center justify-center p-12 gap-3 opacity-70">
                             <span className="material-symbols-outlined text-5xl text-outline">print_disabled</span>
-                            <p className="text-sm font-bold text-on-surface-variant">{tt("Chưa có cấu hình máy in nào", "Noch keine Druckerkonfiguration")}</p>
+                            <p className="text-sm font-bold text-on-surface-variant">{tt("Chưa có máy in", "Noch keine Drucker")}</p>
                          </div>
                       ) : dbPrinters.map(p => (
                          <div key={p.id} className={`p-5 rounded-2xl border transition-all group ${p.is_enabled ? 'bg-surface-container border-outline-variant/30 hover:border-primary/40 shadow-sm' : 'bg-surface-container-low border-dashed border-outline-variant/40 opacity-70'}`}>
                             <div className="flex justify-between items-start mb-4">
                                <div className="flex items-center gap-3">
-                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform ${p.is_enabled ? (p.type==='KITCHEN'?'bg-orange-100 text-orange-600':p.type==='DRINK'?'bg-blue-100 text-blue-600':'bg-primary-container text-primary') : 'bg-surface-container-highest text-outline'}`}>
-                                     <span className="material-symbols-outlined text-[20px]">{p.type==='KITCHEN'?'oven_gen':p.type==='DRINK'?'local_bar':'receipt_long'}</span>
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform ${p.is_enabled ? (p.type==='KITCHEN'?'bg-orange-100 text-orange-600':p.type==='TAMTINH'?'bg-violet-100 text-violet-700':p.type==='DRINK'?'bg-blue-100 text-blue-600':'bg-primary-container text-primary') : 'bg-surface-container-highest text-outline'}`}>
+                                     <span className="material-symbols-outlined text-[20px]">{p.type==='KITCHEN'?'oven_gen':p.type==='TAMTINH'?'calculate':p.type==='DRINK'?'local_bar':'receipt_long'}</span>
                                   </div>
                                   <div>
                                      <h5 className="font-bold text-on-surface text-sm max-w-[150px] truncate">{p.name}</h5>
@@ -1938,7 +1991,7 @@ export default function App() {
                             <div className="space-y-2 mt-4 bg-white/50 p-3 rounded-xl border border-outline-variant/20">
                                <div className="flex justify-between items-center text-xs">
                                   <span className="text-on-surface-variant font-medium">{tt("Vai trò", "Rolle")}:</span>
-                                 <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${p.type==='KITCHEN'?'bg-orange-100 text-orange-700':p.type==='DRINK'?'bg-blue-100 text-blue-700':'bg-primary-container text-on-primary-container'}`}>{p.type === "ALL" ? tt("Tất cả", "Alle") : p.type}</span>
+                                 <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${p.type==='KITCHEN'?'bg-orange-100 text-orange-700':p.type==='TAMTINH'?'bg-violet-100 text-violet-800':p.type==='DRINK'?'bg-blue-100 text-blue-700':'bg-primary-container text-on-primary-container'}`}>{p.type === "ALL" ? tt("Tất cả", "Alle") : p.type}</span>
                                </div>
                                <div className="flex justify-between items-center text-xs">
                                   <span className="text-on-surface-variant font-medium">{tt("Khổ giấy", "Papierbreite")}:</span>

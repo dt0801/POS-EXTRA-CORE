@@ -1472,7 +1472,7 @@ function startServer() {
 
   const { buildReceiptHtml } = createBuildReceiptHtml({
     getBillCssOverride,
-    getStoreProfile,
+    getBillSettings: () => settingsCache,
   });
   const { dispatchReceiptToType } = createDispatchReceiptToType({
     getEnabledPrintersByType,

@@ -46,21 +46,30 @@ export function generateBillHTML({
   billId,
   createdAt,
   isReprint = false,
+  kitchenTitle = "PHIẾU BẾP",
+  kitchenTimeDisplay,
+  preformattedDate,
+  paperSizeMm = 80,
+  appendFooter = "",
 }) {
   const cfg = buildCfg(settings, type);
   const fs = Number(cfg.font_size) || 13;
   const align = cfg.header_align;
   const fw = cfg.font_style === "bold" ? "bold" : "normal";
   const fi = cfg.font_style === "italic" ? "italic" : "normal";
-  const dateStr = createdAt
-    ? new Date(createdAt).toLocaleString("vi-VN")
-    : new Date().toLocaleString("vi-VN");
-  const timeStr = new Date().toLocaleTimeString("vi-VN");
+  const dateStr = preformattedDate
+    ? String(preformattedDate)
+    : createdAt
+      ? new Date(createdAt).toLocaleString("vi-VN")
+      : new Date().toLocaleString("vi-VN");
+  const timeStr = kitchenTimeDisplay || new Date().toLocaleTimeString("vi-VN");
+  const pw = Number(paperSizeMm) === 58 ? 58 : 80;
+  const maxW = pw === 58 ? 220 : 320;
 
   const baseStyle = `
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:monospace;font-size:${fs}px;font-weight:${fw};font-style:${fi};
-         width:100%;max-width:320px;margin:0 auto;padding:16px;color:#000;background:#fff;line-height:1.6}
+         width:100%;max-width:${maxW}px;margin:0 auto;padding:16px;color:#000;background:#fff;line-height:1.6}
     .hr{border-top:1px dashed #999;margin:5px 0}
     .center{text-align:center}
     .right{text-align:right}
@@ -70,7 +79,7 @@ export function generateBillHTML({
     .row{display:flex;justify-content:space-between}
     table{width:100%;border-collapse:collapse}
     th,td{padding:3px 2px;font-size:${fs}px}
-    @media print{@page{size:80mm auto;margin:3mm 2mm}body{max-width:100%;padding:8px}}
+    @media print{@page{size:${pw}mm auto;margin:3mm 2mm}body{max-width:100%;padding:8px}}
   `;
 
   const defaultName = esc(cfg.store_name) || "CITRUS POS";
@@ -89,6 +98,10 @@ export function generateBillHTML({
   const extraFooterHTML = cfg.extra_footer
     ? `<div class="center muted" style="margin-top:2px;white-space:pre-wrap">${esc(cfg.extra_footer)}</div>`
     : "";
+  const appendFooterHTML =
+    appendFooter && String(appendFooter).trim()
+      ? `<div class="hr"></div><div class="center muted" style="margin-top:4px;white-space:pre-wrap">${esc(appendFooter)}</div>`
+      : "";
 
   let bodyHTML = "";
 
@@ -125,15 +138,16 @@ export function generateBillHTML({
     if (uncategorized.length) {
       sections.push(uncategorized.map(rowHtml).join(""));
     }
+    const kt = esc(kitchenTitle);
     bodyHTML = `
-      <div class="center bold" style="font-size:${fs + 3}px;margin-bottom:4px">PHIẾU BẾP</div>
+      <div class="center bold" style="font-size:${fs + 3}px;margin-bottom:4px">${kt}</div>
       <div class="center sub" style="margin-bottom:8px">Bàn <b>${esc(tableNum)}</b> | ${esc(timeStr)}</div>
       <div class="hr"></div>
       ${sections.join("")}
       <div class="hr"></div>
       ${cfg.footer ? `<div class="center sub" style="font-style:italic;white-space:pre-wrap">${esc(cfg.footer)}</div>` : ""}
     `;
-    return wrapHTML(baseStyle, bodyHTML, `Phiếu Bếp - Bàn ${tableNum}`);
+    return wrapHTML(baseStyle, bodyHTML, `${kitchenTitle} - Bàn ${tableNum}`);
   }
 
   if (type === "tamtinh") {
@@ -160,7 +174,7 @@ export function generateBillHTML({
         <span>TẠM TÍNH</span><span>${fmt(total)}</span>
       </div>
       <div class="center muted" style="margin-top:4px;font-style:italic">(Chưa thanh toán chính thức)</div>
-      ${footerHTML}${extraFooterHTML}
+      ${footerHTML}${extraFooterHTML}${appendFooterHTML}
     `;
     return wrapHTML(baseStyle, bodyHTML, `Tạm Tính - Bàn ${tableNum}`);
   }
@@ -203,7 +217,7 @@ export function generateBillHTML({
       <span>THÀNH TIỀN</span><span>${fmt(total)}</span>
     </div>
     ${isReprint ? `<div class="center muted" style="margin-top:4px">*** IN LẠI ***</div>` : ""}
-    ${footerHTML}${extraFooterHTML}
+    ${footerHTML}${extraFooterHTML}${appendFooterHTML}
   `;
   return wrapHTML(baseStyle, bodyHTML, `Hóa Đơn - Bàn ${tableNum}`);
 }

@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import BillPreview, { billPreviewFrameWidthPx, billPreviewPaperMm } from "../bill/BillPreview";
 import { buildCfg, BILL_TYPE_PREFIX } from "../../hooks/billHTML";
+import { API_URL } from "../../config/api";
+import { uploadStoreLogo } from "../../services/settingsService";
 
 /**
  * Tab Cài đặt — Report Bill: 3 loại phiếu, form + preview (mẫu tiếng Việt).
@@ -17,6 +19,7 @@ export default function ReportBillSettingsSection({
   dbPrinters,
 }) {
   const [billType, setBillType] = useState("bill");
+  const [logoUploading, setLogoUploading] = useState(false);
   const previewPaperMm = useMemo(() => billPreviewPaperMm(billType, dbPrinters), [billType, dbPrinters]);
   const previewFrameW = billPreviewFrameWidthPx(previewPaperMm);
   const P = BILL_TYPE_PREFIX[billType];
@@ -33,6 +36,26 @@ export default function ReportBillSettingsSection({
 
   const inputCls =
     "w-full bg-surface-container border border-outline-variant/40 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface outline-none focus:ring-2 focus:ring-primary/25";
+
+  const logoSrc = useMemo(() => {
+    const raw = String(settings.store_logo || "").trim();
+    if (!raw) return "";
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return `${API_URL.replace(/\/+$/, "")}/uploads/${raw.replace(/^\/+/, "")}`;
+  }, [settings.store_logo]);
+
+  const handleUploadLogo = async (file) => {
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const r = await uploadStoreLogo(file);
+      setSettings((s) => ({ ...s, store_logo: r.value || "" }));
+    } catch (e) {
+      alert(e.message || "Upload logo thất bại");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
 
   const Field = ({ label, k, placeholder, type = "text" }) => (
     <div className="space-y-1">
@@ -114,6 +137,42 @@ export default function ReportBillSettingsSection({
               />
             </div>
           ))}
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+              {tt("Logo cửa hàng", "Shop-Logo")}
+            </label>
+            <div className="flex items-center gap-3">
+              {logoSrc ? (
+                <img
+                  src={logoSrc}
+                  alt="store-logo"
+                  className="w-14 h-14 object-contain rounded-lg border border-outline-variant/40 bg-white"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-lg border border-dashed border-outline-variant/50 flex items-center justify-center text-[10px] text-on-surface-variant">
+                  LOGO
+                </div>
+              )}
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={logoUploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    handleUploadLogo(f);
+                    e.target.value = "";
+                  }}
+                  className="block w-full text-xs text-on-surface-variant file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-primary file:text-white file:font-semibold"
+                />
+                <div className="text-[11px] text-on-surface-variant mt-1">
+                  {logoUploading
+                    ? tt("Đang tải logo...", "Logo wird hochgeladen...")
+                    : tt("PNG/JPG, hiển thị ở đầu bill", "PNG/JPG, oben auf dem Beleg")}
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         {billType !== "kitchen" && (

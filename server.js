@@ -54,6 +54,7 @@ const {
 const { getPrinterIP: getPrinterIPFromSettings } = require("./core/settings/getPrinterIP");
 const { getSettings } = require("./core/settings/getSettings");
 const { upsertSetting } = require("./core/settings/upsertSetting");
+const { uploadStoreLogo } = require("./core/settings/uploadStoreLogo");
 const { listWindowsPrintersApi } = require("./core/windowsPrinters/listWindowsPrintersApi");
 const { createWindowsPrinter } = require("./core/windowsPrinters/createWindowsPrinter");
 const { updateWindowsPrinter } = require("./core/windowsPrinters/updateWindowsPrinter");
@@ -575,6 +576,14 @@ function startServer() {
 
   app.post("/settings", authMiddleware, requireRole("admin"), async (req, res) => {
     const result = await upsertSetting({ mongoDb, settingsCache }, req.body || {});
+    res.status(result.status).json(result.body);
+  });
+
+  app.post("/settings/logo", authMiddleware, requireRole("admin"), menuUpload.single("logo"), async (req, res) => {
+    const result = await uploadStoreLogo(
+      { mongoDb, settingsCache, persistMenuImage },
+      req.file
+    );
     res.status(result.status).json(result.body);
   });
 

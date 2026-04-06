@@ -2,6 +2,7 @@ const DEFAULT_SETTINGS = [
   ["printer_ip", ""],
   ["printer_type", ""],
   ["store_name", ""],
+  ["store_logo", ""],
   ["store_address", ""],
   ["store_phone", ""],
   ["cashier_name", ""],

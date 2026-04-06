@@ -32,6 +32,7 @@ function buildCfg(settings, type) {
   const billPrefix = BILL_TYPE_PREFIX.bill;
   return {
     store_name: settings.store_name || "",
+    store_logo: settings.store_logo || "",
     store_address: settings.store_address || "",
     store_phone: settings.store_phone || "",
     extra_header: get("extra_header"),
@@ -85,21 +86,31 @@ function generateBillHTML(opts) {
   const timeStr = kitchenTimeDisplay || new Date().toLocaleTimeString("vi-VN");
   const pw = Number(paperSizeMm) === 58 ? 58 : 80;
   const maxW = pw === 58 ? 220 : 320;
+  const logoMax = pw === 58 ? 52 : 68;
 
   const baseStyle = `
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:monospace;font-size:${fs}px;font-weight:${fw};font-style:${fi};
-         width:100%;max-width:${maxW}px;margin:0 auto;padding:16px;color:#000;background:#fff;line-height:1.6}
-    .hr{border-top:1px dashed #999;margin:5px 0}
+    body{
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      font-size:${fs}px;font-weight:${fw};font-style:${fi};
+      width:100%;max-width:${maxW}px;margin:0 auto;padding:14px 12px;
+      color:#111;background:#fff;line-height:1.45;letter-spacing:0.1px
+    }
+    .hr{border-top:1px dashed #999;margin:7px 0}
     .center{text-align:center}
     .right{text-align:right}
-    .bold{font-weight:bold}
+    .bold{font-weight:700}
     .sub{font-size:${Math.max(10, fs - 1)}px;color:#555}
-    .muted{font-size:${Math.max(9, fs - 2)}px;color:#888}
-    .row{display:flex;justify-content:space-between}
+    .muted{font-size:${Math.max(9, fs - 2)}px;color:#777}
+    .row{display:flex;justify-content:space-between;gap:8px}
+    .brand{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:8px}
+    .brand img{max-width:${logoMax}px;max-height:${logoMax}px;object-fit:contain}
+    .meta{padding:6px 0}
     table{width:100%;border-collapse:collapse}
-    th,td{padding:3px 2px;font-size:${fs}px}
-    @media print{@page{size:${pw}mm auto;margin:3mm 2mm}body{max-width:100%;padding:8px}}
+    th,td{padding:4px 2px;font-size:${fs}px;vertical-align:top}
+    thead th{font-weight:700;border-bottom:1px dashed #999;padding-bottom:5px}
+    .total{padding-top:4px}
+    @media print{@page{size:${pw}mm auto;margin:2.5mm 1.8mm}body{max-width:100%;padding:8px 7px}}
   `;
 
   const extraStyleBlock = injectExtraCss && String(injectExtraCss).trim()
@@ -107,9 +118,16 @@ function generateBillHTML(opts) {
     : "";
 
   const defaultName = esc(cfg.store_name) || "CITRUS POS";
+  const logoRaw = String(cfg.store_logo || "").trim();
+  const logoSrc = logoRaw
+    ? (/^https?:\/\//i.test(logoRaw)
+      ? logoRaw
+      : `/uploads/${logoRaw.replace(/^\/+/, "")}`)
+    : "";
   const headerHTML = `
-    <div style="text-align:${esc(align)};margin-bottom:8px">
-      <div style="font-size:${fs + 2}px;font-weight:bold">${defaultName}</div>
+    <div style="text-align:${esc(align)};margin-bottom:8px" class="brand">
+      ${logoSrc ? `<img src="${esc(logoSrc)}" alt="logo" />` : ""}
+      <div style="font-size:${fs + 2}px;font-weight:800;letter-spacing:0.3px">${defaultName}</div>
       ${cfg.store_address ? `<div class="sub">${esc(cfg.store_address)}</div>` : ""}
       ${cfg.store_phone ? `<div class="sub">Tel: ${esc(cfg.store_phone)}</div>` : ""}
       ${cfg.extra_header ? `<div class="sub" style="margin-top:2px;white-space:pre-wrap">${esc(cfg.extra_header)}</div>` : ""}
@@ -177,7 +195,7 @@ function generateBillHTML(opts) {
     bodyHTML = `
       ${headerHTML}
       <div class="hr"></div>
-      <div class="sub" style="overflow:hidden">
+      <div class="sub meta" style="overflow:hidden">
         <span>Bàn: <b>${esc(tableNum)}</b></span>
         <span style="float:right">${esc(dateStr)}</span>
       </div>
@@ -193,7 +211,7 @@ function generateBillHTML(opts) {
         )
         .join("")}
       <div class="hr"></div>
-      <div class="row bold" style="font-size:${fs + 1}px">
+      <div class="row bold total" style="font-size:${fs + 1}px">
         <span>TẠM TÍNH</span><span>${fmt(total)}</span>
       </div>
       <div class="center muted" style="margin-top:4px;font-style:italic">(Chưa thanh toán chính thức)</div>
@@ -207,14 +225,14 @@ function generateBillHTML(opts) {
   bodyHTML = `
     ${headerHTML}
     <div class="hr"></div>
-    <div class="sub" style="overflow:hidden">
+    <div class="sub meta" style="overflow:hidden">
       <span>Bàn: <b>${esc(tableNum)}</b>${billId ? ` · HD#${esc(billId)}` : ""}</span>
       <span style="float:right">${esc(dateStr)}</span>
     </div>
     <div class="hr"></div>
     <table>
       <thead>
-        <tr style="border-bottom:1px dashed #999">
+        <tr>
           <th style="text-align:left;padding-bottom:3px">Món</th>
           ${showQty ? `<th style="text-align:center;width:28px">SL</th>` : ""}
           ${showUnitPrice ? `<th style="text-align:right;width:60px">Đơn</th>` : ""}
@@ -236,7 +254,7 @@ function generateBillHTML(opts) {
       </tbody>
     </table>
     <div class="hr"></div>
-    <div class="row bold" style="font-size:${fs + 1}px">
+    <div class="row bold total" style="font-size:${fs + 1}px">
       <span>THÀNH TIỀN</span><span>${fmt(total)}</span>
     </div>
     ${isReprint ? `<div class="center muted" style="margin-top:4px">*** IN LẠI ***</div>` : ""}

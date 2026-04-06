@@ -83,7 +83,7 @@ export default function BillPreview({ settings, billType, titleHint, language = 
       items: SAMPLE_ITEMS_BILL,
       total: SAMPLE_TOTAL_BILL,
     });
-  }, [settings, billType, language, paperSizeMm]);
+  }, [settings, billType, language, paperSizeMm, injectExtraCss]);
 
   return (
     <div className="w-full overflow-auto rounded-b-lg bg-white" style={{ maxHeight: "min(65vh, 560px)" }}>

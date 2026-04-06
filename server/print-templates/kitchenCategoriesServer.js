@@ -1,4 +1,4 @@
-/** Đồng bộ với pos-ui/src/constants/kitchenCategories.js */
+/** Đồng bộ với pos-ui/src/constants/kitchenCategories.js — template phiếu in (server/print-templates/). */
 
 const DEFAULT_KITCHEN_CATEGORIES_JSON = JSON.stringify([
   { id: "APPETIZER", labelVi: "Khai vị", labelDe: "Vorspeise", subtitleVi: "KHAI VỊ", order: 0 },

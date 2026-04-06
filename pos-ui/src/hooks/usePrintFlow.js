@@ -1,7 +1,12 @@
 import { useCallback } from "react";
 import { API_URL } from "../config/api";
 import { isPosElectron, printViaElectronRemote } from "../services/electronPrint";
-import { generateBillHTML } from "./billHTML";
+import { fetchPrintPreviewHtml } from "../services/printPreviewApi";
+import {
+  receiptPayloadBillPrint,
+  receiptPayloadKitchenPrint,
+  receiptPayloadTamTinhPrint,
+} from "../utils/serverReceiptPayload";
 import { openBillPrintWindow } from "../utils/openBillPrintWindow";
 
 export default function usePrintFlow({
@@ -71,16 +76,19 @@ export default function usePrintFlow({
           type: i.type || "FOOD",
           kitchen_category: i.kitchen_category,
         }));
-        openBillPrintWindow(
-          generateBillHTML({
-            settings,
-            type: "kitchen",
-            tableNum: currentTable,
-            items: kitchenItems,
-            total: 0,
-            injectExtraCss: settings.bill_css_override || "",
-          })
-        );
+        try {
+          const html = await fetchPrintPreviewHtml({
+            receipt: receiptPayloadKitchenPrint({
+              tableNum: currentTable,
+              items: kitchenItems,
+            }),
+            paper_size: 80,
+            css_override: settings.bill_css_override || "",
+          });
+          openBillPrintWindow(html);
+        } catch (e2) {
+          alert(e2.message || "Không in được phiếu bếp");
+        }
       }
 
       setKitchenSent((prev) => {
@@ -144,17 +152,21 @@ export default function usePrintFlow({
         total,
       });
     } catch {
-      openBillPrintWindow(
-        generateBillHTML({
-          settings,
-          type: "bill",
-          tableNum: currentTable,
-          items: itemsPrint,
-          total,
-          billId,
-          injectExtraCss: settings.bill_css_override || "",
-        })
-      );
+      try {
+        const html = await fetchPrintPreviewHtml({
+          receipt: receiptPayloadBillPrint({
+            tableNum: currentTable,
+            items: itemsPrint,
+            totalValue: total,
+            billId,
+          }),
+          paper_size: 80,
+          css_override: settings.bill_css_override || "",
+        });
+        openBillPrintWindow(html);
+      } catch (e2) {
+        alert(e2.message || "Không in được hóa đơn");
+      }
     }
 
     updateTableStatus(currentTable, "PAYING");
@@ -194,16 +206,20 @@ export default function usePrintFlow({
         total: provisionalTotal,
       });
     } catch {
-      openBillPrintWindow(
-        generateBillHTML({
-          settings,
-          type: "tamtinh",
-          tableNum: currentTable,
-          items: itemsPrint,
-          total: provisionalTotal,
-          injectExtraCss: settings.bill_css_override || "",
-        })
-      );
+      try {
+        const html = await fetchPrintPreviewHtml({
+          receipt: receiptPayloadTamTinhPrint({
+            tableNum: currentTable,
+            items: itemsPrint,
+            totalValue: provisionalTotal,
+          }),
+          paper_size: 80,
+          css_override: settings.bill_css_override || "",
+        });
+        openBillPrintWindow(html);
+      } catch (e2) {
+        alert(e2.message || "Không in được tạm tính");
+      }
     }
   }, [callPrintApi, currentItems, currentTable, itemNotes, orderSessionReady, settings]);
 

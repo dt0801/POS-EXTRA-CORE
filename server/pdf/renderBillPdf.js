@@ -1,9 +1,9 @@
 /**
- * PDF hóa đơn khổ phiếu nhiệt (logic khớp billHTML / billHTMLServer).
+ * PDF hóa đơn khổ phiếu nhiệt (logic khớp billHTML / server/print-templates/billHTMLServer).
  * Tiền: cent → EUR (cùng quy ước DB/UI).
  */
 
-const { buildCfg, formatMoney } = require("../printing/billHTMLServer");
+const { buildCfg, formatMoney } = require("../print-templates/billHTMLServer");
 
 function mmToPt(mm) {
   return (Number(mm) || 80) * (72 / 25.4);

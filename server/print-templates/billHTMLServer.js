@@ -1,5 +1,6 @@
 /**
  * Cùng logic với pos-ui/src/hooks/billHTML.js — in / render-queue / Electron khớp preview.
+ * Folder: server/print-templates/
  */
 
 const {

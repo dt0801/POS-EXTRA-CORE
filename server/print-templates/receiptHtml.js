@@ -1,5 +1,6 @@
 /**
- * HTML phiếu in — dùng cùng template với preview (billHTMLServer / pos-ui billHTML.js).
+ * HTML phiếu in — đồng bộ preview (pos-ui billHTML.js).
+ * Folder: server/print-templates/
  */
 
 const { generateBillHTML, formatMoney } = require("./billHTMLServer");

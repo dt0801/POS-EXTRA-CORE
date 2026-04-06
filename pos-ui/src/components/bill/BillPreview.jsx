@@ -1,10 +1,20 @@
-import React, { useMemo } from "react";
-import { generateBillHTML } from "../../hooks/billHTML";
-import { parseKitchenCategoriesList } from "../../constants/kitchenCategories";
+import React, { useEffect, useMemo, useState } from "react";
+import { fetchPrintPreviewHtml } from "../../services/printPreviewApi";
+import {
+  receiptPayloadBillPreview,
+  receiptPayloadKitchenPreview,
+  receiptPayloadTamtinhPreview,
+} from "../../utils/serverReceiptPayload";
 
-export const PREVIEW_TABLE_NUM = 5;
+export {
+  PREVIEW_TABLE_NUM,
+  SAMPLE_ITEMS_BILL,
+  SAMPLE_ITEMS_KITCHEN,
+  SAMPLE_TOTAL_BILL,
+  buildKitchenPreviewSampleItems,
+} from "./billPreviewSamples";
 
-/** Khớp maxW trong generateBillHTML (58mm → 220px, 80mm → 320px). */
+/** Khớp maxW trong billHTMLServer (58mm → 220px, 80mm → 320px). */
 export function billPreviewFrameWidthPx(paperSizeMm) {
   return Number(paperSizeMm) === 58 ? 220 : 320;
 }
@@ -20,80 +30,68 @@ export function billPreviewPaperMm(billType, dbPrinters) {
   return ps === 58 ? 58 : 80;
 }
 
-// Giá theo cent (EUR) — cùng đơn vị với pos-ui / DB
-export const SAMPLE_ITEMS_BILL = [
-  { name: "Gà nướng muối ớt", qty: 2, price: 850 },
-  { name: "Bò lúc lắc tỏi đen", qty: 1, price: 1200 },
-  { name: "Nước ngọt lon", qty: 3, price: 150 },
-];
-
-/** Mẫu cố định (legacy); preview phiếu bếp dùng buildKitchenPreviewSampleItems theo settings. */
-export const SAMPLE_ITEMS_KITCHEN = [
-  { name: "Salad trứng", qty: 1, note: "", kitchen_category: "APPETIZER", type: "FOOD" },
-  { name: "California roll", qty: 2, note: "Không wasabi", kitchen_category: "SUSHI", type: "FOOD" },
-  { name: "Gà nướng muối ớt", qty: 1, note: "Ít cay", kitchen_category: "MAIN", type: "FOOD" },
-];
-
-export const SAMPLE_TOTAL_BILL = SAMPLE_ITEMS_BILL.reduce((s, i) => s + i.price * i.qty, 0);
-
-/**
- * Một dòng mẫu / nhóm — đúng thứ tự & id như Danh mục bếp trong settings (kể cả danh mục mới tạo).
- */
-export function buildKitchenPreviewSampleItems(settings, language = "vi") {
-  const list = parseKitchenCategoriesList(settings);
-  const note = language === "de" ? "(Vorschau)" : "(mẫu preview)";
-  return list.map((row) => ({
-    name: language === "de" ? row.labelDe || row.labelVi || row.id : row.labelVi || row.id,
-    qty: 1,
-    note,
-    kitchen_category: row.id,
-    type: "FOOD",
-  }));
-}
-
 export default function BillPreview({ settings, billType, titleHint, language = "vi", dbPrinters }) {
   const paperSizeMm = useMemo(() => billPreviewPaperMm(billType, dbPrinters), [billType, dbPrinters]);
   const frameW = billPreviewFrameWidthPx(paperSizeMm);
   const injectExtraCss = settings.bill_css_override || "";
 
-  const html = useMemo(() => {
-    const common = { settings, paperSizeMm, injectExtraCss };
-    if (billType === "kitchen") {
-      return generateBillHTML({
-        ...common,
-        type: "kitchen",
-        tableNum: PREVIEW_TABLE_NUM,
-        items: buildKitchenPreviewSampleItems(settings, language),
-        total: 0,
+  const [html, setHtml] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+
+    const receipt =
+      billType === "kitchen"
+        ? receiptPayloadKitchenPreview({ settings, language })
+        : billType === "tamtinh"
+          ? receiptPayloadTamtinhPreview()
+          : receiptPayloadBillPreview();
+
+    fetchPrintPreviewHtml({
+      receipt,
+      paper_size: paperSizeMm,
+      css_override: injectExtraCss,
+    })
+      .then((h) => {
+        if (!cancelled) {
+          setHtml(h);
+          setLoading(false);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setError(e.message || "Không tải được preview từ server");
+          setHtml("");
+          setLoading(false);
+        }
       });
-    }
-    if (billType === "tamtinh") {
-      return generateBillHTML({
-        ...common,
-        type: "tamtinh",
-        tableNum: PREVIEW_TABLE_NUM,
-        items: SAMPLE_ITEMS_BILL,
-        total: SAMPLE_TOTAL_BILL,
-      });
-    }
-    return generateBillHTML({
-      ...common,
-      type: "bill",
-      tableNum: PREVIEW_TABLE_NUM,
-      items: SAMPLE_ITEMS_BILL,
-      total: SAMPLE_TOTAL_BILL,
-    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [settings, billType, language, paperSizeMm, injectExtraCss]);
 
   return (
     <div className="w-full overflow-auto rounded-b-lg bg-white" style={{ maxHeight: "min(65vh, 560px)" }}>
-      <iframe
-        title={titleHint ? `Preview — ${titleHint}` : "Bill preview"}
-        sandbox="allow-same-origin"
-        srcDoc={html}
-        className="block w-full border-0 bg-white"
-        style={{ width: frameW, minHeight: 420, height: 720 }}
-      />
+      {loading && (
+        <div className="flex items-center justify-center p-8 text-sm text-slate-500">Đang tải preview từ server…</div>
+      )}
+      {error && !loading && (
+        <div className="p-4 text-sm text-red-600">{error}</div>
+      )}
+      {!loading && html && (
+        <iframe
+          title={titleHint ? `Preview — ${titleHint}` : "Bill preview"}
+          sandbox="allow-same-origin"
+          srcDoc={html}
+          className="block w-full border-0 bg-white"
+          style={{ width: frameW, minHeight: 420, height: 720 }}
+        />
+      )}
     </div>
   );
 }

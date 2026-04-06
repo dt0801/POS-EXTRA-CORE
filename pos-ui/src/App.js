@@ -35,7 +35,8 @@ import StatsView from "./components/views/StatsView";
 import MobileOrderView from "./components/views/MobileOrderView";
 import ReportBillSettingsSection from "./components/views/ReportBillSettingsSection";
 import KitchenCategoriesSettingsSection from "./components/views/KitchenCategoriesSettingsSection";
-import { generateBillHTML } from "./hooks/billHTML";
+import { fetchPrintPreviewHtml } from "./services/printPreviewApi";
+import { receiptPayloadBillReprint } from "./utils/serverReceiptPayload";
 import { openBillPrintWindow } from "./utils/openBillPrintWindow";
 
 // =============================================
@@ -578,19 +579,16 @@ export default function App() {
           );
         }
       } catch {
-        openBillPrintWindow(
-          generateBillHTML({
-            settings,
-            type: "bill",
-            tableNum: bill.table_num,
-            items: bill.items || [],
-            total: bill.total,
-            billId: bill.id,
-            createdAt: bill.created_at,
-            isReprint: true,
-            injectExtraCss: settings.bill_css_override || "",
-          })
-        );
+        try {
+          const html = await fetchPrintPreviewHtml({
+            receipt: receiptPayloadBillReprint({ bill }),
+            paper_size: 80,
+            css_override: settings.bill_css_override || "",
+          });
+          openBillPrintWindow(html);
+        } catch (e2) {
+          alert(e2.message || "Không in được hóa đơn");
+        }
       }
     },
     [callPrintApi, settings, tt]

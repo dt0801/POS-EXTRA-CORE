@@ -11,7 +11,7 @@ const {
   createSafePrinter,
   listWindowsPrinters,
 } = require("./server/printing/windowsPrinter");
-const { createBuildReceiptHtml } = require("./server/printing/receiptHtml");
+const { createBuildReceiptHtml } = require("./server/print-templates/receiptHtml");
 const { createDispatchReceiptToType } = require("./server/printing/receiptDispatch");
 const { buildBillPdfBuffer } = require("./server/pdf/buildBillPdfBuffer");
 const { renderBillPdf, buildThermalPdfDocOptions } = require("./server/pdf/renderBillPdf");

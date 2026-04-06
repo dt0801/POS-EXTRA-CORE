@@ -1,0 +1,34 @@
+import { parseKitchenCategoriesList } from "../../constants/kitchenCategories";
+
+export const PREVIEW_TABLE_NUM = 5;
+
+// Giá theo cent (EUR) — cùng đơn vị với pos-ui / DB
+export const SAMPLE_ITEMS_BILL = [
+  { name: "Gà nướng muối ớt", qty: 2, price: 850 },
+  { name: "Bò lúc lắc tỏi đen", qty: 1, price: 1200 },
+  { name: "Nước ngọt lon", qty: 3, price: 150 },
+];
+
+/** Mẫu cố định (legacy); preview phiếu bếp dùng buildKitchenPreviewSampleItems theo settings. */
+export const SAMPLE_ITEMS_KITCHEN = [
+  { name: "Salad trứng", qty: 1, note: "", kitchen_category: "APPETIZER", type: "FOOD" },
+  { name: "California roll", qty: 2, note: "Không wasabi", kitchen_category: "SUSHI", type: "FOOD" },
+  { name: "Gà nướng muối ớt", qty: 1, note: "Ít cay", kitchen_category: "MAIN", type: "FOOD" },
+];
+
+export const SAMPLE_TOTAL_BILL = SAMPLE_ITEMS_BILL.reduce((s, i) => s + i.price * i.qty, 0);
+
+/**
+ * Một dòng mẫu / nhóm — đúng thứ tự & id như Danh mục bếp trong settings (kể cả danh mục mới tạo).
+ */
+export function buildKitchenPreviewSampleItems(settings, language = "vi") {
+  const list = parseKitchenCategoriesList(settings);
+  const note = language === "de" ? "(Vorschau)" : "(mẫu preview)";
+  return list.map((row) => ({
+    name: language === "de" ? row.labelDe || row.labelVi || row.id : row.labelVi || row.id,
+    qty: 1,
+    note,
+    kitchen_category: row.id,
+    type: "FOOD",
+  }));
+}

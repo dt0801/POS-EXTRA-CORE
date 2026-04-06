@@ -25,14 +25,17 @@ function applyUnicodeFont(doc) {
  *
  * @param {{ title?: string }} meta
  * @param {(doc: InstanceType<typeof PDFDocument>) => void} draw — đồng bộ
+ * @param {{ size?: string | [number, number], margin?: number | object, autoFirstPage?: boolean }} [docOpts] — tùy chọn PDFDocument (vd. khổ nhiệt)
  * @returns {Promise<Buffer>}
  */
-function buildBillPdfBuffer(meta, draw) {
+function buildBillPdfBuffer(meta, draw, docOpts = {}) {
+  const { size = "A4", margin = 48, autoFirstPage = true, info: _ignoreInfo, ...rest } = docOpts;
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
-      margin: 48,
-      size: "A4",
-      autoFirstPage: true,
+      ...rest,
+      margin,
+      size,
+      autoFirstPage,
       info: { Title: String(meta.title || "document").slice(0, 200) },
     });
 

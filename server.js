@@ -18,7 +18,7 @@ const {
 const { createBuildReceiptHtml } = require("./server/printing/receiptHtml");
 const { createDispatchReceiptToType } = require("./server/printing/receiptDispatch");
 const { buildBillPdfBuffer } = require("./server/pdf/buildBillPdfBuffer");
-const { renderBillPdf } = require("./server/pdf/renderBillPdf");
+const { renderBillPdf, buildThermalPdfDocOptions } = require("./server/pdf/renderBillPdf");
 const { menuSeedItems } = require("./server/seed/menuSeed");
 const cloudinary = require("cloudinary").v2;
 
@@ -1278,7 +1278,22 @@ function startServer() {
     };
   }
 
-  // Xuất hóa đơn PDF — buildBillPdfBuffer (pipe PassThrough) + res.end; ?format=base64 nếu proxy cắt binary
+  /** Khớp BillPreview: máy in BILL/ALL bật đầu tiên; ?paper=58|80 ép khổ. */
+  function pdfExportBillPaperMm(printers, queryPaper) {
+    const q = Number(queryPaper);
+    if (q === 58) return 58;
+    if (q === 80) return 80;
+    const list = (printers || []).filter(
+      (p) =>
+        Number(p.is_enabled) !== 0 &&
+        (String(p.type || "").toUpperCase() === "BILL" ||
+          String(p.type || "").toUpperCase() === "ALL")
+    );
+    const ps = Number(list[0]?.paper_size);
+    return ps === 58 ? 58 : 80;
+  }
+
+  // Xuất hóa đơn PDF — khổ phiếu nhiệt + cùng bill_* settings; ?format=base64 nếu proxy cắt binary; ?paper=58|80
   app.get("/bills/:id/pdf", authMiddleware, requireRole("admin"), async (req, res) => {
     const { id } = req.params;
     const billId = Number(id);
@@ -1311,11 +1326,14 @@ function startServer() {
         })),
       };
 
+      const paperMm = pdfExportBillPaperMm(printersCache, req.query.paper);
+
       let buf;
       try {
         buf = await buildBillPdfBuffer(
           { title: `Hóa đơn #${payload.billId}` },
-          (doc) => renderBillPdf(doc, payload)
+          (doc) => renderBillPdf(doc, { ...payload, isReprint: false }, settingsCache, paperMm),
+          buildThermalPdfDocOptions(paperMm)
         );
       } catch (pdfErr) {
         console.error("[pdf] buildBillPdfBuffer:", pdfErr && pdfErr.stack ? pdfErr.stack : pdfErr);

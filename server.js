@@ -582,7 +582,10 @@ function startServer() {
   app.post("/settings/logo", authMiddleware, requireRole("admin"), menuUpload.single("logo"), async (req, res) => {
     const result = await uploadStoreLogo(
       { mongoDb, settingsCache, persistMenuImage },
-      req.file
+      {
+        file: req.file,
+        publicBaseUrl: `${req.protocol}://${req.get("host")}`,
+      }
     );
     res.status(result.status).json(result.body);
   });

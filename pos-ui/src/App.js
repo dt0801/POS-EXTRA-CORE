@@ -554,7 +554,16 @@ export default function App() {
   const handleReprintBill = useCallback(
     async (bill) => {
       try {
-        await callPrintApi(`/print/bill/${bill.id}`, {});
+        const data = await callPrintApi(`/print/bill/${bill.id}`, {});
+        // Render/cloud: mặc định PRINT_DISPATCH_MODE=queue → chỉ tạo job, không in trên trình duyệt
+        if (data && data.job_id != null) {
+          alert(
+            tt(
+              `Đã xếp hàng in trên server (job #${data.job_id}). Trên cloud không tự in ra giấy — mở Print Bridge ở máy quầy, hoặc bấm «Tải PDF».`,
+              `Druckauftrag #${data.job_id} auf dem Server. In der Cloud kein direkter Druck — Print Bridge am PC oder «PDF herunterladen».`
+            )
+          );
+        }
       } catch {
         openBillPrintWindow(
           generateBillHTML({
@@ -571,7 +580,7 @@ export default function App() {
         );
       }
     },
-    [callPrintApi, settings]
+    [callPrintApi, settings, tt]
   );
 
   const handleDownloadBillPdf = useCallback(

@@ -956,6 +956,16 @@ function startServer() {
   // BILLS APIs
   // =============================================
 
+  /** Mongo có thể lưu sqlite_id / bill_id dạng number hoặc string */
+  function mongoBillBySqliteId(billId) {
+    const n = Number(billId);
+    return { $or: [{ sqlite_id: n }, { sqlite_id: String(n) }] };
+  }
+  function mongoItemsByBillId(billId) {
+    const n = Number(billId);
+    return { $or: [{ bill_id: n }, { bill_id: String(n) }] };
+  }
+
   // Tạo hóa đơn mới
   app.post("/bills", authMiddleware, requireRole("admin"), async (req, res) => {
     const { table_num, total, items } = req.body || {};
@@ -1011,8 +1021,9 @@ function startServer() {
       if (!bills.length) return res.json([]);
 
       const billIds = bills.map((b) => Number(b.sqlite_id ?? b.id ?? 0)).filter(Boolean);
+      const billIdKeys = [...new Set(billIds.flatMap((id) => [id, String(id)]))];
       const itemsDocs = await mongoDb.collection("bill_items")
-        .find({ bill_id: { $in: billIds } })
+        .find({ bill_id: { $in: billIdKeys } })
         .sort({ sqlite_id: 1 })
         .toArray();
 
@@ -1045,10 +1056,10 @@ function startServer() {
     const { id } = req.params;
     const billId = Number(id);
     try {
-      const bill = await mongoDb.collection("bills").findOne({ sqlite_id: billId });
+      const bill = await mongoDb.collection("bills").findOne(mongoBillBySqliteId(billId));
       if (!bill) return res.status(404).json({ error: "Not found" });
       const items = await mongoDb.collection("bill_items")
-        .find({ bill_id: billId })
+        .find(mongoItemsByBillId(billId))
         .sort({ sqlite_id: 1 })
         .toArray();
 
@@ -1275,15 +1286,11 @@ function startServer() {
       return res.status(400).json({ error: "ID hóa đơn không hợp lệ" });
     }
     try {
-      const bill = await mongoDb.collection("bills").findOne({
-        $or: [{ sqlite_id: billId }, { sqlite_id: String(billId) }],
-      });
+      const bill = await mongoDb.collection("bills").findOne(mongoBillBySqliteId(billId));
       if (!bill) return res.status(404).json({ error: "Not found" });
       const items = await mongoDb
         .collection("bill_items")
-        .find({
-          $or: [{ bill_id: billId }, { bill_id: String(billId) }],
-        })
+        .find(mongoItemsByBillId(billId))
         .sort({ sqlite_id: 1 })
         .toArray();
 
@@ -1826,11 +1833,11 @@ function startServer() {
       if (action === "bill_reprint") {
         const billId = Number(req.body.billId);
         if (!billId) return res.status(400).json({ error: "Thiếu billId" });
-        const bill = await mongoDb.collection("bills").findOne({ sqlite_id: billId });
+        const bill = await mongoDb.collection("bills").findOne(mongoBillBySqliteId(billId));
         if (!bill) return res.status(404).json({ error: "Không tìm thấy hóa đơn" });
         const items = await mongoDb
           .collection("bill_items")
-          .find({ bill_id: billId })
+          .find(mongoItemsByBillId(billId))
           .sort({ sqlite_id: 1 })
           .toArray();
         const store = getStoreProfile();
@@ -2010,11 +2017,11 @@ function startServer() {
     const { id } = req.params;
     const billId = Number(id);
     try {
-      const bill = await mongoDb.collection("bills").findOne({ sqlite_id: billId });
+      const bill = await mongoDb.collection("bills").findOne(mongoBillBySqliteId(billId));
       if (!bill) return res.status(404).json({ error: "Không tìm thấy hóa đơn" });
 
       const items = await mongoDb.collection("bill_items")
-        .find({ bill_id: billId })
+        .find(mongoItemsByBillId(billId))
         .sort({ sqlite_id: 1 })
         .toArray();
       if (useBridgeQueue()) {

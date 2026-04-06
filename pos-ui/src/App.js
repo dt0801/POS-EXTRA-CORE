@@ -574,6 +574,36 @@ export default function App() {
     [callPrintApi, settings]
   );
 
+  const handleDownloadBillPdf = useCallback(
+    async (bill) => {
+      try {
+        const res = await authedFetch(`${API_URL}/bills/${bill.id}/pdf`);
+        if (!res.ok) {
+          let err = {};
+          try {
+            err = await res.json();
+          } catch {
+            /* ignore */
+          }
+          throw new Error(err.error || "Không tải được PDF");
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `hoa-don-${bill.id}.pdf`;
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert(e.message || "Không tải được PDF");
+      }
+    },
+    [authedFetch]
+  );
+
   const { addMenu, updateMenu, deleteMenu, menuSaving } = useMenuManagement({
     authedFetch,
     newItem,
@@ -1710,6 +1740,7 @@ export default function App() {
             formatMoney={formatMoney}
             callPrintApi={callPrintApi}
             onReprintBill={handleReprintBill}
+            onDownloadBillPdf={handleDownloadBillPdf}
             language={language}
           />
         )}

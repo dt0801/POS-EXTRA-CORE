@@ -11,6 +11,7 @@ export default function HistoryView({
   formatMoney,
   callPrintApi,
   onReprintBill,
+  onDownloadBillPdf,
   language = "vi",
 }) {
   const tr = (vi, de) => (language === "de" ? de : vi);
@@ -215,7 +216,17 @@ export default function HistoryView({
 
             {/* Fixed Footer Action */}
             <div className="absolute bottom-0 w-full z-20 bg-white/95 backdrop-blur-md rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] border-t border-outline-variant/10">
-              <div className="px-6 pt-5 pb-8 mb-safe md:pb-6">
+              <div className="px-6 pt-5 pb-8 mb-safe md:pb-6 flex flex-col gap-3">
+                {typeof onDownloadBillPdf === "function" && (
+                  <button
+                    type="button"
+                    onClick={() => onDownloadBillPdf(selectedBill)}
+                    className="w-full h-12 md:h-14 rounded-[1.25rem] font-headline font-bold text-base border-2 border-primary text-primary bg-white hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined">picture_as_pdf</span>
+                    {tr("Tải PDF", "PDF herunterladen")}
+                  </button>
+                )}
                 <button 
                   onClick={async () => { 
                     if (typeof onReprintBill === "function") {

@@ -17,6 +17,8 @@ const {
 } = require("./server/printing/windowsPrinter");
 const { createBuildReceiptHtml } = require("./server/printing/receiptHtml");
 const { createDispatchReceiptToType } = require("./server/printing/receiptDispatch");
+const { streamPdfToResponse } = require("./server/pdf/streamPdfToResponse");
+const { renderBillPdf } = require("./server/pdf/renderBillPdf");
 const { menuSeedItems } = require("./server/seed/menuSeed");
 const cloudinary = require("cloudinary").v2;
 
@@ -1066,6 +1068,46 @@ function startServer() {
       });
     } catch (e) {
       res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
+  // Xuất hóa đơn PDF (stream đúng chuẩn — tránh file 0KB)
+  app.get("/bills/:id/pdf", authMiddleware, requireRole("admin"), async (req, res) => {
+    const { id } = req.params;
+    const billId = Number(id);
+    if (!Number.isFinite(billId) || billId < 1) {
+      return res.status(400).json({ error: "ID hóa đơn không hợp lệ" });
+    }
+    try {
+      const bill = await mongoDb.collection("bills").findOne({ sqlite_id: billId });
+      if (!bill) return res.status(404).json({ error: "Not found" });
+      const items = await mongoDb
+        .collection("bill_items")
+        .find({ bill_id: billId })
+        .sort({ sqlite_id: 1 })
+        .toArray();
+
+      const store = getStoreProfile();
+      const payload = {
+        storeName: store.storeName,
+        billId: Number(bill.sqlite_id ?? bill.id ?? billId),
+        tableNum: Number(bill.table_num || 0),
+        createdAt: bill.created_at || "",
+        total: Number(bill.total || 0),
+        items: items.map((it) => ({
+          name: it.name || "",
+          price: Number(it.price || 0),
+          qty: Number(it.qty || 0),
+        })),
+      };
+
+      streamPdfToResponse(
+        res,
+        { filename: `hoa-don-${payload.billId}.pdf`, title: `Hóa đơn #${payload.billId}` },
+        (doc) => renderBillPdf(doc, payload)
+      );
+    } catch (e) {
+      if (!res.headersSent) res.status(500).json({ error: e.message || String(e) });
     }
   });
 

@@ -577,7 +577,10 @@ export default function App() {
   const handleDownloadBillPdf = useCallback(
     async (bill) => {
       try {
-        const res = await authedFetch(`${API_URL}/bills/${bill.id}/pdf`);
+        const res = await authedFetch(`${API_URL}/bills/${bill.id}/pdf`, {
+          headers: { Accept: "application/pdf" },
+        });
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
         if (!res.ok) {
           let err = {};
           try {
@@ -585,9 +588,21 @@ export default function App() {
           } catch {
             /* ignore */
           }
-          throw new Error(err.error || "Không tải được PDF");
+          throw new Error(err.error || err.detail || "Không tải được PDF");
         }
-        const blob = await res.blob();
+        if (!ct.includes("application/pdf")) {
+          const text = await res.text();
+          throw new Error(
+            text && text.length < 400
+              ? text
+              : "Server không trả PDF (kiểm tra proxy/API URL)."
+          );
+        }
+        const buf = await res.arrayBuffer();
+        if (buf.byteLength < 64) {
+          throw new Error("File PDF rỗng — xem log server hoặc font PDF_FONT_PATH.");
+        }
+        const blob = new Blob([buf], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;

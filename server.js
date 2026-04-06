@@ -1267,7 +1267,7 @@ function startServer() {
     };
   }
 
-  // Xuất hóa đơn PDF (PDFKit stream — pipe + end đúng thứ tự, tránh file 0KB)
+  // Xuất hóa đơn PDF (buffer đầy đủ rồi send — tránh 0KB do stream/proxy)
   app.get("/bills/:id/pdf", authMiddleware, requireRole("admin"), async (req, res) => {
     const { id } = req.params;
     const billId = Number(id);
@@ -1275,11 +1275,15 @@ function startServer() {
       return res.status(400).json({ error: "ID hóa đơn không hợp lệ" });
     }
     try {
-      const bill = await mongoDb.collection("bills").findOne({ sqlite_id: billId });
+      const bill = await mongoDb.collection("bills").findOne({
+        $or: [{ sqlite_id: billId }, { sqlite_id: String(billId) }],
+      });
       if (!bill) return res.status(404).json({ error: "Not found" });
       const items = await mongoDb
         .collection("bill_items")
-        .find({ bill_id: billId })
+        .find({
+          $or: [{ bill_id: billId }, { bill_id: String(billId) }],
+        })
         .sort({ sqlite_id: 1 })
         .toArray();
 

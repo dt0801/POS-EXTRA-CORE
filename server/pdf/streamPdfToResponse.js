@@ -1,22 +1,18 @@
 const PDFDocument = require("pdfkit");
 const { resolveUnicodeFontPath } = require("./resolveUnicodeFont");
 
+const MIN_PDF_BYTES = 64;
+
 /**
- * Pipe PDFKit → Express response đúng vòng đời stream (tránh file 0KB / response kép).
- *
- * - Gọi draw(doc) đồng bộ; mọi await phải xong trước khi gọi hàm này.
- * - Không được res.send/res.json sau khi đã pipe.
+ * Tạo PDF bằng PDFKit, gom buffer rồi gửi một lần — tránh file 0KB do pipe/proxy/ngắt stream sớm.
  *
  * @param {import("express").Response} res
  * @param {{ filename?: string, title?: string }} opts
- * @param {(doc: InstanceType<typeof PDFDocument>) => void} draw
+ * @param {(doc: InstanceType<typeof PDFDocument>) => void} draw — đồng bộ
  */
 function streamPdfToResponse(res, opts, draw) {
   const filename = (opts.filename || "document.pdf").replace(/["\r\n]/g, "_");
   const title = opts.title || filename;
-
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
   const doc = new PDFDocument({
     margin: 48,
@@ -25,28 +21,45 @@ function streamPdfToResponse(res, opts, draw) {
     autoFirstPage: true,
   });
 
+  const chunks = [];
   let failed = false;
 
-  const onFail = (err, logLabel = "error") => {
+  const fail = (err, label = "error") => {
     if (failed) return;
     failed = true;
-    console.error(`[pdf] ${logLabel}:`, err && err.stack ? err.stack : err);
+    console.error(`[pdf] ${label}:`, err && err.stack ? err.stack : err);
     try {
       if (typeof doc.destroy === "function") doc.destroy(err);
     } catch (_) {
       /* ignore */
     }
     if (!res.headersSent) {
-      res.status(500).json({ error: "Không tạo được PDF", detail: String(err && err.message ? err.message : err) });
-    } else {
-      res.destroy(err instanceof Error ? err : new Error(String(err)));
+      res.status(500).json({
+        error: "Không tạo được PDF",
+        detail: String(err && err.message ? err.message : err),
+      });
     }
   };
 
-  doc.on("error", (err) => onFail(err, "document error"));
-  res.on("error", (err) => onFail(err, "response error"));
-
-  doc.pipe(res);
+  doc.on("error", (err) => fail(err, "document error"));
+  doc.on("data", (chunk) => {
+    if (!failed && chunk && chunk.length) chunks.push(chunk);
+  });
+  doc.on("end", () => {
+    if (failed) return;
+    const buf = Buffer.concat(chunks);
+    if (buf.length < MIN_PDF_BYTES) {
+      console.error(`[pdf] output quá nhỏ: ${buf.length} bytes`);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "PDF rỗng hoặc không hợp lệ" });
+      }
+      return;
+    }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", String(buf.length));
+    res.send(buf);
+  });
 
   const fontPath = resolveUnicodeFontPath();
   if (fontPath) {
@@ -60,7 +73,7 @@ function streamPdfToResponse(res, opts, draw) {
   } else {
     doc.font("Helvetica");
     console.warn(
-      "[pdf] Không tìm thấy font Unicode (PDF_FONT_PATH / Arial / DejaVu). Chữ tiếng Việt có thể sai."
+      "[pdf] Không tìm thấy font Unicode (PDF_FONT_PATH / Arial / DejaVu). Chữ tiếng Việt có thể lỗi."
     );
   }
 
@@ -68,7 +81,7 @@ function streamPdfToResponse(res, opts, draw) {
     draw(doc);
     doc.end();
   } catch (err) {
-    onFail(err, "draw/end");
+    fail(err, "draw/end");
   }
 }
 

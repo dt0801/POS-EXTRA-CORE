@@ -78,6 +78,7 @@ export default function usePrintFlow({
             tableNum: currentTable,
             items: kitchenItems,
             total: 0,
+            injectExtraCss: settings.bill_css_override || "",
           })
         );
       }
@@ -151,6 +152,7 @@ export default function usePrintFlow({
           items: itemsPrint,
           total,
           billId,
+          injectExtraCss: settings.bill_css_override || "",
         })
       );
     }
@@ -199,6 +201,7 @@ export default function usePrintFlow({
           tableNum: currentTable,
           items: itemsPrint,
           total: provisionalTotal,
+          injectExtraCss: settings.bill_css_override || "",
         })
       );
     }

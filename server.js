@@ -1748,7 +1748,7 @@ function startServer() {
           totalValue: total,
           billNo: "--",
           cashier: store.cashierName,
-          footer: "(Chưa thanh toán chính thức)",
+          footer: "",
           groupItemsByType: true,
         });
         return res.json({ success: true, prints, queued: prints.length });
@@ -1771,7 +1771,7 @@ function startServer() {
           totalValue: total,
           billNo: "--",
           cashier: store.cashierName,
-          footer: "Cảm ơn quý khách - Hẹn gặp lại!",
+          footer: "",
           groupItemsByType: true,
         });
         return res.json({ success: true, prints, queued: prints.length });
@@ -1799,7 +1799,8 @@ function startServer() {
           totalValue: Number(bill.total || 0),
           billNo: Number(bill.sqlite_id ?? bill.id ?? billId),
           cashier: store.cashierName,
-          footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
+          reprint: true,
+          footer: "",
           groupItemsByType: true,
         });
         return res.json({ success: true, prints, queued: prints.length });
@@ -1907,7 +1908,7 @@ function startServer() {
         totalValue: total,
         billNo: "--",
         cashier: store.cashierName,
-        footer: "(Chưa thanh toán chính thức)",
+        footer: "",
         groupItemsByType: true,
       });
       res.json({ success: true, queued: sent });
@@ -1948,7 +1949,7 @@ function startServer() {
         totalValue: total,
         billNo: "--",
         cashier: store.cashierName,
-        footer: "Cảm ơn quý khách - Hẹn gặp lại!",
+        footer: "",
         groupItemsByType: true,
       });
       res.json({ success: true, queued: sent });
@@ -1997,7 +1998,8 @@ function startServer() {
           totalValue: Number(bill.total || 0),
           billNo: Number(bill.sqlite_id ?? bill.id ?? billId),
           cashier: store.cashierName,
-          footer: "*** IN LẠI ***  -  Cảm ơn quý khách!",
+          reprint: true,
+          footer: "",
           groupItemsByType: true,
         });
         res.json({ success: true, queued: sent });

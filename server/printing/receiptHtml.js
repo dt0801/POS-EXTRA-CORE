@@ -31,6 +31,17 @@ function normalizePricingItems(items) {
   }));
 }
 
+/** Tránh lặp dòng *** IN LẠI *** (template đã có khi isReprint). */
+function appendFooterForBill(receipt) {
+  const raw = String(receipt.footer || "").trim();
+  const isReprint =
+    Boolean(receipt.reprint) || /\bIN\s+L[ẠA]I\b/i.test(raw);
+  if (!raw) return { isReprint, appendFooter: "" };
+  if (!isReprint) return { isReprint: false, appendFooter: raw };
+  let rest = raw.replace(/\*+\s*IN\s+L[ẠA]I\s*\*+/gi, "").replace(/^[\s\-–:;|]+/g, "").trim();
+  return { isReprint, appendFooter: rest };
+}
+
 function createBuildReceiptHtml(ctx) {
   const { getBillCssOverride, getBillSettings } = ctx;
 
@@ -71,7 +82,7 @@ function createBuildReceiptHtml(ctx) {
         preformattedDate: receipt.timeValue,
         paperSizeMm: ps,
         injectExtraCss: extraCss,
-        appendFooter: receipt.footer,
+        appendFooter: String(receipt.footer || "").trim(),
       });
     }
 
@@ -81,6 +92,8 @@ function createBuildReceiptHtml(ctx) {
         ? billNo
         : undefined;
 
+    const { isReprint, appendFooter } = appendFooterForBill(receipt);
+
     return generateBillHTML({
       settings,
       type: "bill",
@@ -89,10 +102,10 @@ function createBuildReceiptHtml(ctx) {
       total: Number(receipt.totalValue) || 0,
       billId: bid,
       preformattedDate: receipt.timeValue,
-      isReprint: /IN LẠI/i.test(String(receipt.footer || "")),
+      isReprint,
       paperSizeMm: ps,
       injectExtraCss: extraCss,
-      appendFooter: receipt.footer,
+      appendFooter,
     });
   }
 

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import BillPreview from "../bill/BillPreview";
+import BillPreview, { billPreviewFrameWidthPx, billPreviewPaperMm } from "../bill/BillPreview";
 import { buildCfg, BILL_TYPE_PREFIX } from "../../hooks/billHTML";
 
 /**
@@ -14,8 +14,11 @@ export default function ReportBillSettingsSection({
   tt,
   toggleLanguage,
   language,
+  dbPrinters,
 }) {
   const [billType, setBillType] = useState("bill");
+  const previewPaperMm = useMemo(() => billPreviewPaperMm(billType, dbPrinters), [billType, dbPrinters]);
+  const previewFrameW = billPreviewFrameWidthPx(previewPaperMm);
   const P = BILL_TYPE_PREFIX[billType];
   const get = (k) => settings[P + k] || "";
   const set = (k, v) => setSettings((s) => ({ ...s, [P + k]: v }));
@@ -283,11 +286,12 @@ export default function ReportBillSettingsSection({
             backgroundSize: "20px 20px",
           }}
         >
-          <div className="shadow-2xl rounded-sm overflow-hidden" style={{ maxWidth: 320, width: "100%" }}>
+          <div className="shadow-2xl rounded-sm overflow-hidden" style={{ maxWidth: previewFrameW, width: "100%" }}>
             <BillPreview
               settings={settings}
               billType={billType}
               language={language}
+              dbPrinters={dbPrinters}
               titleHint={`${reportBillCfg.font_size}px · ${reportBillCfg.font_style}`}
             />
           </div>

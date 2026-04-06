@@ -50,6 +50,7 @@ export function generateBillHTML({
   kitchenTimeDisplay,
   preformattedDate,
   paperSizeMm = 80,
+  injectExtraCss = "",
   appendFooter = "",
 }) {
   const cfg = buildCfg(settings, type);
@@ -81,6 +82,11 @@ export function generateBillHTML({
     th,td{padding:3px 2px;font-size:${fs}px}
     @media print{@page{size:${pw}mm auto;margin:3mm 2mm}body{max-width:100%;padding:8px}}
   `;
+
+  const extraStyleBlock =
+    injectExtraCss && String(injectExtraCss).trim()
+      ? `<style>${String(injectExtraCss)}</style>`
+      : "";
 
   const defaultName = esc(cfg.store_name) || "CITRUS POS";
   const headerHTML = `
@@ -147,7 +153,7 @@ export function generateBillHTML({
       <div class="hr"></div>
       ${cfg.footer ? `<div class="center sub" style="font-style:italic;white-space:pre-wrap">${esc(cfg.footer)}</div>` : ""}
     `;
-    return wrapHTML(baseStyle, bodyHTML, `${kitchenTitle} - Bàn ${tableNum}`);
+    return wrapHTML(baseStyle, bodyHTML, `${kitchenTitle} - Bàn ${tableNum}`, extraStyleBlock);
   }
 
   if (type === "tamtinh") {
@@ -176,7 +182,7 @@ export function generateBillHTML({
       <div class="center muted" style="margin-top:4px;font-style:italic">(Chưa thanh toán chính thức)</div>
       ${footerHTML}${extraFooterHTML}${appendFooterHTML}
     `;
-    return wrapHTML(baseStyle, bodyHTML, `Tạm Tính - Bàn ${tableNum}`);
+    return wrapHTML(baseStyle, bodyHTML, `Tạm Tính - Bàn ${tableNum}`, extraStyleBlock);
   }
 
   const showQty = cfg.show_qty !== "false";
@@ -219,13 +225,14 @@ export function generateBillHTML({
     ${isReprint ? `<div class="center muted" style="margin-top:4px">*** IN LẠI ***</div>` : ""}
     ${footerHTML}${extraFooterHTML}${appendFooterHTML}
   `;
-  return wrapHTML(baseStyle, bodyHTML, `Hóa Đơn - Bàn ${tableNum}`);
+  return wrapHTML(baseStyle, bodyHTML, `Hóa Đơn - Bàn ${tableNum}`, extraStyleBlock);
 }
 
-function wrapHTML(style, body, title) {
+function wrapHTML(style, body, title, extraStyleBlock = "") {
   return `<!DOCTYPE html><html><head>
     <meta charset="utf-8"/>
     <title>${esc(title)}</title>
     <style>${style}</style>
+    ${extraStyleBlock || ""}
   </head><body>${body}</body></html>`;
 }

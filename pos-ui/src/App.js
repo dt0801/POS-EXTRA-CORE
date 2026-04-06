@@ -566,6 +566,7 @@ export default function App() {
             billId: bill.id,
             createdAt: bill.created_at,
             isReprint: true,
+            injectExtraCss: settings.bill_css_override || "",
           })
         );
       }
@@ -1766,6 +1767,7 @@ export default function App() {
                 tt={tt}
                 toggleLanguage={toggleLanguage}
                 language={language}
+                dbPrinters={dbPrinters}
               />
             ) : null}
 

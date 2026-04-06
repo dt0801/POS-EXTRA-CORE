@@ -17,7 +17,7 @@ const {
 } = require("./server/printing/windowsPrinter");
 const { createBuildReceiptHtml } = require("./server/printing/receiptHtml");
 const { createDispatchReceiptToType } = require("./server/printing/receiptDispatch");
-const { streamPdfToResponse } = require("./server/pdf/streamPdfToResponse");
+const { buildBillPdfBuffer } = require("./server/pdf/buildBillPdfBuffer");
 const { renderBillPdf } = require("./server/pdf/renderBillPdf");
 const { menuSeedItems } = require("./server/seed/menuSeed");
 const cloudinary = require("cloudinary").v2;
@@ -1278,13 +1278,16 @@ function startServer() {
     };
   }
 
-  // Xuất hóa đơn PDF (buffer đầy đủ rồi send — tránh 0KB do stream/proxy)
+  // Xuất hóa đơn PDF — buildBillPdfBuffer (pipe PassThrough) + res.end; ?format=base64 nếu proxy cắt binary
   app.get("/bills/:id/pdf", authMiddleware, requireRole("admin"), async (req, res) => {
     const { id } = req.params;
     const billId = Number(id);
     if (!Number.isFinite(billId) || billId < 1) {
       return res.status(400).json({ error: "ID hóa đơn không hợp lệ" });
     }
+    const asBase64 =
+      String(req.query.format || "").toLowerCase() === "base64" || req.query.base64 === "1";
+
     try {
       const bill = await mongoDb.collection("bills").findOne(mongoBillBySqliteId(billId));
       if (!bill) return res.status(404).json({ error: "Not found" });
@@ -1308,11 +1311,37 @@ function startServer() {
         })),
       };
 
-      streamPdfToResponse(
-        res,
-        { filename: `hoa-don-${payload.billId}.pdf`, title: `Hóa đơn #${payload.billId}` },
-        (doc) => renderBillPdf(doc, payload)
-      );
+      let buf;
+      try {
+        buf = await buildBillPdfBuffer(
+          { title: `Hóa đơn #${payload.billId}` },
+          (doc) => renderBillPdf(doc, payload)
+        );
+      } catch (pdfErr) {
+        console.error("[pdf] buildBillPdfBuffer:", pdfErr && pdfErr.stack ? pdfErr.stack : pdfErr);
+        return res.status(500).json({
+          error: "Không tạo được PDF",
+          detail: String(pdfErr && pdfErr.message ? pdfErr.message : pdfErr),
+        });
+      }
+
+      if (asBase64) {
+        res.setHeader("Cache-Control", "private, no-store");
+        return res.json({
+          filename: `hoa-don-${payload.billId}.pdf`,
+          mimeType: "application/pdf",
+          data: buf.toString("base64"),
+        });
+      }
+
+      res.status(200);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="hoa-don-${payload.billId}.pdf"`);
+      res.setHeader("Content-Length", String(buf.length));
+      res.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.end(buf);
     } catch (e) {
       if (!res.headersSent) res.status(500).json({ error: e.message || String(e) });
     }

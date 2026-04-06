@@ -49,6 +49,19 @@ const getLocalDateISO = () => {
 };
 const getLocalMonthISO = () => getLocalDateISO().slice(0, 7);
 
+function isPdfArrayBuffer(ab) {
+  if (!ab || ab.byteLength < 5) return false;
+  const u = new Uint8Array(ab);
+  return u[0] === 0x25 && u[1] === 0x50 && u[2] === 0x44 && u[3] === 0x46;
+}
+
+function base64ToPdfBlob(b64) {
+  const bin = atob(b64);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) u8[i] = bin.charCodeAt(i);
+  return new Blob([u8], { type: "application/pdf" });
+}
+
 // =============================================
 // MAIN COMPONENT
 // =============================================
@@ -585,33 +598,8 @@ export default function App() {
 
   const handleDownloadBillPdf = useCallback(
     async (bill) => {
-      try {
-        const res = await authedFetch(`${API_URL}/bills/${bill.id}/pdf`, {
-          headers: { Accept: "application/pdf" },
-        });
-        const ct = (res.headers.get("content-type") || "").toLowerCase();
-        if (!res.ok) {
-          let err = {};
-          try {
-            err = await res.json();
-          } catch {
-            /* ignore */
-          }
-          throw new Error(err.error || err.detail || "Không tải được PDF");
-        }
-        if (!ct.includes("application/pdf")) {
-          const text = await res.text();
-          throw new Error(
-            text && text.length < 400
-              ? text
-              : "Server không trả PDF (kiểm tra proxy/API URL)."
-          );
-        }
-        const buf = await res.arrayBuffer();
-        if (buf.byteLength < 64) {
-          throw new Error("File PDF rỗng — xem log server hoặc font PDF_FONT_PATH.");
-        }
-        const blob = new Blob([buf], { type: "application/pdf" });
+      const pdfUrl = `${API_URL}/bills/${bill.id}/pdf`;
+      const triggerSave = (blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -621,6 +609,77 @@ export default function App() {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
+      };
+
+      const tryBinary = async () => {
+        const res = await authedFetch(pdfUrl, {
+          cache: "no-store",
+          headers: { Accept: "application/pdf" },
+        });
+        if (!res.ok) {
+          let err = {};
+          try {
+            err = await res.json();
+          } catch {
+            /* ignore */
+          }
+          throw new Error(err.error || err.detail || "Không tải được PDF");
+        }
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (!ct.includes("application/pdf")) {
+          const text = await res.text();
+          throw new Error(
+            text && text.length < 400
+              ? text
+              : "Server không trả application/pdf (kiểm tra proxy/API URL)."
+          );
+        }
+        const buf = await res.arrayBuffer();
+        if (!isPdfArrayBuffer(buf) || buf.byteLength < 100) {
+          throw new Error("__FALLBACK_BASE64__");
+        }
+        return new Blob([buf], { type: "application/pdf" });
+      };
+
+      const tryBase64 = async () => {
+        const res = await authedFetch(`${pdfUrl}?format=base64`, { cache: "no-store" });
+        if (!res.ok) {
+          let err = {};
+          try {
+            err = await res.json();
+          } catch {
+            /* ignore */
+          }
+          throw new Error(err.error || err.detail || "Không tải PDF (base64)");
+        }
+        const j = await res.json();
+        if (!j.data || typeof j.data !== "string") {
+          throw new Error("Server không trả data base64");
+        }
+        const blob = base64ToPdfBlob(j.data);
+        const check = await blob.arrayBuffer();
+        if (!isPdfArrayBuffer(check) || check.byteLength < 100) {
+          throw new Error("Base64 không phải PDF hợp lệ");
+        }
+        return new Blob([check], { type: "application/pdf" });
+      };
+
+      try {
+        let blob;
+        try {
+          blob = await tryBinary();
+        } catch (e) {
+          if (e.message === "__FALLBACK_BASE64__") {
+            blob = await tryBase64();
+          } else {
+            try {
+              blob = await tryBase64();
+            } catch {
+              throw e;
+            }
+          }
+        }
+        triggerSave(blob);
       } catch (e) {
         alert(e.message || "Không tải được PDF");
       }

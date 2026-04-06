@@ -21,7 +21,40 @@ class WindowsRawDriver {
 
       fs.writeFileSync(tmpBin, data);
 
-      const psScript = `
+      const normalizeName = (s) =>
+        String(s || "")
+          .replace(/^\uFEFF/, "")
+          .trim()
+          .replace(/\s+/g, " ");
+
+      const pickPrinterName = async (wanted) => {
+        const w = normalizeName(wanted);
+        if (!w) return { picked: wanted, reason: "empty" };
+        const list = await listWindowsPrinters();
+        const names = list.map((p) => normalizeName(p.name)).filter(Boolean);
+        if (!names.length) return { picked: wanted, reason: "no_list" };
+
+        // 1) exact (normalized)
+        const exact = names.find((n) => n === w);
+        if (exact) return { picked: exact, reason: "exact" };
+
+        // 2) case-insensitive
+        const wl = w.toLowerCase();
+        const ci = names.find((n) => n.toLowerCase() === wl);
+        if (ci) return { picked: ci, reason: "case_insensitive" };
+
+        // 3) substring match (best effort)
+        const contains = names.find((n) => n.toLowerCase().includes(wl));
+        if (contains) return { picked: contains, reason: "contains" };
+
+        return { picked: wanted, reason: "not_found", candidates: names.slice(0, 30) };
+      };
+
+      const wantedPrinterName = String(printer || "");
+      Promise.resolve(pickPrinterName(wantedPrinterName)).then((pickedInfo) => {
+        const pickedPrinterName = String(pickedInfo?.picked || wantedPrinterName);
+
+        const psScript = `
 $code = @"
 using System;
 using System.Runtime.InteropServices;
@@ -72,18 +105,30 @@ Add-Type -TypeDefinition $code -Language CSharp
 $bytes = [System.IO.File]::ReadAllBytes('${tmpBin.replace(/\\/g, "\\\\")}')
 $hGlobal = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
 [System.Runtime.InteropServices.Marshal]::Copy($bytes, 0, $hGlobal, $bytes.Length)
-[RawPrinterHelper]::SendBytesToPrinter('${printer}', $hGlobal, $bytes.Length)
+[RawPrinterHelper]::SendBytesToPrinter('${pickedPrinterName.replace(/'/g, "''")}', $hGlobal, $bytes.Length)
 [System.Runtime.InteropServices.Marshal]::FreeHGlobal($hGlobal)
 Remove-Item -Path '${tmpBin.replace(/\\/g, "\\\\")}' -ErrorAction SilentlyContinue
 `;
 
-      fs.writeFileSync(tmpPsfile, psScript);
-      exec(`powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "${tmpPsfile}"`, (err) => {
-        try {
-          fs.unlinkSync(tmpPsfile);
-        } catch {}
-        if (err) return error(err);
-        success();
+        fs.writeFileSync(tmpPsfile, psScript);
+        exec(`powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "${tmpPsfile}"`, (err) => {
+          try {
+            fs.unlinkSync(tmpPsfile);
+          } catch {}
+          if (err) {
+            const extra =
+              pickedInfo?.reason === "not_found" && Array.isArray(pickedInfo.candidates)
+                ? `; Available printers (sample): ${pickedInfo.candidates.join(" | ")}`
+                : pickedInfo?.reason && pickedInfo.reason !== "exact"
+                  ? `; picked_by=${pickedInfo.reason}; picked="${pickedPrinterName}"`
+                  : "";
+            const wrapped = new Error(
+              `OpenPrinter [${wantedPrinterName}] thất bại: ${err.message || err}${extra}`
+            );
+            return error(wrapped);
+          }
+          success();
+        });
       });
     } catch (e) {
       error(e);

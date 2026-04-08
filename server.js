@@ -700,7 +700,7 @@ function startServer() {
   // In phiếu bếp (Tách Đồ ăn -> Bếp, Nước uống -> Bill/Pha chế)
   app.post("/print/kitchen", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await postKitchenPrint(
-      { useBridgeQueue, createPrintJob, dispatchReceiptToType },
+      { useBridgeQueue, createPrintJob, dispatchReceiptToType, enqueueJobsForType },
       req.body || {}
     );
     res.status(result.status).json(result.body);
@@ -709,7 +709,7 @@ function startServer() {
   // Tạm tính
   app.post("/print/tamtinh", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await postTamtinhPrint(
-      { useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile },
+      { useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile, enqueueJobsForType },
       req.body || {}
     );
     res.status(result.status).json(result.body);
@@ -718,7 +718,7 @@ function startServer() {
   // In hóa đơn tài chính
   app.post("/print/bill", authMiddleware, requireRole("admin"), async (req, res) => {
     const result = await postBillPrint(
-      { useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile },
+      { useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile, enqueueJobsForType },
       req.body || {}
     );
     res.status(result.status).json(result.body);
@@ -727,7 +727,7 @@ function startServer() {
   // In lại hóa đơn từ lịch sử
   app.post("/print/bill/:id", authMiddleware, requireRole("admin"), async (req, res) => {
     const result = await postBillReprintPrint(
-      { mongoDb, useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile },
+      { mongoDb, useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile, enqueueJobsForType },
       Number(req.params.id)
     );
     res.status(result.status).json(result.body);

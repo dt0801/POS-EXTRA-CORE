@@ -8,3 +8,4 @@ pos-ui/build/
 .DS_Store
 *.zip
 .cursor/
+print-bridge/

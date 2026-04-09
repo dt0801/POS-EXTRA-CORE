@@ -2032,7 +2032,8 @@ export default function App() {
                           className="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm appearance-none"
                         >
                           <option value="KITCHEN">{tt("Bếp (KITCHEN)", "Küche (KITCHEN)")}</option>
-                          <option value="BILL">{tt("Hóa đơn / pha chế (BILL)", "Rechnung / Bar (BILL)")}</option>
+                          <option value="BAR">{tt("Bar / Pha chế (BAR)", "Bar (BAR)")}</option>
+                          <option value="BILL">{tt("Hóa đơn (BILL)", "Rechnung (BILL)")}</option>
                           <option value="TAMTINH">{tt("Tạm tính (TAMTINH)", "Zwischenrechnung (TAMTINH)")}</option>
                           <option value="ALL">{tt("Tất cả loại phiếu (ALL)", "Alle Belege (ALL)")}</option>
                         </select>

@@ -49,7 +49,7 @@ async function postKitchenPrint(
       if (drinkItems.length > 0) {
         const ids = await dispatchToBridge(
           { enqueueJobsForType, createPrintJob },
-          "BILL",
+          "BAR",
           null,
           drinkData
         );
@@ -68,7 +68,7 @@ async function postKitchenPrint(
     errors.push(err.message);
   }
   try {
-    if (drinkItems.length > 0) dispatchReceiptToType("BILL", drinkData);
+    if (drinkItems.length > 0) dispatchReceiptToType("BAR", drinkData);
   } catch (err) {
     errors.push(err.message);
   }

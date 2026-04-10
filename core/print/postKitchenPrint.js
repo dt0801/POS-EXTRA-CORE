@@ -6,21 +6,34 @@ const { parseKitchenCategoriesList } = require("../../server/print-templates/kit
  * - DRINK → luôn "BAR"
  * - FOOD  → tra kitchen_categories_json, lấy printer_dest (default "KITCHEN")
  */
-function resolveItemPrinterDest(item, settings) {
-  if (item.type === "DRINK") return "BAR";
+/**
+ * Trả về { dest, groupKey } cho mỗi item.
+ * - dest: printer type để gửi (KITCHEN, BAR, ...)
+ * - groupKey: key để tách phiếu riêng (dest + category)
+ */
+function resolveItemRouting(item, settings) {
+  if (item.type === "DRINK") {
+    return { dest: "BAR", groupKey: "BAR__DRINK" };
+  }
   const cats = parseKitchenCategoriesList(settings);
   const catId = item.kitchen_category || "MAIN";
   const cat = cats.find((c) => c.id === catId);
-  return cat?.printer_dest || "KITCHEN";
+  const dest = cat?.printer_dest || "KITCHEN";
+  return { dest, groupKey: `${dest}__${catId}` };
 }
 
-const DEST_LABELS = {
-  KITCHEN: { title: "PHIẾU BẾP", subtitle: "ĐỒ ĂN", footer: "Giao bếp" },
-  BAR:     { title: "PHIẾU PHA CHẾ", subtitle: "NƯỚC / BAR", footer: "Pha chế" },
+const GROUP_LABELS = {
+  DRINK:     { title: "PHIẾU PHA CHẾ", subtitle: "NƯỚC", footer: "Pha chế" },
+  SUSHI:     { title: "PHIẾU BAR", subtitle: "SUSHI", footer: "Bar" },
+  APPETIZER: { title: "PHIẾU BẾP", subtitle: "KHAI VỊ", footer: "Giao bếp" },
+  MAIN:      { title: "PHIẾU BẾP", subtitle: "MÓN CHÍNH", footer: "Giao bếp" },
 };
 
-function buildReceiptData(dest, table_num, items, nowText) {
-  const labels = DEST_LABELS[dest] || { title: `PHIẾU ${dest}`, subtitle: dest, footer: dest };
+function buildReceiptData(dest, catId, table_num, items, nowText, settings) {
+  const labels = GROUP_LABELS[catId]
+    || (dest === "BAR"
+      ? { title: "PHIẾU BAR", subtitle: String(catId).toUpperCase(), footer: "Bar" }
+      : { title: "PHIẾU BẾP", subtitle: String(catId).toUpperCase(), footer: "Giao bếp" });
   return {
     title: labels.title,
     subtitle: labels.subtitle,
@@ -44,22 +57,22 @@ async function postKitchenPrint(
 
   const nowText = new Date().toLocaleString("vi-VN");
 
-  // Group items theo printer destination
+  // Group items theo groupKey (dest + category) → mỗi group = 1 phiếu riêng
   const groups = {};
   for (const item of items) {
-    const dest = resolveItemPrinterDest(item, settingsCache || {});
-    if (!groups[dest]) groups[dest] = [];
-    groups[dest].push(item);
+    const { dest, groupKey } = resolveItemRouting(item, settingsCache || {});
+    if (!groups[groupKey]) groups[groupKey] = { dest, catId: item.type === "DRINK" ? "DRINK" : (item.kitchen_category || "MAIN"), items: [] };
+    groups[groupKey].items.push(item);
   }
 
   if (useBridgeQueue()) {
     try {
       const jobIds = [];
-      for (const [dest, destItems] of Object.entries(groups)) {
-        const data = buildReceiptData(dest, table_num, destItems, nowText);
+      for (const g of Object.values(groups)) {
+        const data = buildReceiptData(g.dest, g.catId, table_num, g.items, nowText, settingsCache);
         const ids = await dispatchToBridge(
           { enqueueJobsForType, createPrintJob },
-          dest,
+          g.dest,
           null,
           data
         );
@@ -72,10 +85,10 @@ async function postKitchenPrint(
   }
 
   const errors = [];
-  for (const [dest, destItems] of Object.entries(groups)) {
+  for (const g of Object.values(groups)) {
     try {
-      const data = buildReceiptData(dest, table_num, destItems, nowText);
-      dispatchReceiptToType(dest, data);
+      const data = buildReceiptData(g.dest, g.catId, table_num, g.items, nowText, settingsCache);
+      dispatchReceiptToType(g.dest, data);
     } catch (err) {
       errors.push(err.message);
     }

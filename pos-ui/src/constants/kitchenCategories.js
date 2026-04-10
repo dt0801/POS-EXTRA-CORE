@@ -1,8 +1,8 @@
 /** JSON mặc định — đồng bộ với server `DEFAULT_KITCHEN_CATEGORIES_JSON` */
 export const DEFAULT_KITCHEN_CATEGORIES_JSON = JSON.stringify([
-  { id: "APPETIZER", labelVi: "Khai vị", labelDe: "Vorspeise", subtitleVi: "KHAI VỊ", order: 0 },
-  { id: "SUSHI", labelVi: "Sushi / bar lạnh", labelDe: "Sushi", subtitleVi: "SUSHI", order: 1 },
-  { id: "MAIN", labelVi: "Món chính / bếp nóng", labelDe: "Hauptgericht", subtitleVi: "MÓN CHÍNH", order: 2 },
+  { id: "APPETIZER", labelVi: "Khai vị", labelDe: "Vorspeise", subtitleVi: "KHAI VỊ", order: 0, printer_dest: "KITCHEN" },
+  { id: "SUSHI", labelVi: "Sushi / bar lạnh", labelDe: "Sushi", subtitleVi: "SUSHI", order: 1, printer_dest: "BAR" },
+  { id: "MAIN", labelVi: "Món chính / bếp nóng", labelDe: "Hauptgericht", subtitleVi: "MÓN CHÍNH", order: 2, printer_dest: "KITCHEN" },
 ]);
 
 /**
@@ -26,12 +26,14 @@ export function parseKitchenCategoriesList(settings) {
         if (c.subtitleVi != null) subtitleVi = String(c.subtitleVi);
         else if (c.labelVi != null) subtitleVi = String(c.labelVi);
         else subtitleVi = String(id);
+        const printer_dest = String(c.printer_dest || "KITCHEN").toUpperCase();
         return {
           id,
           labelVi,
           labelDe,
           subtitleVi: subtitleVi.toUpperCase(),
           order: Number.isFinite(ord) ? ord : i,
+          printer_dest,
         };
       })
       .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));

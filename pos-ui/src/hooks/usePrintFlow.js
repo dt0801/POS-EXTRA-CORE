@@ -16,6 +16,7 @@ export default function usePrintFlow({
   currentTable,
   currentItems,
   itemNotes,
+  kitchenSent,
   total,
   setKitchenSent,
   updateTableStatus,
@@ -46,15 +47,23 @@ export default function usePrintFlow({
       if (!orderSessionReady) return alert("Dang tai du lieu don, thu lai sau vai giay.");
       if (!currentTable) return alert("Vui long chon ban!");
 
-      const itemsToPrint = currentItems.filter((item) => {
-        const isDrink = item.type === "DRINK";
-        if (targetType === "DRINK") return isDrink;
-        if (targetType === "FOOD") return !isDrink;
-        return true;
-      });
+      const sentMap = kitchenSent[currentTable] || {};
+      const itemsToPrint = currentItems
+        .filter((item) => {
+          const isDrink = item.type === "DRINK";
+          if (targetType === "DRINK") return isDrink;
+          if (targetType === "FOOD") return !isDrink;
+          return true;
+        })
+        .map((item) => {
+          const sentQty = sentMap[item.id] || 0;
+          const newQty = item.qty - sentQty;
+          return newQty > 0 ? { ...item, qty: newQty } : null;
+        })
+        .filter(Boolean);
 
       if (itemsToPrint.length === 0) {
-        return alert(targetType === "DRINK" ? "Chua co mon nuoc nao!" : "Chua co mon do an nao!");
+        return alert("Tat ca mon da duoc gui, khong co mon moi!");
       }
 
       const notes = itemNotes[currentTable] || {};
@@ -95,12 +104,12 @@ export default function usePrintFlow({
         const currentSent = prev[currentTable] || {};
         const newSent = { ...currentSent };
         itemsToPrint.forEach((i) => {
-          newSent[i.id] = i.qty;
+          newSent[i.id] = (currentSent[i.id] || 0) + i.qty;
         });
         return { ...prev, [currentTable]: newSent };
       });
     },
-    [callPrintApi, currentItems, currentTable, itemNotes, orderSessionReady, setKitchenSent, settings]
+    [callPrintApi, currentItems, currentTable, itemNotes, kitchenSent, orderSessionReady, setKitchenSent, settings]
   );
 
   const handlePayment = useCallback(async () => {

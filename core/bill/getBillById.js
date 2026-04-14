@@ -22,6 +22,7 @@ async function getBillById(deps, input) {
         id: Number(bill.sqlite_id ?? bill.id ?? billId),
         table_num: Number(bill.table_num || 0),
         total: Number(bill.total || 0),
+        payment_method: bill.payment_method || null,
         created_at: bill.created_at || "",
         items: items.map((it) => ({
           id: Number(it.sqlite_id ?? it.id ?? 0),

@@ -103,11 +103,14 @@ export default function usePrintFlow({
     [callPrintApi, currentItems, currentTable, itemNotes, orderSessionReady, setKitchenSent, settings]
   );
 
-  const handlePayment = useCallback(async () => {
+  const handlePayment = useCallback(async (payment_method) => {
     if (!isAdmin) return alert("Ban khong co quyen thanh toan.");
     if (!orderSessionReady) return;
     if (!currentTable) return;
     if (currentItems.length === 0) return alert("Ban chua co mon!");
+
+    const pm = String(payment_method || "").trim().toUpperCase();
+    const normalizedPaymentMethod = pm === "CARD" ? "CARD" : "CASH";
 
     const notes = itemNotes[currentTable] || {};
     const itemsForBill = currentItems.map((i) => ({
@@ -124,6 +127,7 @@ export default function usePrintFlow({
       body: JSON.stringify({
         table_num: currentTable,
         total,
+        payment_method: normalizedPaymentMethod,
         items: itemsForBill.map(({ name, price, qty, type }) => ({ name, price, qty, type })),
       }),
     });
@@ -141,7 +145,7 @@ export default function usePrintFlow({
     try {
       saved = await billRes.json();
     } catch {}
-    const billId = saved.id;
+    const billId = saved?.id ?? saved?.bill_id;
 
     const itemsPrint = itemsForBill.map((i) => ({ name: i.name, price: i.price, qty: i.qty }));
 

@@ -18,6 +18,12 @@ export default function HistoryView({
   const locale = language === "de" ? "de-DE" : "vi-VN";
   const totalCompleted = bills.length;
   const totalRevenue = bills.reduce((sum, b) => sum + (b.total || 0), 0);
+  const paymentLabel = (pm) => {
+    const v = String(pm || "").toUpperCase();
+    if (v === "CARD") return tr("Thẻ / Card", "Karte / Card");
+    if (v === "CASH") return tr("Tiền mặt", "Bar");
+    return tr("Không rõ", "Unbekannt");
+  };
 
   // If mobile and selectedBill, we show the detail screen overlay style
   const isMobileDetailVisible = !!selectedBill;
@@ -209,7 +215,7 @@ export default function HistoryView({
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-outline-variant/20">
                   <span className="material-symbols-outlined text-sm text-secondary">payments</span>
-                  <span className="text-xs font-bold text-on-surface-variant">{tr("Tiền mặt / Chuyển khoản", "Bar / Überweisung")}</span>
+                  <span className="text-xs font-bold text-on-surface-variant">{paymentLabel(selectedBill.payment_method)}</span>
                 </div>
               </div>
             </div>

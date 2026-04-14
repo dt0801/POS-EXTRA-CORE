@@ -265,6 +265,9 @@ export default function App() {
   const [statsMonthlyData, setStatsMonthlyData] = useState({ bill_count: 0, revenue: 0, days: [], top_items: [] });
   const [statsYearlyData, setStatsYearlyData] = useState({ bill_count: 0, revenue: 0, months: [], top_items: [] });
   const [selectedBill, setSelectedBill] = useState(null); // chi tiết bill đang xem
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("CASH"); // "CASH" | "CARD"
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const {
     settings,
     setSettings,
@@ -440,6 +443,13 @@ export default function App() {
   const fetchBillDetail = async (id) => {
     const data = await authedFetch(`${API_URL}/bills/${id}`).then(r => r.json());
     setSelectedBill(data);
+  };
+
+  const openPaymentMethodModal = () => {
+    if (!isAdmin) return;
+    if (!currentTable) return;
+    if (currentItems.length === 0) return;
+    setShowPaymentMethodModal(true);
   };
 
   /** Fetch danh sách bàn đầy đủ cho trang quản lý
@@ -1466,7 +1476,7 @@ export default function App() {
                      </button>
                    ) : (
                      <button
-                       onClick={() => { if (!isAdmin) return; handlePayment(); }}
+                      onClick={() => openPaymentMethodModal()}
                        disabled={!isAdmin || currentItems.length === 0}
                        className="w-full py-4 bg-primary hover:bg-[#c2410c] text-white font-bold text-sm rounded-[1.2rem] shadow-lg shadow-orange-300/40 active:scale-95 transition-all uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-70 disabled:grayscale-[0.5]"
                      >
@@ -1476,6 +1486,89 @@ export default function App() {
                    )}
                  </div>
               </aside>
+             
+             {/* Payment Method Modal */}
+             {showPaymentMethodModal && (
+               <div
+                 className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+                 onClick={() => { if (paymentSubmitting) return; setShowPaymentMethodModal(false); }}
+               >
+                 <div
+                   className="w-full max-w-sm bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/30 shadow-2xl"
+                   onClick={(e) => e.stopPropagation()}
+                 >
+                   <div className="flex items-start justify-between gap-4">
+                     <div>
+                       <h3 className="font-headline font-black text-xl text-on-surface">
+                         {tt("Chọn phương thức thanh toán", "Zahlungsart wählen")}
+                       </h3>
+                       <p className="text-sm text-on-surface-variant font-medium mt-1">
+                         {tt("Tiền mặt hoặc thẻ/card", "Bar oder Karte")}
+                       </p>
+                     </div>
+                     <button
+                       type="button"
+                       disabled={paymentSubmitting}
+                       onClick={() => setShowPaymentMethodModal(false)}
+                       className="w-11 h-11 bg-surface-container-high hover:bg-outline-variant/30 text-on-surface flex items-center justify-center rounded-full transition-colors shadow-sm disabled:opacity-40 disabled:pointer-events-none"
+                     >
+                       <span className="material-symbols-outlined text-2xl">close</span>
+                     </button>
+                   </div>
+
+                   <div className="mt-6 space-y-3">
+                     <button
+                       type="button"
+                       disabled={paymentSubmitting}
+                       onClick={async () => {
+                         try {
+                           setPaymentSubmitting(true);
+                           setPaymentMethod("CASH");
+                           await handlePayment("CASH");
+                           setShowPaymentMethodModal(false);
+                         } finally {
+                           setPaymentSubmitting(false);
+                         }
+                       }}
+                       className={`w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base transition-all flex items-center justify-center gap-2 border
+                         ${paymentMethod === "CASH" ? "bg-primary text-white border-primary shadow-lg shadow-orange-300/30" : "bg-white text-on-surface border-outline-variant/40 hover:bg-surface-container"}`}
+                     >
+                       <span className="material-symbols-outlined">payments</span>
+                       {tt("Trả tiền mặt", "Barzahlung")}
+                     </button>
+
+                     <button
+                       type="button"
+                       disabled={paymentSubmitting}
+                       onClick={async () => {
+                         try {
+                           setPaymentSubmitting(true);
+                           setPaymentMethod("CARD");
+                           await handlePayment("CARD");
+                           setShowPaymentMethodModal(false);
+                         } finally {
+                           setPaymentSubmitting(false);
+                         }
+                       }}
+                       className={`w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base transition-all flex items-center justify-center gap-2 border
+                         ${paymentMethod === "CARD" ? "bg-primary text-white border-primary shadow-lg shadow-orange-300/30" : "bg-white text-on-surface border-outline-variant/40 hover:bg-surface-container"}`}
+                     >
+                       <span className="material-symbols-outlined">credit_card</span>
+                       {tt("Trả thẻ / Card", "Kartenzahlung")}
+                     </button>
+
+                     <button
+                       type="button"
+                       disabled={paymentSubmitting}
+                       onClick={() => setShowPaymentMethodModal(false)}
+                       className="w-full h-12 rounded-[1.25rem] font-bold text-sm bg-surface-container-high text-on-surface-variant hover:bg-outline-variant/30 transition-colors"
+                     >
+                       {tt("Hủy", "Abbrechen")}
+                     </button>
+                   </div>
+                 </div>
+               </div>
+             )}
             </div>
           )
         )}
@@ -2457,7 +2550,7 @@ export default function App() {
                      GỬI BẾP
                    </button>
                    <button
-                     onClick={() => { if (!isAdmin) return; handlePayment(); setShowMobileCart(false); }}
+                     onClick={() => { openPaymentMethodModal(); setShowMobileCart(false); }}
                      disabled={!isAdmin || currentItems.length === 0}
                      className="py-4 bg-primary text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-orange-300/40 text-sm"
                    >

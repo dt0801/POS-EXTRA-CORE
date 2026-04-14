@@ -6,11 +6,15 @@
  */
 async function createBill(deps, reqBody) {
   const { mongoDb, getNextMongoId } = deps;
-  const { table_num, total, items } = reqBody || {};
+  const { table_num, total, items, payment_method } = reqBody || {};
   if (!table_num) return { status: 400, body: { error: "Thiếu table_num" } };
   if (!Array.isArray(items) || items.length === 0) {
     return { status: 400, body: { error: "Danh sách món không hợp lệ" } };
   }
+
+  const pmRaw = payment_method == null ? "" : String(payment_method);
+  const pm = pmRaw.trim().toUpperCase();
+  const normalizedPaymentMethod = pm === "CARD" ? "CARD" : pm === "CASH" ? "CASH" : "CASH";
 
   const now = new Date().toLocaleString("sv-SE").replace("T", " "); // "YYYY-MM-DD HH:MM:SS"
   try {
@@ -19,6 +23,7 @@ async function createBill(deps, reqBody) {
       sqlite_id: billId,
       table_num: Number(table_num),
       total: Number(total || 0),
+      payment_method: normalizedPaymentMethod,
       created_at: now,
     });
 
@@ -41,7 +46,10 @@ async function createBill(deps, reqBody) {
       { upsert: true }
     );
 
-    return { status: 200, body: { bill_id: billId } };
+    return {
+      status: 200,
+      body: { id: billId, bill_id: billId, payment_method: normalizedPaymentMethod },
+    };
   } catch (e) {
     return { status: 500, body: { error: e.message || String(e) } };
   }

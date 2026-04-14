@@ -170,6 +170,9 @@ export default function HistoryView({
                     <div className="text-right">
                       <p className="text-on-surface-variant font-medium text-sm">{new Date(selectedBill.created_at).toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" })}</p>
                       <p className="text-on-surface-variant font-bold text-lg">{new Date(selectedBill.created_at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</p>
+                      <p className="text-on-surface-variant font-semibold text-xs mt-1">
+                        {tr("NV", "MA")}: {(selectedBill.created_by_full_name || selectedBill.created_by_username) ? String(selectedBill.created_by_full_name || selectedBill.created_by_username) : tr("Không rõ", "Unbekannt")}
+                      </p>
                     </div>
                   </div>
                 </div>

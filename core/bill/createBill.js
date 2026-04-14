@@ -6,7 +6,7 @@
  */
 async function createBill(deps, reqBody) {
   const { mongoDb, getNextMongoId } = deps;
-  const { table_num, total, items, payment_method } = reqBody || {};
+  const { table_num, total, items, payment_method, actorUser } = reqBody || {};
   if (!table_num) return { status: 400, body: { error: "Thiếu table_num" } };
   if (!Array.isArray(items) || items.length === 0) {
     return { status: 400, body: { error: "Danh sách món không hợp lệ" } };
@@ -16,6 +16,11 @@ async function createBill(deps, reqBody) {
   const pm = pmRaw.trim().toUpperCase();
   const normalizedPaymentMethod = pm === "CARD" ? "CARD" : pm === "CASH" ? "CASH" : "CASH";
 
+  const actor = actorUser && typeof actorUser === "object" ? actorUser : null;
+  const actorUserId = actor?.id != null ? Number(actor.id) : null;
+  const actorUsername = actor?.username ? String(actor.username) : null;
+  const actorFullName = actor?.full_name ? String(actor.full_name) : actorUsername;
+
   const now = new Date().toLocaleString("sv-SE").replace("T", " "); // "YYYY-MM-DD HH:MM:SS"
   try {
     const billId = await getNextMongoId("bills");
@@ -24,6 +29,9 @@ async function createBill(deps, reqBody) {
       table_num: Number(table_num),
       total: Number(total || 0),
       payment_method: normalizedPaymentMethod,
+      created_by: actorUserId,
+      created_by_username: actorUsername,
+      created_by_full_name: actorFullName,
       created_at: now,
     });
 
@@ -48,7 +56,14 @@ async function createBill(deps, reqBody) {
 
     return {
       status: 200,
-      body: { id: billId, bill_id: billId, payment_method: normalizedPaymentMethod },
+      body: {
+        id: billId,
+        bill_id: billId,
+        payment_method: normalizedPaymentMethod,
+        created_by: actorUserId,
+        created_by_username: actorUsername,
+        created_by_full_name: actorFullName,
+      },
     };
   } catch (e) {
     return { status: 500, body: { error: e.message || String(e) } };

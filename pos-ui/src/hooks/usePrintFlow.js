@@ -113,7 +113,6 @@ export default function usePrintFlow({
   );
 
   const handlePayment = useCallback(async (payment_method) => {
-    if (!isAdmin) return alert("Ban khong co quyen thanh toan.");
     if (!orderSessionReady) return;
     if (!currentTable) return;
     if (currentItems.length === 0) return alert("Ban chua co mon!");

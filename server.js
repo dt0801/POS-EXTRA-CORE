@@ -433,13 +433,16 @@ function startServer() {
   // =============================================
 
   // Tạo hóa đơn mới
-  app.post("/bills", authMiddleware, requireRole("admin"), async (req, res) => {
-    const result = await createBill({ mongoDb, getNextMongoId }, req.body || {});
+  app.post("/bills", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
+    const result = await createBill(
+      { mongoDb, getNextMongoId },
+      { ...(req.body || {}), actorUser: req.user }
+    );
     res.status(result.status).json(result.body);
   });
 
   // Lịch sử hóa đơn theo ngày
-  app.get("/bills", authMiddleware, requireRole("admin"), async (req, res) => {
+  app.get("/bills", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await listBillsByDate(
       { mongoDb },
       { date: req.query.date || new Date().toISOString().split("T")[0] }
@@ -448,7 +451,7 @@ function startServer() {
   });
 
   // Chi tiết 1 hóa đơn
-  app.get("/bills/:id", authMiddleware, requireRole("admin"), async (req, res) => {
+  app.get("/bills/:id", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await getBillById({ mongoDb }, { id: req.params.id });
     res.status(result.status).json(result.body);
   });

@@ -36,6 +36,9 @@ async function listBillsByDate(deps, input) {
         table_num: Number(b.table_num || 0),
         total: Number(b.total || 0),
         payment_method: b.payment_method || null,
+        created_by: b.created_by ?? null,
+        created_by_username: b.created_by_username ?? null,
+        created_by_full_name: b.created_by_full_name ?? null,
         created_at: b.created_at || "",
         items_summary: (map[id] || []).join(", "),
       };

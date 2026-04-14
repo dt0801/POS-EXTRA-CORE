@@ -446,7 +446,7 @@ export default function App() {
   };
 
   const openPaymentMethodModal = () => {
-    if (!isAdmin) return;
+    if (!authUser) return;
     if (!currentTable) return;
     if (currentItems.length === 0) return;
     setShowPaymentMethodModal(true);
@@ -1452,7 +1452,7 @@ export default function App() {
                      </button>
                      <button
                        onClick={() => printTamTinh()}
-                       disabled={!isAdmin || currentItems.length === 0}
+                      disabled={!authUser || currentItems.length === 0}
                        className="py-3.5 bg-stone-50 text-stone-600 font-bold rounded-2xl hover:bg-stone-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-sm border border-stone-200/50"
                      >
                       <span className="material-symbols-outlined text-[16px]">receipt</span> {tt("Tạm Tính", "Zwischenrechnung")}
@@ -1470,7 +1470,7 @@ export default function App() {
                    ) : (
                      <button
                       onClick={() => openPaymentMethodModal()}
-                       disabled={!isAdmin || currentItems.length === 0}
+                      disabled={!authUser || currentItems.length === 0}
                        className="w-full py-4 bg-primary hover:bg-[#c2410c] text-white font-bold text-sm rounded-[1.2rem] shadow-lg shadow-orange-300/40 active:scale-95 transition-all uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-70 disabled:grayscale-[0.5]"
                      >
                        <span className="material-symbols-outlined text-[18px]">payments</span>
@@ -2545,7 +2545,7 @@ export default function App() {
                    </button>
                    <button
                      onClick={() => { openPaymentMethodModal(); setShowMobileCart(false); }}
-                     disabled={!isAdmin || currentItems.length === 0}
+                     disabled={!authUser || currentItems.length === 0}
                      className="py-4 bg-primary text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-orange-300/40 text-sm"
                    >
                      THANH TOÁN

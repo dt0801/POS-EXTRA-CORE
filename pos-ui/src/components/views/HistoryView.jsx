@@ -24,6 +24,10 @@ export default function HistoryView({
     if (v === "CASH") return tr("Tiền mặt", "Bar");
     return tr("Không rõ", "Unbekannt");
   };
+  const userLabel = (b) => {
+    const name = b?.created_by_full_name || b?.created_by_username || "";
+    return name ? String(name) : tr("Không rõ", "Unbekannt");
+  };
 
   // If mobile and selectedBill, we show the detail screen overlay style
   const isMobileDetailVisible = !!selectedBill;
@@ -100,12 +104,18 @@ export default function HistoryView({
                           <span className="w-1 h-1 bg-stone-300 rounded-full"></span>
                           <span className={`text-sm font-medium ${isSelected ? "text-on-primary-container/80" : "text-on-surface-variant"}`}>#HD-{b.id}</span>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                           <span className={`text-xs font-medium flex items-center gap-1 ${isSelected ? "text-on-primary-container/80" : "text-stone-400"}`}>
                             <span className="material-symbols-outlined text-[14px]">schedule</span> 
                             {new Date(b.created_at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
                           </span>
                           <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isSelected ? "bg-white/20 text-on-primary-container" : "bg-green-100 text-green-700"}`}>{tr("Hoàn tất", "Abgeschlossen")}</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isSelected ? "bg-white/20 text-on-primary-container" : "bg-surface-container-high text-on-surface-variant"}`}>
+                            {paymentLabel(b.payment_method)}
+                          </span>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isSelected ? "bg-white/20 text-on-primary-container" : "bg-surface-container-high text-on-surface-variant"}`}>
+                            {userLabel(b)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -212,6 +222,12 @@ export default function HistoryView({
                 <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-outline-variant/20">
                   <span className="material-symbols-outlined text-sm text-secondary">tag</span>
                   <span className="text-xs font-bold text-on-surface-variant">{tr("Mã HD", "RE-Code")}: {selectedBill.id}</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-outline-variant/20">
+                  <span className="material-symbols-outlined text-sm text-secondary">person</span>
+                  <span className="text-xs font-bold text-on-surface-variant">
+                    {(selectedBill.created_by_full_name || selectedBill.created_by_username) ? String(selectedBill.created_by_full_name || selectedBill.created_by_username) : tr("Không rõ", "Unbekannt")}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-outline-variant/20">
                   <span className="material-symbols-outlined text-sm text-secondary">payments</span>

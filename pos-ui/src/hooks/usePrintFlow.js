@@ -187,7 +187,6 @@ export default function usePrintFlow({
     callPrintApi,
     currentItems,
     currentTable,
-    isAdmin,
     itemNotes,
     orderSessionReady,
     settings,

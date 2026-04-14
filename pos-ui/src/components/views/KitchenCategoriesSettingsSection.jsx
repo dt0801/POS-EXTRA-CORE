@@ -70,6 +70,7 @@ export default function KitchenCategoriesSettingsSection({
       labelDe: "",
       subtitleVi: String(tt("Danh mục mới", "Neue Kategorie")).toUpperCase(),
       order: list.length,
+      printer_dest: "KITCHEN",
     });
     updateRows(list);
   };
@@ -178,7 +179,7 @@ export default function KitchenCategoriesSettingsSection({
                   ↓
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 flex-1 min-w-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 flex-1 min-w-0">
                 <div>
                   <label className="text-[10px] font-bold text-on-surface-variant uppercase block mb-1">ID</label>
                   <input
@@ -216,6 +217,19 @@ export default function KitchenCategoriesSettingsSection({
                     onChange={(e) => patchRow(r.id, "subtitleVi", e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface text-sm"
                   />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-on-surface-variant uppercase block mb-1">
+                    {tt("In về", "Drucker")}
+                  </label>
+                  <select
+                    value={r.printer_dest || "KITCHEN"}
+                    onChange={(e) => patchRow(r.id, "printer_dest", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface text-sm font-bold"
+                  >
+                    <option value="KITCHEN">{tt("Bếp", "Küche")}</option>
+                    <option value="BAR">{tt("Bar", "Bar")}</option>
+                  </select>
                 </div>
               </div>
               <button

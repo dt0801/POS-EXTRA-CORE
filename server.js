@@ -700,7 +700,7 @@ function startServer() {
   // In phiếu bếp (Tách Đồ ăn -> Bếp, Nước uống -> Bill/Pha chế)
   app.post("/print/kitchen", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await postKitchenPrint(
-      { useBridgeQueue, createPrintJob, dispatchReceiptToType, enqueueJobsForType },
+      { useBridgeQueue, createPrintJob, dispatchReceiptToType, enqueueJobsForType, settingsCache },
       req.body || {}
     );
     res.status(result.status).json(result.body);

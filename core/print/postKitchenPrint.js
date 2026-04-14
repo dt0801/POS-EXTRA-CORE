@@ -1,7 +1,53 @@
 const { dispatchToBridge } = require("./dispatchToBridge");
+const { parseKitchenCategoriesList } = require("../../server/print-templates/kitchenCategoriesServer");
+
+/**
+ * Xác định printer destination cho 1 item dựa vào kitchen_category + settings.
+ * - DRINK → luôn "BAR"
+ * - FOOD  → tra kitchen_categories_json, lấy printer_dest (default "KITCHEN")
+ */
+/**
+ * Trả về { dest, groupKey } cho mỗi item.
+ * - dest: printer type để gửi (KITCHEN, BAR, ...)
+ * - groupKey: key để tách phiếu riêng (dest + category)
+ */
+function resolveItemRouting(item, settings) {
+  if (item.type === "DRINK") {
+    return { dest: "BAR", groupKey: "BAR__DRINK" };
+  }
+  const cats = parseKitchenCategoriesList(settings);
+  const catId = item.kitchen_category || "MAIN";
+  const cat = cats.find((c) => c.id === catId);
+  const dest = cat?.printer_dest || "KITCHEN";
+  return { dest, groupKey: `${dest}__${catId}` };
+}
+
+const GROUP_LABELS = {
+  DRINK:     { title: "PHIẾU PHA CHẾ", subtitle: "NƯỚC", footer: "Pha chế" },
+  SUSHI:     { title: "PHIẾU BAR", subtitle: "SUSHI", footer: "Bar" },
+  APPETIZER: { title: "PHIẾU BẾP", subtitle: "KHAI VỊ", footer: "Giao bếp" },
+  MAIN:      { title: "PHIẾU BẾP", subtitle: "MÓN CHÍNH", footer: "Giao bếp" },
+};
+
+function buildReceiptData(dest, catId, table_num, items, nowText, settings) {
+  const labels = GROUP_LABELS[catId]
+    || (dest === "BAR"
+      ? { title: "PHIẾU BAR", subtitle: String(catId).toUpperCase(), footer: "Bar" }
+      : { title: "PHIẾU BẾP", subtitle: String(catId).toUpperCase(), footer: "Giao bếp" });
+  return {
+    title: labels.title,
+    subtitle: labels.subtitle,
+    tableNum: table_num,
+    timeLabel: "Giờ",
+    timeValue: nowText,
+    items,
+    footer: labels.footer,
+    hidePrices: true,
+  };
+}
 
 async function postKitchenPrint(
-  { useBridgeQueue, createPrintJob, dispatchReceiptToType, enqueueJobsForType },
+  { useBridgeQueue, createPrintJob, dispatchReceiptToType, enqueueJobsForType, settingsCache },
   body
 ) {
   const { table_num, items = [] } = body;
@@ -10,48 +56,25 @@ async function postKitchenPrint(
   }
 
   const nowText = new Date().toLocaleString("vi-VN");
-  const foodItems = items.filter((i) => i.type !== "DRINK");
-  const drinkItems = items.filter((i) => i.type === "DRINK");
 
-  const foodData = {
-    title: "PHIẾU BẾP",
-    subtitle: "ĐỒ ĂN",
-    tableNum: table_num,
-    timeLabel: "Giờ",
-    timeValue: nowText,
-    items: foodItems,
-    footer: "Giao bếp",
-    hidePrices: true,
-  };
-  const drinkData = {
-    title: "PHIẾU PHA CHẾ",
-    subtitle: "NƯỚC",
-    tableNum: table_num,
-    timeLabel: "Giờ",
-    timeValue: nowText,
-    items: drinkItems,
-    footer: "Pha chế",
-    hidePrices: true,
-  };
+  // Group items theo groupKey (dest + category) → mỗi group = 1 phiếu riêng
+  const groups = {};
+  for (const item of items) {
+    const { dest, groupKey } = resolveItemRouting(item, settingsCache || {});
+    if (!groups[groupKey]) groups[groupKey] = { dest, catId: item.type === "DRINK" ? "DRINK" : (item.kitchen_category || "MAIN"), items: [] };
+    groups[groupKey].items.push(item);
+  }
 
   if (useBridgeQueue()) {
     try {
       const jobIds = [];
-      if (foodItems.length > 0) {
+      for (const g of Object.values(groups)) {
+        const data = buildReceiptData(g.dest, g.catId, table_num, g.items, nowText, settingsCache);
         const ids = await dispatchToBridge(
           { enqueueJobsForType, createPrintJob },
-          "KITCHEN",
+          g.dest,
           null,
-          foodData
-        );
-        jobIds.push(...ids);
-      }
-      if (drinkItems.length > 0) {
-        const ids = await dispatchToBridge(
-          { enqueueJobsForType, createPrintJob },
-          "BILL",
-          null,
-          drinkData
+          data
         );
         jobIds.push(...ids);
       }
@@ -62,18 +85,16 @@ async function postKitchenPrint(
   }
 
   const errors = [];
-  try {
-    if (foodItems.length > 0) dispatchReceiptToType("KITCHEN", foodData);
-  } catch (err) {
-    errors.push(err.message);
-  }
-  try {
-    if (drinkItems.length > 0) dispatchReceiptToType("BILL", drinkData);
-  } catch (err) {
-    errors.push(err.message);
+  for (const g of Object.values(groups)) {
+    try {
+      const data = buildReceiptData(g.dest, g.catId, table_num, g.items, nowText, settingsCache);
+      dispatchReceiptToType(g.dest, data);
+    } catch (err) {
+      errors.push(err.message);
+    }
   }
 
-  if (errors.length && foodItems.length + drinkItems.length > 0) {
+  if (errors.length && items.length > 0) {
     return { status: 503, body: { error: errors.join(", ") } };
   }
   return { status: 200, body: { success: true } };

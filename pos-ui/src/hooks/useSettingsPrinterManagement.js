@@ -85,7 +85,7 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     if (!name) return alert("Vui lòng nhập tên máy in");
     const paper = Math.min(120, Math.max(40, Number(newPrinter.paper_size) || 80));
     let type = String(newPrinter.type || "ALL").toUpperCase();
-    if (type === "DRINK") type = "BILL";
+    if (type === "DRINK") type = "BAR";
     const payload = { name, type, paper_size: paper, is_enabled: newPrinter.is_enabled !== 0 ? 1 : 0 };
     try {
       await addDbPrinterRequest(payload);

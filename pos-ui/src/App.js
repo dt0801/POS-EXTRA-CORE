@@ -569,6 +569,7 @@ export default function App() {
     currentTable,
     currentItems,
     itemNotes,
+    kitchenSent,
     total,
     setKitchenSent,
     updateTableStatus,
@@ -1443,11 +1444,11 @@ export default function App() {
                  <div className="space-y-3 shrink-0">
                    <div className="grid grid-cols-2 gap-3">
                      <button
-                       onClick={() => printOrderTicket('FOOD')}
+                       onClick={() => printOrderTicket('ALL')}
                        disabled={currentItems.length === 0}
                        className="py-3.5 bg-stone-50 text-stone-600 font-bold rounded-2xl hover:bg-stone-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-sm border border-stone-200/50"
                      >
-                      <span className="material-symbols-outlined text-[16px]">restaurant</span> {currentItems.length > 0 && currentItems.filter(i => i.type !== 'DRINK').some(i => i.qty > (kitchenSent[currentTable]?.[i.id] || 0)) ? <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-error animate-pulse"></span> : null} {tt("Gửi Bếp", "Zur Küche")}
+                      <span className="material-symbols-outlined text-[16px]">restaurant</span> {currentItems.length > 0 && currentItems.some(i => i.qty > (kitchenSent[currentTable]?.[i.id] || 0)) ? <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-error animate-pulse"></span> : null} {tt("Gửi Bếp / Bar", "Küche / Bar")}
                      </button>
                      <button
                        onClick={() => printTamTinh()}
@@ -1455,14 +1456,6 @@ export default function App() {
                        className="py-3.5 bg-stone-50 text-stone-600 font-bold rounded-2xl hover:bg-stone-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-sm border border-stone-200/50"
                      >
                       <span className="material-symbols-outlined text-[16px]">receipt</span> {tt("Tạm Tính", "Zwischenrechnung")}
-                     </button>
-                     {/* Optional: Drink order button, moved to span across if needed, or included in 3-grid. Kept exactly like image (2 cols) + fallback. */}
-                     <button
-                       onClick={() => printOrderTicket('DRINK')}
-                       disabled={currentItems.length === 0}
-                       className="col-span-2 py-2.5 bg-white text-stone-500 font-bold rounded-xl hover:bg-stone-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-[11px] border border-stone-200/30"
-                     >
-                      <span className="material-symbols-outlined text-[14px]">local_cafe</span> {tt("Gửi Bếp Nước", "Getränke senden")}
                      </button>
                    </div>
                    
@@ -2125,7 +2118,8 @@ export default function App() {
                           className="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold text-on-surface text-sm appearance-none"
                         >
                           <option value="KITCHEN">{tt("Bếp (KITCHEN)", "Küche (KITCHEN)")}</option>
-                          <option value="BILL">{tt("Hóa đơn / pha chế (BILL)", "Rechnung / Bar (BILL)")}</option>
+                          <option value="BAR">{tt("Bar / Pha chế (BAR)", "Bar (BAR)")}</option>
+                          <option value="BILL">{tt("Hóa đơn (BILL)", "Rechnung (BILL)")}</option>
                           <option value="TAMTINH">{tt("Tạm tính (TAMTINH)", "Zwischenrechnung (TAMTINH)")}</option>
                           <option value="ALL">{tt("Tất cả loại phiếu (ALL)", "Alle Belege (ALL)")}</option>
                         </select>
@@ -2543,11 +2537,11 @@ export default function App() {
                  
                  <div className="grid grid-cols-2 gap-3 pb-safe">
                    <button
-                     onClick={() => { printOrderTicket('FOOD'); setShowMobileCart(false); }}
+                     onClick={() => { printOrderTicket('ALL'); setShowMobileCart(false); }}
                      disabled={currentItems.length === 0}
                      className="py-4 bg-stone-100 text-stone-600 font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm"
                    >
-                     GỬI BẾP
+                     GỬI BẾP / BAR
                    </button>
                    <button
                      onClick={() => { openPaymentMethodModal(); setShowMobileCart(false); }}

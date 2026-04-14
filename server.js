@@ -719,7 +719,7 @@ function startServer() {
   });
 
   // In hóa đơn tài chính
-  app.post("/print/bill", authMiddleware, requireRole("admin"), async (req, res) => {
+  app.post("/print/bill", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await postBillPrint(
       { useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile, enqueueJobsForType },
       req.body || {}
@@ -728,7 +728,7 @@ function startServer() {
   });
 
   // In lại hóa đơn từ lịch sử
-  app.post("/print/bill/:id", authMiddleware, requireRole("admin"), async (req, res) => {
+  app.post("/print/bill/:id", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await postBillReprintPrint(
       { mongoDb, useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile, enqueueJobsForType },
       Number(req.params.id)

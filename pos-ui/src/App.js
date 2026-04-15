@@ -1710,10 +1710,10 @@ export default function App() {
                              return (
                                <div
                                  key={it.id}
-                                 className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all ${
+                                 className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all shadow-sm ${
                                    isSelected
-                                     ? "border-primary/40 bg-orange-50/60"
-                                     : "border-outline-variant/30 bg-white"
+                                     ? "border-primary/40 bg-orange-50/70 shadow-orange-200/40"
+                                     : "border-outline-variant/30 bg-white hover:bg-surface-container-lowest"
                                  }`}
                                >
                                  <button
@@ -1727,8 +1727,8 @@ export default function App() {
                                        return next;
                                      });
                                    }}
-                                   className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${
-                                     isSelected ? "bg-primary border-primary text-white" : "bg-white border-outline-variant/40 text-transparent"
+                                   className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${
+                                     isSelected ? "bg-primary border-primary text-white" : "bg-white border-outline-variant/40 text-transparent hover:border-primary/40"
                                    }`}
                                    aria-label="toggle"
                                  >
@@ -1736,9 +1736,14 @@ export default function App() {
                                  </button>
 
                                  <div className="flex-1 min-w-0">
-                                   <div className="font-bold text-sm text-on-surface truncate">{it.name}</div>
-                                   <div className="text-xs text-on-surface-variant font-semibold">
-                                     {formatMoney(it.price)} × {it.qty}
+                                   <div className="font-bold text-[13px] text-on-surface truncate leading-tight">{it.name}</div>
+                                   <div className="flex items-center gap-2 mt-1">
+                                     <span className="text-[11px] font-bold text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full">
+                                       {tt("Còn", "Verfügbar")}: {it.qty}
+                                     </span>
+                                     <span className="text-[11px] font-semibold text-on-surface-variant">
+                                       {formatMoney(it.price)}
+                                     </span>
                                    </div>
                                  </div>
 
@@ -1756,11 +1761,15 @@ export default function App() {
                                          return next;
                                        });
                                      }}
-                                     className="w-8 h-8 rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-outline-variant/30 font-black"
+                                     className={`w-9 h-9 rounded-2xl font-black transition-all border ${
+                                       isSelected
+                                         ? "bg-white border-outline-variant/30 text-on-surface hover:bg-surface-container-lowest"
+                                         : "bg-surface-container-high border-outline-variant/20 text-on-surface-variant"
+                                     }`}
                                    >
                                      -
                                    </button>
-                                   <div className="w-9 text-center font-headline font-black text-sm text-on-surface">
+                                   <div className="w-10 text-center font-headline font-black text-sm text-on-surface">
                                      {selectedQty || 0}
                                    </div>
                                    <button
@@ -1775,7 +1784,11 @@ export default function App() {
                                          return next;
                                        });
                                      }}
-                                     className="w-8 h-8 rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-outline-variant/30 font-black"
+                                     className={`w-9 h-9 rounded-2xl font-black transition-all border ${
+                                       isSelected
+                                         ? "bg-primary border-primary text-white hover:bg-[#c2410c]"
+                                         : "bg-surface-container-high border-outline-variant/20 text-on-surface-variant"
+                                     }`}
                                    >
                                      +
                                    </button>
@@ -1785,9 +1798,16 @@ export default function App() {
                            })}
                          </div>
 
-                         <div className="flex items-center justify-between px-1">
-                           <span className="text-sm font-bold text-on-surface-variant">{tt("Tổng tách", "Teilbetrag")}</span>
-                           <span className="font-headline font-black text-xl text-primary">{formatMoney(calcSplitPayTotal())}</span>
+                         <div className="rounded-2xl bg-surface-container-high border border-outline-variant/20 px-4 py-3 flex items-center justify-between">
+                           <div className="flex flex-col">
+                             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                               {tt("Tổng tách", "Teilbetrag")}
+                             </span>
+                             <span className="text-[11px] font-semibold text-on-surface-variant">
+                               {tt("Chọn món để tạo bill riêng", "Artikel auswählen für getrennte Rechnung")}
+                             </span>
+                           </div>
+                           <span className="font-headline font-black text-2xl text-primary">{formatMoney(calcSplitPayTotal())}</span>
                          </div>
 
                          <button
@@ -1797,7 +1817,7 @@ export default function App() {
                              setPaymentMethod("CASH");
                              await confirmSplitPayment("CASH");
                            }}
-                           className="w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base bg-primary text-white border border-primary shadow-lg shadow-orange-300/30 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:grayscale-[0.5]"
+                           className="w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base bg-primary text-white border border-primary shadow-lg shadow-orange-300/30 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:grayscale-[0.5] hover:bg-[#c2410c] active:scale-[0.99]"
                          >
                            <span className="material-symbols-outlined">payments</span>
                            {tt("Tách bill • Tiền mặt", "Getrennt • Bar")}
@@ -1810,7 +1830,7 @@ export default function App() {
                              setPaymentMethod("CARD");
                              await confirmSplitPayment("CARD");
                            }}
-                           className="w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base bg-white text-on-surface border border-outline-variant/40 hover:bg-surface-container transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:grayscale-[0.5]"
+                           className="w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base bg-white text-on-surface border border-outline-variant/40 hover:bg-surface-container transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:grayscale-[0.5] active:scale-[0.99]"
                          >
                            <span className="material-symbols-outlined">credit_card</span>
                            {tt("Tách bill • Thẻ/Card", "Getrennt • Karte")}

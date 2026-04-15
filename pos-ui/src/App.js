@@ -1609,7 +1609,7 @@ export default function App() {
                  onClick={() => { if (paymentSubmitting) return; setShowPaymentMethodModal(false); }}
                >
                  <div
-                   className="w-full max-w-sm bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/30 shadow-2xl"
+                  className="w-full max-w-lg md:max-w-2xl bg-surface-container-lowest rounded-[2rem] p-6 md:p-7 border border-outline-variant/30 shadow-2xl max-h-[88vh] overflow-hidden flex flex-col"
                    onClick={(e) => e.stopPropagation()}
                  >
                    <div className="flex items-start justify-between gap-4">
@@ -1631,7 +1631,7 @@ export default function App() {
                      </button>
                    </div>
 
-                   <div className="mt-6 space-y-3">
+                  <div className="mt-6 space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
                      <div className="flex bg-surface-container-high p-1.5 rounded-2xl">
                        <button
                          type="button"
@@ -1703,7 +1703,7 @@ export default function App() {
                        </>
                      ) : (
                        <>
-                         <div className="max-h-[45vh] overflow-y-auto pr-1 space-y-2">
+                         <div className="max-h-[52vh] md:max-h-[56vh] overflow-y-auto pr-1 space-y-2">
                            {currentItems.map((it) => {
                              const selectedQty = Number(splitPaySelected?.[it.id] || 0);
                              const isSelected = selectedQty > 0;

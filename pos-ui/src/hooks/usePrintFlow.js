@@ -112,29 +112,37 @@ export default function usePrintFlow({
     [callPrintApi, currentItems, currentTable, itemNotes, kitchenSent, orderSessionReady, setKitchenSent, settings]
   );
 
-  const handlePayment = useCallback(async (payment_method) => {
+  const handlePayment = useCallback(async (input) => {
     if (!orderSessionReady) return;
     if (!currentTable) return;
     if (currentItems.length === 0) return alert("Ban chua co mon!");
+
+    const payment_method = typeof input === "string" ? input : input?.payment_method;
+    const overrideItems = typeof input === "object" && input ? input.items : null;
+    const overrideTotal = typeof input === "object" && input ? input.total : null;
+    const shouldMarkPaying = typeof input === "object" && input ? input.shouldMarkPaying !== false : true;
 
     const pm = String(payment_method || "").trim().toUpperCase();
     const normalizedPaymentMethod = pm === "CARD" ? "CARD" : "CASH";
 
     const notes = itemNotes[currentTable] || {};
-    const itemsForBill = currentItems.map((i) => ({
+    const baseItems = Array.isArray(overrideItems) && overrideItems.length ? overrideItems : currentItems;
+    const itemsForBill = baseItems.map((i) => ({
       name: i.name,
       price: i.price,
       qty: i.qty,
       type: i.type || "FOOD",
       note: notes[i.id] || "",
     }));
+    const computedTotal = itemsForBill.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 0), 0);
+    const billTotal = overrideTotal != null ? Number(overrideTotal || 0) : computedTotal;
 
     const billRes = await authedFetch(`${API_URL}/bills`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         table_num: currentTable,
-        total,
+        total: billTotal,
         payment_method: normalizedPaymentMethod,
         items: itemsForBill.map(({ name, price, qty, type }) => ({ name, price, qty, type })),
       }),
@@ -161,7 +169,7 @@ export default function usePrintFlow({
       await callPrintApi("/print/bill", {
         table_num: currentTable,
         items: itemsPrint,
-        total,
+        total: billTotal,
       });
     } catch {
       try {
@@ -169,7 +177,7 @@ export default function usePrintFlow({
           receipt: receiptPayloadBillPrint({
             tableNum: currentTable,
             items: itemsPrint,
-            totalValue: total,
+            totalValue: billTotal,
             billId,
           }),
           paper_size: 80,
@@ -181,7 +189,8 @@ export default function usePrintFlow({
       }
     }
 
-    updateTableStatus(currentTable, "PAYING");
+    if (shouldMarkPaying) updateTableStatus(currentTable, "PAYING");
+    return { ok: true, billId, payment_method: normalizedPaymentMethod, total: billTotal };
   }, [
     authedFetch,
     callPrintApi,
@@ -190,7 +199,6 @@ export default function usePrintFlow({
     itemNotes,
     orderSessionReady,
     settings,
-    total,
     updateTableStatus,
   ]);
 

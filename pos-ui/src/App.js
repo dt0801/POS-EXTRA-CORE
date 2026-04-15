@@ -268,6 +268,8 @@ export default function App() {
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("CASH"); // "CASH" | "CARD"
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [paymentMode, setPaymentMode] = useState("FULL"); // "FULL" | "SPLIT"
+  const [splitPaySelected, setSplitPaySelected] = useState({}); // { [itemId]: qtyToPay }
   const {
     settings,
     setSettings,
@@ -449,6 +451,8 @@ export default function App() {
     if (!authUser) return;
     if (!currentTable) return;
     if (currentItems.length === 0) return;
+    setPaymentMode("FULL");
+    setSplitPaySelected({});
     setShowPaymentMethodModal(true);
   };
 
@@ -534,14 +538,14 @@ export default function App() {
   }, [authUser, isAdmin, sidebarView]);
 
   /** Cập nhật trạng thái bàn lên server và local state */
-  const updateTableStatus = async (tableNum, status) => {
-    setTableStatus(prev => ({ ...prev, [tableNum]: status }));
+  const updateTableStatus = useCallback(async (tableNum, status) => {
+    setTableStatus((prev) => ({ ...prev, [tableNum]: status }));
     await authedFetch(`${API_URL}/tables/${tableNum}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-  };
+  }, [authedFetch]);
 
   const { addItem, addCustomLineItem, updateQty, removeItem, resetTable, transferTable, executeSplit } = useTableActions({
     orderSessionReady,
@@ -575,6 +579,124 @@ export default function App() {
     updateTableStatus,
     settings,
   });
+
+  const calcSplitPayTotal = useCallback(
+    () =>
+      currentItems.reduce((s, it) => {
+        const q = Number(splitPaySelected?.[it.id] || 0);
+        if (!q) return s;
+        return s + Number(it.price || 0) * q;
+      }, 0),
+    [currentItems, splitPaySelected]
+  );
+
+  const applySplitPayDeduction = useCallback(
+    ({ selected }) => {
+      if (!currentTable) return { remainingCount: currentItems.length };
+      const selectedMap = selected && typeof selected === "object" ? selected : {};
+      const curQtyMap = {};
+      currentItems.forEach((it) => {
+        curQtyMap[it.id] = Number(it.qty || 0);
+      });
+
+      setTableOrders((prev) => {
+        const table = prev[currentTable] || {};
+        const updated = { ...table };
+        Object.entries(selectedMap).forEach(([itemId, qtyPay]) => {
+          const ex = updated[itemId];
+          if (!ex) return;
+          const q = Math.max(0, Math.round(Number(qtyPay) || 0));
+          const nextQty = Number(ex.qty || 0) - q;
+          if (nextQty <= 0) delete updated[itemId];
+          else updated[itemId] = { ...ex, qty: nextQty };
+        });
+        return { ...prev, [currentTable]: updated };
+      });
+
+      setItemNotes((prev) => {
+        const notes = prev[currentTable] || {};
+        if (!notes || typeof notes !== "object") return prev;
+        const updated = { ...notes };
+        Object.keys(selectedMap).forEach((itemId) => {
+          const qtyPay = Math.max(0, Math.round(Number(selectedMap[itemId]) || 0));
+          const curQty = Number(curQtyMap[itemId] || 0);
+          if (qtyPay >= curQty) delete updated[itemId];
+        });
+        return { ...prev, [currentTable]: updated };
+      });
+
+      setKitchenSent((prev) => {
+        const sent = prev[currentTable] || {};
+        if (!sent || typeof sent !== "object") return prev;
+        const updated = { ...sent };
+        Object.entries(selectedMap).forEach(([itemId, qtyPay]) => {
+          const oldSent = Number(updated[itemId] || 0);
+          const curQty = Number(curQtyMap[itemId] || 0);
+          const q = Math.max(0, Math.round(Number(qtyPay) || 0));
+          const nextQty = curQty - q;
+          if (nextQty <= 0) delete updated[itemId];
+          else updated[itemId] = Math.min(oldSent, nextQty);
+        });
+        return { ...prev, [currentTable]: updated };
+      });
+
+      const remainingCount = currentItems.reduce((cnt, it) => {
+        const qPay = Math.max(0, Math.round(Number(selectedMap[it.id]) || 0));
+        const remain = Number(it.qty || 0) - qPay;
+        return cnt + (remain > 0 ? 1 : 0);
+      }, 0);
+      return { remainingCount };
+    },
+    [currentItems, currentTable, setItemNotes, setKitchenSent, setTableOrders]
+  );
+
+  const confirmSplitPayment = useCallback(
+    async (method) => {
+      const selectedEntries = Object.entries(splitPaySelected || {}).filter(([, q]) => Number(q) > 0);
+      if (!selectedEntries.length) return;
+
+      const itemsToPay = currentItems
+        .filter((it) => splitPaySelected?.[it.id])
+        .map((it) => ({
+          ...it,
+          qty: Math.min(Number(it.qty || 0), Number(splitPaySelected[it.id] || 0)),
+        }))
+        .filter((it) => Number(it.qty || 0) > 0);
+
+      const splitTotal = itemsToPay.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 0), 0);
+      const remainingCount = currentItems.reduce((cnt, it) => {
+        const qPay = Math.max(0, Math.round(Number(splitPaySelected[it.id]) || 0));
+        const remain = Number(it.qty || 0) - qPay;
+        return cnt + (remain > 0 ? 1 : 0);
+      }, 0);
+      const shouldMarkPaying = remainingCount === 0;
+
+      setPaymentSubmitting(true);
+      try {
+        await handlePayment({
+          payment_method: method,
+          items: itemsToPay,
+          total: splitTotal,
+          shouldMarkPaying: false,
+        });
+        applySplitPayDeduction({ selected: splitPaySelected });
+        if (shouldMarkPaying) updateTableStatus(currentTable, "PAYING");
+        else updateTableStatus(currentTable, "OPEN");
+        setShowPaymentMethodModal(false);
+        setSplitPaySelected({});
+      } finally {
+        setPaymentSubmitting(false);
+      }
+    },
+    [
+      applySplitPayDeduction,
+      currentItems,
+      currentTable,
+      handlePayment,
+      splitPaySelected,
+      updateTableStatus,
+    ]
+  );
 
   const handleReprintBill = useCallback(
     async (bill) => {
@@ -1510,45 +1632,191 @@ export default function App() {
                    </div>
 
                    <div className="mt-6 space-y-3">
-                     <button
-                       type="button"
-                       disabled={paymentSubmitting}
-                       onClick={async () => {
-                         try {
-                           setPaymentSubmitting(true);
-                           setPaymentMethod("CASH");
-                           await handlePayment("CASH");
-                           setShowPaymentMethodModal(false);
-                         } finally {
-                           setPaymentSubmitting(false);
-                         }
-                       }}
-                       className={`w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base transition-all flex items-center justify-center gap-2 border
-                         ${paymentMethod === "CASH" ? "bg-primary text-white border-primary shadow-lg shadow-orange-300/30" : "bg-white text-on-surface border-outline-variant/40 hover:bg-surface-container"}`}
-                     >
-                       <span className="material-symbols-outlined">payments</span>
-                       {tt("Trả tiền mặt", "Barzahlung")}
-                     </button>
+                     <div className="flex bg-surface-container-high p-1.5 rounded-2xl">
+                       <button
+                         type="button"
+                         disabled={paymentSubmitting}
+                         onClick={() => setPaymentMode("FULL")}
+                         className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all disabled:opacity-50 ${
+                           paymentMode === "FULL"
+                             ? "bg-surface-container-lowest text-primary shadow-sm"
+                             : "text-on-surface-variant hover:text-on-surface"
+                         }`}
+                       >
+                         {tt("Thanh toán toàn bộ", "Alles bezahlen")}
+                       </button>
+                       <button
+                         type="button"
+                         disabled={paymentSubmitting}
+                         onClick={() => setPaymentMode("SPLIT")}
+                         className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all disabled:opacity-50 ${
+                           paymentMode === "SPLIT"
+                             ? "bg-surface-container-lowest text-primary shadow-sm"
+                             : "text-on-surface-variant hover:text-on-surface"
+                         }`}
+                       >
+                         {tt("Tách bill theo món", "Getrennt (Artikel)")}
+                       </button>
+                     </div>
 
-                     <button
-                       type="button"
-                       disabled={paymentSubmitting}
-                       onClick={async () => {
-                         try {
-                           setPaymentSubmitting(true);
-                           setPaymentMethod("CARD");
-                           await handlePayment("CARD");
-                           setShowPaymentMethodModal(false);
-                         } finally {
-                           setPaymentSubmitting(false);
-                         }
-                       }}
-                       className={`w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base transition-all flex items-center justify-center gap-2 border
-                         ${paymentMethod === "CARD" ? "bg-primary text-white border-primary shadow-lg shadow-orange-300/30" : "bg-white text-on-surface border-outline-variant/40 hover:bg-surface-container"}`}
-                     >
-                       <span className="material-symbols-outlined">credit_card</span>
-                       {tt("Trả thẻ / Card", "Kartenzahlung")}
-                     </button>
+                     {paymentMode === "FULL" ? (
+                       <>
+                         <button
+                           type="button"
+                           disabled={paymentSubmitting}
+                           onClick={async () => {
+                             try {
+                               setPaymentSubmitting(true);
+                               setPaymentMethod("CASH");
+                               await handlePayment("CASH");
+                               setShowPaymentMethodModal(false);
+                             } finally {
+                               setPaymentSubmitting(false);
+                             }
+                           }}
+                           className={`w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base transition-all flex items-center justify-center gap-2 border
+                             ${paymentMethod === "CASH" ? "bg-primary text-white border-primary shadow-lg shadow-orange-300/30" : "bg-white text-on-surface border-outline-variant/40 hover:bg-surface-container"}`}
+                         >
+                           <span className="material-symbols-outlined">payments</span>
+                           {tt("Trả tiền mặt", "Barzahlung")}
+                         </button>
+
+                         <button
+                           type="button"
+                           disabled={paymentSubmitting}
+                           onClick={async () => {
+                             try {
+                               setPaymentSubmitting(true);
+                               setPaymentMethod("CARD");
+                               await handlePayment("CARD");
+                               setShowPaymentMethodModal(false);
+                             } finally {
+                               setPaymentSubmitting(false);
+                             }
+                           }}
+                           className={`w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base transition-all flex items-center justify-center gap-2 border
+                             ${paymentMethod === "CARD" ? "bg-primary text-white border-primary shadow-lg shadow-orange-300/30" : "bg-white text-on-surface border-outline-variant/40 hover:bg-surface-container"}`}
+                         >
+                           <span className="material-symbols-outlined">credit_card</span>
+                           {tt("Trả thẻ / Card", "Kartenzahlung")}
+                         </button>
+                       </>
+                     ) : (
+                       <>
+                         <div className="max-h-[45vh] overflow-y-auto pr-1 space-y-2">
+                           {currentItems.map((it) => {
+                             const selectedQty = Number(splitPaySelected?.[it.id] || 0);
+                             const isSelected = selectedQty > 0;
+                             return (
+                               <div
+                                 key={it.id}
+                                 className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all ${
+                                   isSelected
+                                     ? "border-primary/40 bg-orange-50/60"
+                                     : "border-outline-variant/30 bg-white"
+                                 }`}
+                               >
+                                 <button
+                                   type="button"
+                                   disabled={paymentSubmitting}
+                                   onClick={() => {
+                                     setSplitPaySelected((prev) => {
+                                       const next = { ...(prev || {}) };
+                                       if (next[it.id]) delete next[it.id];
+                                       else next[it.id] = 1;
+                                       return next;
+                                     });
+                                   }}
+                                   className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${
+                                     isSelected ? "bg-primary border-primary text-white" : "bg-white border-outline-variant/40 text-transparent"
+                                   }`}
+                                   aria-label="toggle"
+                                 >
+                                   <span className="material-symbols-outlined text-[18px]">check</span>
+                                 </button>
+
+                                 <div className="flex-1 min-w-0">
+                                   <div className="font-bold text-sm text-on-surface truncate">{it.name}</div>
+                                   <div className="text-xs text-on-surface-variant font-semibold">
+                                     {formatMoney(it.price)} × {it.qty}
+                                   </div>
+                                 </div>
+
+                                 <div className="flex items-center gap-1 shrink-0">
+                                   <button
+                                     type="button"
+                                     disabled={paymentSubmitting || !isSelected}
+                                     onClick={() => {
+                                       setSplitPaySelected((prev) => {
+                                         const next = { ...(prev || {}) };
+                                         const cur = Number(next[it.id] || 0);
+                                         const n = cur - 1;
+                                         if (n <= 0) delete next[it.id];
+                                         else next[it.id] = n;
+                                         return next;
+                                       });
+                                     }}
+                                     className="w-8 h-8 rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-outline-variant/30 font-black"
+                                   >
+                                     -
+                                   </button>
+                                   <div className="w-9 text-center font-headline font-black text-sm text-on-surface">
+                                     {selectedQty || 0}
+                                   </div>
+                                   <button
+                                     type="button"
+                                     disabled={paymentSubmitting || (!isSelected && it.qty <= 0)}
+                                     onClick={() => {
+                                       setSplitPaySelected((prev) => {
+                                         const next = { ...(prev || {}) };
+                                         const cur = Number(next[it.id] || 0);
+                                         const n = Math.min(Number(it.qty || 0), cur + 1 || 1);
+                                         next[it.id] = Math.max(1, n);
+                                         return next;
+                                       });
+                                     }}
+                                     className="w-8 h-8 rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-outline-variant/30 font-black"
+                                   >
+                                     +
+                                   </button>
+                                 </div>
+                               </div>
+                             );
+                           })}
+                         </div>
+
+                         <div className="flex items-center justify-between px-1">
+                           <span className="text-sm font-bold text-on-surface-variant">{tt("Tổng tách", "Teilbetrag")}</span>
+                           <span className="font-headline font-black text-xl text-primary">{formatMoney(calcSplitPayTotal())}</span>
+                         </div>
+
+                         <button
+                           type="button"
+                           disabled={paymentSubmitting || calcSplitPayTotal() <= 0}
+                           onClick={async () => {
+                             setPaymentMethod("CASH");
+                             await confirmSplitPayment("CASH");
+                           }}
+                           className="w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base bg-primary text-white border border-primary shadow-lg shadow-orange-300/30 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:grayscale-[0.5]"
+                         >
+                           <span className="material-symbols-outlined">payments</span>
+                           {tt("Tách bill • Tiền mặt", "Getrennt • Bar")}
+                         </button>
+
+                         <button
+                           type="button"
+                           disabled={paymentSubmitting || calcSplitPayTotal() <= 0}
+                           onClick={async () => {
+                             setPaymentMethod("CARD");
+                             await confirmSplitPayment("CARD");
+                           }}
+                           className="w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base bg-white text-on-surface border border-outline-variant/40 hover:bg-surface-container transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:grayscale-[0.5]"
+                         >
+                           <span className="material-symbols-outlined">credit_card</span>
+                           {tt("Tách bill • Thẻ/Card", "Getrennt • Karte")}
+                         </button>
+                       </>
+                     )}
 
                      <button
                        type="button"

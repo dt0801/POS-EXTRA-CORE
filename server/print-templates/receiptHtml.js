@@ -104,7 +104,6 @@ function createBuildReceiptHtml(ctx) {
       subtotal: Number(receipt.subtotalValue) || 0,
       discountPercent: Number(receipt.discountPercent) || 0,
       discountAmount: Number(receipt.discountAmount) || 0,
-      tipAmount: Number(receipt.tipAmount) || 0,
       cashGiven: Number(receipt.cashGiven) || 0,
       changeDue: Number(receipt.changeDue) || 0,
       billId: bid,

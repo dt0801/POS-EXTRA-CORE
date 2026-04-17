@@ -270,7 +270,6 @@ export default function App() {
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [paymentMode, setPaymentMode] = useState("FULL"); // "FULL" | "SPLIT"
   const [paymentDiscountPercent, setPaymentDiscountPercent] = useState("0"); // "0".."100"
-  const [paymentTipEuro, setPaymentTipEuro] = useState(""); // euro input string
   const [paymentCashGivenEuro, setPaymentCashGivenEuro] = useState(""); // euro input string
   const [splitPaySelected, setSplitPaySelected] = useState({}); // { [itemId]: qtyToPay }
   const {
@@ -331,9 +330,8 @@ export default function App() {
     0,
     Math.min(100, Math.round(Number(String(paymentDiscountPercent || "0").replace(",", ".")) || 0))
   );
-  const paymentTipCents = parseEuroInputToCents(paymentTipEuro) ?? 0;
   const paymentDiscountAmountCents = Math.round((paymentSubtotalCents * paymentDiscountPct) / 100);
-  const paymentFinalTotalCents = Math.max(0, paymentSubtotalCents - paymentDiscountAmountCents) + paymentTipCents;
+  const paymentFinalTotalCents = Math.max(0, paymentSubtotalCents - paymentDiscountAmountCents);
   const paymentCashGivenCents = parseEuroInputToCents(paymentCashGivenEuro) ?? 0;
   const paymentChangeCents =
     paymentMethod === "CASH" ? Math.max(0, paymentCashGivenCents - paymentFinalTotalCents) : 0;
@@ -470,7 +468,6 @@ export default function App() {
     setPaymentMode("FULL");
     setPaymentMethod("CASH");
     setPaymentDiscountPercent("0");
-    setPaymentTipEuro("");
     setPaymentCashGivenEuro("");
     setSplitPaySelected({});
     setShowPaymentMethodModal(true);
@@ -1709,7 +1706,7 @@ export default function App() {
                         </div>
 
                         <div className="rounded-[1.75rem] bg-white border border-outline-variant/30 p-4 md:p-5 space-y-4 shadow-sm">
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 gap-3">
                             <label className="flex flex-col gap-1.5">
                               <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                                 {tt("Giảm giá (%)", "Rabatt (%)")}
@@ -1720,19 +1717,6 @@ export default function App() {
                                 value={paymentDiscountPercent}
                                 onChange={(e) => setPaymentDiscountPercent(e.target.value)}
                                 placeholder="0"
-                                className="w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 border-transparent focus:border-primary focus:bg-white outline-none transition-all"
-                              />
-                            </label>
-                            <label className="flex flex-col gap-1.5">
-                              <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                                {tt("Tiền bo", "Trinkgeld")}
-                              </span>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={paymentTipEuro}
-                                onChange={(e) => setPaymentTipEuro(e.target.value)}
-                                placeholder={tt("VD: 2,00", "z.B. 2,00")}
                                 className="w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 border-transparent focus:border-primary focus:bg-white outline-none transition-all"
                               />
                             </label>
@@ -1765,10 +1749,6 @@ export default function App() {
                               <span>{tt("Giảm giá", "Rabatt")} ({paymentDiscountPct}%)</span>
                               <span className="text-error">{paymentDiscountAmountCents > 0 ? `- ${formatMoney(paymentDiscountAmountCents)}` : formatMoney(0)}</span>
                             </div>
-                            <div className="flex justify-between text-[12px] font-semibold text-on-surface-variant">
-                              <span>{tt("Tiền bo", "Trinkgeld")}</span>
-                              <span className="text-on-surface">{paymentTipCents > 0 ? `+ ${formatMoney(paymentTipCents)}` : formatMoney(0)}</span>
-                            </div>
                             <div className="pt-2 mt-2 border-t border-dashed border-outline-variant/40 flex justify-between items-end">
                               <span className="font-bold text-on-surface">{tt("Tổng phải trả", "Zu zahlen")}</span>
                               <span className="font-headline font-black text-2xl text-primary">{formatMoney(paymentFinalTotalCents)}</span>
@@ -1793,7 +1773,6 @@ export default function App() {
                                   subtotal: paymentSubtotalCents,
                                   discount_percent: paymentDiscountPct,
                                   discount_amount: paymentDiscountAmountCents,
-                                  tip_amount: paymentTipCents,
                                   cash_given: paymentMethod === "CASH" ? paymentCashGivenCents : 0,
                                   change_due: paymentMethod === "CASH" ? paymentChangeCents : 0,
                                 });

@@ -25,7 +25,6 @@ async function getBillById(deps, input) {
         subtotal: Number(bill.subtotal || 0),
         discount_percent: Number(bill.discount_percent || 0),
         discount_amount: Number(bill.discount_amount || 0),
-        tip_amount: Number(bill.tip_amount || 0),
         cash_given: Number(bill.cash_given || 0),
         change_due: Number(bill.change_due || 0),
         payment_method: bill.payment_method || null,

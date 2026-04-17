@@ -38,7 +38,6 @@ async function listBillsByDate(deps, input) {
         subtotal: Number(b.subtotal || 0),
         discount_percent: Number(b.discount_percent || 0),
         discount_amount: Number(b.discount_amount || 0),
-        tip_amount: Number(b.tip_amount || 0),
         cash_given: Number(b.cash_given || 0),
         change_due: Number(b.change_due || 0),
         payment_method: b.payment_method || null,

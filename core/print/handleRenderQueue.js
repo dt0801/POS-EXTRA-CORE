@@ -76,7 +76,6 @@ async function handleRenderQueue(
         subtotal,
         discount_percent,
         discount_amount,
-        tip_amount,
         cash_given,
         change_due,
       } = body;
@@ -96,7 +95,6 @@ async function handleRenderQueue(
         subtotalValue: subtotal,
         discountPercent: discount_percent,
         discountAmount: discount_amount,
-        tipAmount: tip_amount,
         cashGiven: cash_given,
         changeDue: change_due,
         billNo: "--",

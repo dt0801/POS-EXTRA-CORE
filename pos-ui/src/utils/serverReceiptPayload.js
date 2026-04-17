@@ -71,7 +71,6 @@ export function receiptPayloadBillPrint({
   subtotalValue,
   discountPercent,
   discountAmount,
-  tipAmount,
   cashGiven,
   changeDue,
 }) {
@@ -82,7 +81,6 @@ export function receiptPayloadBillPrint({
     subtotalValue,
     discountPercent,
     discountAmount,
-    tipAmount,
     cashGiven,
     changeDue,
     timeValue: new Date().toLocaleString("vi-VN"),

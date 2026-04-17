@@ -65,7 +65,6 @@ function generateBillHTML(opts) {
     subtotal,
     discountPercent,
     discountAmount,
-    tipAmount,
     cashGiven,
     changeDue,
     billId,
@@ -232,7 +231,6 @@ function generateBillHTML(opts) {
   const sub = hasSubtotal ? Number(subtotal) : Number(total || 0);
   const discAmt = Number(discountAmount || 0);
   const discPct = Number(discountPercent || 0);
-  const tipAmt = Number(tipAmount || 0);
   const cash = Number(cashGiven || 0);
   const change = Number(changeDue || 0);
   bodyHTML = `
@@ -273,11 +271,6 @@ function generateBillHTML(opts) {
     ${discAmt > 0
       ? `<div class="row sub" style="margin-top:2px">
         <span>GIẢM GIÁ${discPct > 0 ? ` (${esc(discPct)}%)` : ""}</span><span style="color:#c00">- ${fmt(discAmt)}</span>
-      </div>`
-      : ""}
-    ${tipAmt > 0
-      ? `<div class="row sub" style="margin-top:2px">
-        <span>TIỀN BO</span><span>+ ${fmt(tipAmt)}</span>
       </div>`
       : ""}
     <div class="row bold total" style="font-size:${fs + 2}px;margin-top:5px">

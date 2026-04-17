@@ -332,11 +332,23 @@ export default function App() {
   );
   const paymentDiscountAmountCents = Math.round((paymentSubtotalCents * paymentDiscountPct) / 100);
   const paymentFinalTotalCents = Math.max(0, paymentSubtotalCents - paymentDiscountAmountCents);
-  const paymentCashGivenCents = parseEuroInputToCents(paymentCashGivenEuro) ?? 0;
+  const paymentCashGivenRaw = String(paymentCashGivenEuro || "").trim();
+  const paymentCashGivenParsedCents = parseEuroInputToCents(paymentCashGivenRaw);
+  // Nếu để trống → mặc định khách đưa đúng bằng tổng phải trả (không cần nhập).
+  const paymentCashGivenCents =
+    paymentMethod !== "CASH"
+      ? 0
+      : paymentCashGivenRaw === ""
+        ? paymentFinalTotalCents
+        : paymentCashGivenParsedCents ?? 0;
   const paymentChangeCents =
     paymentMethod === "CASH" ? Math.max(0, paymentCashGivenCents - paymentFinalTotalCents) : 0;
   const paymentCashEnough =
-    paymentMethod !== "CASH" ? true : paymentCashGivenCents >= paymentFinalTotalCents;
+    paymentMethod !== "CASH"
+      ? true
+      : paymentCashGivenRaw === ""
+        ? true
+        : paymentCashGivenCents >= paymentFinalTotalCents;
   const filteredMenu = useMemo(() => {
     const byTab = filterMenu(menu, filter, settings);
     if (!searchQuery) return byTab;
@@ -1733,6 +1745,7 @@ export default function App() {
                                 value={paymentCashGivenEuro}
                                 onChange={(e) => setPaymentCashGivenEuro(e.target.value)}
                                 placeholder={tt("VD: 50,00", "z.B. 50,00")}
+                                autoComplete="off"
                                 className={`w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 outline-none transition-all ${
                                   paymentCashEnough ? "border-transparent focus:border-primary focus:bg-white" : "border-error focus:border-error"
                                 }`}

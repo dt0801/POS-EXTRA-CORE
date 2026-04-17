@@ -30,18 +30,27 @@ const GROUP_LABELS = {
 };
 
 function buildReceiptData(dest, catId, table_num, items, nowText, settings) {
+  const lang = String(settings?.language || "").toLowerCase() === "de" ? "de" : "vi";
+  const t = (vi, de) => (lang === "de" ? de : vi);
   const labels = GROUP_LABELS[catId]
     || (dest === "BAR"
       ? { title: "PHIẾU BAR", subtitle: String(catId).toUpperCase(), footer: "Bar" }
       : { title: "PHIẾU BẾP", subtitle: String(catId).toUpperCase(), footer: "Giao bếp" });
   return {
-    title: labels.title,
-    subtitle: labels.subtitle,
+    language: lang,
+    title: lang === "de"
+      ? (labels.title === "PHIẾU PHA CHẾ" ? "GETRÄNKEBON" : labels.title === "PHIẾU BAR" ? "BARBON" : "KÜCHENBON")
+      : labels.title,
+    subtitle: lang === "de"
+      ? (labels.subtitle === "NƯỚC" ? "GETRÄNKE" : labels.subtitle === "ĐỒ ĂN" ? "ESSEN" : labels.subtitle)
+      : labels.subtitle,
     tableNum: table_num,
-    timeLabel: "Giờ",
+    timeLabel: t("Giờ", "Uhr"),
     timeValue: nowText,
     items,
-    footer: labels.footer,
+    footer: lang === "de"
+      ? (labels.footer === "Giao bếp" ? "Küche" : labels.footer === "Pha chế" ? "Bar" : labels.footer)
+      : labels.footer,
     hidePrices: true,
   };
 }
@@ -50,12 +59,15 @@ async function postKitchenPrint(
   { useBridgeQueue, createPrintJob, dispatchReceiptToType, enqueueJobsForType, settingsCache },
   body
 ) {
-  const { table_num, items = [] } = body;
+  const { table_num, items = [], language } = body;
   if (!Array.isArray(items) || items.length === 0) {
     return { status: 400, body: { error: "Danh sách món không hợp lệ" } };
   }
 
-  const nowText = new Date().toLocaleString("vi-VN");
+  const lang = String(language || "").toLowerCase() === "de" ? "de" : "vi";
+  const locale = lang === "de" ? "de-DE" : "vi-VN";
+  const nowText = new Date().toLocaleString(locale);
+  const settingsWithLang = { ...(settingsCache || {}), language: lang };
 
   // Group items theo groupKey (dest + category) → mỗi group = 1 phiếu riêng
   const groups = {};
@@ -69,7 +81,7 @@ async function postKitchenPrint(
     try {
       const jobIds = [];
       for (const g of Object.values(groups)) {
-        const data = buildReceiptData(g.dest, g.catId, table_num, g.items, nowText, settingsCache);
+        const data = buildReceiptData(g.dest, g.catId, table_num, g.items, nowText, settingsWithLang);
         const ids = await dispatchToBridge(
           { enqueueJobsForType, createPrintJob },
           g.dest,
@@ -87,7 +99,7 @@ async function postKitchenPrint(
   const errors = [];
   for (const g of Object.values(groups)) {
     try {
-      const data = buildReceiptData(g.dest, g.catId, table_num, g.items, nowText, settingsCache);
+      const data = buildReceiptData(g.dest, g.catId, table_num, g.items, nowText, settingsWithLang);
       dispatchReceiptToType(g.dest, data);
     } catch (err) {
       errors.push(err.message);

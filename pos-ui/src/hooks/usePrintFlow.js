@@ -21,6 +21,7 @@ export default function usePrintFlow({
   setKitchenSent,
   updateTableStatus,
   settings,
+  language = "vi",
 }) {
   const callPrintApi = useCallback(
     async (endpoint, payload) => {
@@ -76,6 +77,7 @@ export default function usePrintFlow({
         await callPrintApi("/print/kitchen", {
           table_num: currentTable,
           items: payloadItems,
+          language,
         });
       } catch {
         const kitchenItems = payloadItems.map((i) => ({
@@ -90,6 +92,7 @@ export default function usePrintFlow({
             receipt: receiptPayloadKitchenPrint({
               tableNum: currentTable,
               items: kitchenItems,
+              language,
             }),
             paper_size: 80,
             css_override: settings.bill_css_override || "",
@@ -190,6 +193,7 @@ export default function usePrintFlow({
         discount_amount: billDiscountAmount,
         cash_given: billCashGiven,
         change_due: billChangeDue,
+        language,
       });
     } catch {
       try {
@@ -204,6 +208,7 @@ export default function usePrintFlow({
             discountAmount: billDiscountAmount,
             cashGiven: billCashGiven,
             changeDue: billChangeDue,
+            language,
           }),
           paper_size: 80,
           css_override: settings.bill_css_override || "",
@@ -248,6 +253,7 @@ export default function usePrintFlow({
         table_num: currentTable,
         items: itemsPrint,
         total: provisionalTotal,
+        language,
       });
     } catch {
       try {
@@ -256,6 +262,7 @@ export default function usePrintFlow({
             tableNum: currentTable,
             items: itemsPrint,
             totalValue: provisionalTotal,
+            language,
           }),
           paper_size: 80,
           css_override: settings.bill_css_override || "",

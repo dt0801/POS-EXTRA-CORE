@@ -59,6 +59,7 @@ function generateBillHTML(opts) {
   const {
     settings,
     type,
+    language = "vi",
     tableNum,
     items,
     total,
@@ -78,6 +79,10 @@ function generateBillHTML(opts) {
     appendFooter = "",
   } = opts;
 
+  const lang = String(language || "").toLowerCase() === "de" ? "de" : "vi";
+  const locale = lang === "de" ? "de-DE" : "vi-VN";
+  const t = (vi, de) => (lang === "de" ? de : vi);
+
   const cfg = buildCfg(settings, type);
   const fs = Number(cfg.font_size) || 13;
   const align = cfg.header_align;
@@ -86,9 +91,9 @@ function generateBillHTML(opts) {
   const dateStr = preformattedDate
     ? String(preformattedDate)
     : createdAt
-      ? new Date(createdAt).toLocaleString("vi-VN")
-      : new Date().toLocaleString("vi-VN");
-  const timeStr = kitchenTimeDisplay || new Date().toLocaleTimeString("vi-VN");
+      ? new Date(createdAt).toLocaleString(locale)
+      : new Date().toLocaleString(locale);
+  const timeStr = kitchenTimeDisplay || new Date().toLocaleTimeString(locale);
   const pw = Number(paperSizeMm) === 58 ? 58 : 80;
   const maxW = pw === 58 ? 220 : 320;
   const logoMax = pw === 58 ? 52 : 68;
@@ -184,16 +189,16 @@ function generateBillHTML(opts) {
     if (uncategorized.length) {
       sections.push(uncategorized.map(rowHtml).join(""));
     }
-    const kt = esc(kitchenTitle);
+    const kt = esc(kitchenTitle || t("PHIẾU BẾP", "KÜCHENBON"));
     bodyHTML = `
       <div class="center bold" style="font-size:${fs + 3}px;margin-bottom:4px">${kt}</div>
-      <div class="center sub" style="margin-bottom:8px">Bàn <b>${esc(tableNum)}</b> | ${esc(timeStr)}</div>
+      <div class="center sub" style="margin-bottom:8px">${t("Bàn", "Tisch")} <b>${esc(tableNum)}</b> | ${esc(timeStr)}</div>
       <div class="hr"></div>
       ${sections.join("")}
       <div class="hr"></div>
       ${cfg.footer ? `<div class="center sub" style="font-style:italic;white-space:pre-wrap">${esc(cfg.footer)}</div>` : ""}
     `;
-    return wrapHTML(baseStyle, bodyHTML, `${kitchenTitle} - Bàn ${tableNum}`, extraStyleBlock);
+    return wrapHTML(baseStyle, bodyHTML, `${kt} - ${t("Bàn", "Tisch")} ${tableNum}`, extraStyleBlock);
   }
 
   if (type === "tamtinh") {
@@ -201,11 +206,11 @@ function generateBillHTML(opts) {
       ${headerHTML}
       <div class="hr"></div>
       <div class="sub meta" style="overflow:hidden">
-        <span>Bàn: <b>${esc(tableNum)}</b></span>
+        <span>${t("Bàn", "Tisch")}: <b>${esc(tableNum)}</b></span>
         <span style="float:right">${esc(dateStr)}</span>
       </div>
       <div class="hr"></div>
-      <div class="center bold" style="font-size:${fs + 1}px;margin-bottom:6px">** TẠM TÍNH **</div>
+      <div class="center bold" style="font-size:${fs + 1}px;margin-bottom:6px">** ${t("TẠM TÍNH", "ZWISCHENRECHNUNG")} **</div>
       ${items
         .map(
           (i) => `
@@ -217,12 +222,12 @@ function generateBillHTML(opts) {
         .join("")}
       <div class="hr"></div>
       <div class="row bold total" style="font-size:${fs + 1}px">
-        <span>TẠM TÍNH</span><span>${fmt(total)}</span>
+        <span>${t("TẠM TÍNH", "ZWISCHENSUMME")}</span><span>${fmt(total)}</span>
       </div>
-      <div class="center muted" style="margin-top:4px;font-style:italic">(Chưa thanh toán chính thức)</div>
+      <div class="center muted" style="margin-top:4px;font-style:italic">(${t("Chưa thanh toán chính thức", "Noch nicht bezahlt")})</div>
       ${footerHTML}${extraFooterHTML}${appendFooterHTML}
     `;
-    return wrapHTML(baseStyle, bodyHTML, `Tạm Tính - Bàn ${tableNum}`, extraStyleBlock);
+    return wrapHTML(baseStyle, bodyHTML, `${t("Tạm Tính", "Zwischenrechnung")} - ${t("Bàn", "Tisch")} ${tableNum}`, extraStyleBlock);
   }
 
   const showQty = cfg.show_qty !== "false";
@@ -237,17 +242,17 @@ function generateBillHTML(opts) {
     ${headerHTML}
     <div class="hr"></div>
     <div class="sub meta" style="overflow:hidden">
-      <span>Bàn: <b>${esc(tableNum)}</b>${billId ? ` · HD#${esc(billId)}` : ""}</span>
+      <span>${t("Bàn", "Tisch")}: <b>${esc(tableNum)}</b>${billId ? ` · ${t("HD", "RE")}#${esc(billId)}` : ""}</span>
       <span style="float:right">${esc(dateStr)}</span>
     </div>
     <div class="hr"></div>
     <table>
       <thead>
         <tr>
-          <th style="text-align:left;padding-bottom:3px">Món</th>
-          ${showQty ? `<th style="text-align:center;width:28px">SL</th>` : ""}
-          ${showUnitPrice ? `<th style="text-align:right;width:60px">Đơn</th>` : ""}
-          <th style="text-align:right;width:70px">T.Tiền</th>
+          <th style="text-align:left;padding-bottom:3px">${t("Món", "Artikel")}</th>
+          ${showQty ? `<th style="text-align:center;width:28px">${t("SL", "Menge")}</th>` : ""}
+          ${showUnitPrice ? `<th style="text-align:right;width:60px">${t("Đơn", "Preis")}</th>` : ""}
+          <th style="text-align:right;width:70px">${t("T.Tiền", "Summe")}</th>
         </tr>
       </thead>
       <tbody>
@@ -266,25 +271,25 @@ function generateBillHTML(opts) {
     </table>
     <div class="hr"></div>
     <div class="row bold total" style="font-size:${fs + 1}px">
-      <span>TẠM TÍNH</span><span>${fmt(sub)}</span>
+      <span>${t("TẠM TÍNH", "ZWISCHENSUMME")}</span><span>${fmt(sub)}</span>
     </div>
     ${discAmt > 0
       ? `<div class="row sub" style="margin-top:2px">
-        <span>GIẢM GIÁ${discPct > 0 ? ` (${esc(discPct)}%)` : ""}</span><span style="color:#c00">- ${fmt(discAmt)}</span>
+        <span>${t("GIẢM GIÁ", "RABATT")}${discPct > 0 ? ` (${esc(discPct)}%)` : ""}</span><span style="color:#c00">- ${fmt(discAmt)}</span>
       </div>`
       : ""}
     <div class="row bold total" style="font-size:${fs + 2}px;margin-top:5px">
-      <span>THÀNH TIỀN</span><span>${fmt(total)}</span>
+      <span>${t("THÀNH TIỀN", "GESAMT")}</span><span>${fmt(total)}</span>
     </div>
     ${cash > 0 || change > 0
       ? `<div class="hr"></div>
-        <div class="row sub"><span>TIỀN KHÁCH ĐƯA</span><span>${fmt(cash)}</span></div>
-        <div class="row sub bold" style="margin-top:2px"><span>TIỀN THỪA</span><span>${fmt(change)}</span></div>`
+        <div class="row sub"><span>${t("TIỀN KHÁCH ĐƯA", "GEGEBEN")}</span><span>${fmt(cash)}</span></div>
+        <div class="row sub bold" style="margin-top:2px"><span>${t("TIỀN THỪA", "RÜCKGELD")}</span><span>${fmt(change)}</span></div>`
       : ""}
-    ${isReprint ? `<div class="center muted" style="margin-top:4px">*** IN LẠI ***</div>` : ""}
+    ${isReprint ? `<div class="center muted" style="margin-top:4px">*** ${t("IN LẠI", "NACHDRUCK")} ***</div>` : ""}
     ${footerHTML}${extraFooterHTML}${appendFooterHTML}
   `;
-  return wrapHTML(baseStyle, bodyHTML, `Hóa Đơn - Bàn ${tableNum}`, extraStyleBlock);
+  return wrapHTML(baseStyle, bodyHTML, `${t("Hóa Đơn", "Rechnung")} - ${t("Bàn", "Tisch")} ${tableNum}`, extraStyleBlock);
 }
 
 function wrapHTML(style, body, title, extraStyleBlock = "") {

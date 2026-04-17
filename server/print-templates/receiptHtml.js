@@ -50,6 +50,7 @@ function createBuildReceiptHtml(ctx) {
     const settings = typeof getBillSettings === "function" ? getBillSettings() || {} : {};
     const ps = Number(paperSize) || 80;
     const extraCss = typeof cssOverride === "string" ? cssOverride : getBillCssOverride();
+    const language = String(receipt.language || "").toLowerCase() === "de" ? "de" : "vi";
 
     const totalLbl = String(receipt.totalLabel || "")
       .toUpperCase()
@@ -59,10 +60,13 @@ function createBuildReceiptHtml(ctx) {
     const isTamTinh = totalLbl.includes("TAMTINH");
 
     if (receipt.hidePrices) {
-      const title = String(receipt.title || "").trim() || "PHIẾU BẾP";
+      const title =
+        String(receipt.title || "").trim() ||
+        (language === "de" ? "KÜCHENBON" : "PHIẾU BẾP");
       return generateBillHTML({
         settings,
         type: "kitchen",
+        language,
         tableNum: receipt.tableNum,
         items: normalizeKitchenItems(receipt.items),
         total: 0,
@@ -77,6 +81,7 @@ function createBuildReceiptHtml(ctx) {
       return generateBillHTML({
         settings,
         type: "tamtinh",
+        language,
         tableNum: receipt.tableNum,
         items: normalizePricingItems(receipt.items),
         total: Number(receipt.totalValue) || 0,
@@ -98,6 +103,7 @@ function createBuildReceiptHtml(ctx) {
     return generateBillHTML({
       settings,
       type: "bill",
+      language,
       tableNum: receipt.tableNum,
       items: normalizePricingItems(receipt.items),
       total: Number(receipt.totalValue) || 0,

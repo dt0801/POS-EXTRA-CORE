@@ -13,20 +13,25 @@ async function postBillPrint(
     discount_amount,
     cash_given,
     change_due,
+    language,
   } = body;
   if (!Array.isArray(items) || items.length === 0) {
     return { status: 400, body: { error: "Danh sách món không hợp lệ" } };
   }
 
   const store = getStoreProfile();
+  const lang = String(language || "").toLowerCase() === "de" ? "de" : "vi";
+  const locale = lang === "de" ? "de-DE" : "vi-VN";
+  const t = (vi, de) => (lang === "de" ? de : vi);
   const receiptData = {
+    language: lang,
     title: store.storeName,
     subtitle: store.storeSubtitle,
     tableNum: table_num,
-    timeLabel: "Ngày",
-    timeValue: new Date().toLocaleString("vi-VN"),
+    timeLabel: t("Ngày", "Datum"),
+    timeValue: new Date().toLocaleString(locale),
     items,
-    totalLabel: "THÀNH TIỀN",
+    totalLabel: t("THÀNH TIỀN", "GESAMT"),
     totalValue: total,
     subtotalValue: subtotal,
     discountPercent: discount_percent,

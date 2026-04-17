@@ -603,6 +603,7 @@ export default function App() {
     setKitchenSent,
     updateTableStatus,
     settings,
+    language,
   });
 
   const calcSplitPayTotal = useCallback(
@@ -739,7 +740,7 @@ export default function App() {
       } catch {
         try {
           const html = await fetchPrintPreviewHtml({
-            receipt: receiptPayloadBillReprint({ bill }),
+            receipt: receiptPayloadBillReprint({ bill, language }),
             paper_size: 80,
             css_override: settings.bill_css_override || "",
           });

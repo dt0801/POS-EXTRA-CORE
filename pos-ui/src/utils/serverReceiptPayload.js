@@ -11,16 +11,18 @@ import {
 
 export function receiptPayloadKitchenPreview({ settings, language }) {
   return {
+    language,
     hidePrices: true,
     title: "PHIẾU BẾP",
     tableNum: PREVIEW_TABLE_NUM,
     items: buildKitchenPreviewSampleItems(settings, language),
-    timeValue: new Date().toLocaleString("vi-VN"),
+    timeValue: new Date().toLocaleString(language === "de" ? "de-DE" : "vi-VN"),
   };
 }
 
 export function receiptPayloadTamtinhPreview() {
   return {
+    language: "vi",
     totalLabel: "TẠM TÍNH",
     tableNum: PREVIEW_TABLE_NUM,
     items: SAMPLE_ITEMS_BILL,
@@ -32,6 +34,7 @@ export function receiptPayloadTamtinhPreview() {
 
 export function receiptPayloadBillPreview() {
   return {
+    language: "vi",
     tableNum: PREVIEW_TABLE_NUM,
     items: SAMPLE_ITEMS_BILL,
     totalValue: SAMPLE_TOTAL_BILL,
@@ -42,23 +45,25 @@ export function receiptPayloadBillPreview() {
   };
 }
 
-export function receiptPayloadKitchenPrint({ tableNum, items, timeValue }) {
+export function receiptPayloadKitchenPrint({ tableNum, items, timeValue, language = "vi" }) {
   return {
+    language,
     hidePrices: true,
     title: "PHIẾU BẾP",
     tableNum,
     items,
-    timeValue: timeValue || new Date().toLocaleString("vi-VN"),
+    timeValue: timeValue || new Date().toLocaleString(language === "de" ? "de-DE" : "vi-VN"),
   };
 }
 
-export function receiptPayloadTamTinhPrint({ tableNum, items, totalValue }) {
+export function receiptPayloadTamTinhPrint({ tableNum, items, totalValue, language = "vi" }) {
   return {
+    language,
     totalLabel: "TẠM TÍNH",
     tableNum,
     items,
     totalValue,
-    timeValue: new Date().toLocaleString("vi-VN"),
+    timeValue: new Date().toLocaleString(language === "de" ? "de-DE" : "vi-VN"),
     footer: "",
   };
 }
@@ -73,8 +78,10 @@ export function receiptPayloadBillPrint({
   discountAmount,
   cashGiven,
   changeDue,
+  language = "vi",
 }) {
   return {
+    language,
     tableNum,
     items,
     totalValue,
@@ -83,19 +90,25 @@ export function receiptPayloadBillPrint({
     discountAmount,
     cashGiven,
     changeDue,
-    timeValue: new Date().toLocaleString("vi-VN"),
+    timeValue: new Date().toLocaleString(language === "de" ? "de-DE" : "vi-VN"),
     billNo: billId != null && billId !== "" ? billId : "--",
     totalLabel: "THÀNH TIỀN",
     footer: "",
   };
 }
 
-export function receiptPayloadBillReprint({ bill }) {
+export function receiptPayloadBillReprint({ bill, language = "vi" }) {
   return {
+    language,
     tableNum: bill.table_num,
     items: bill.items || [],
     totalValue: bill.total,
-    timeValue: new Date(bill.created_at).toLocaleString("vi-VN"),
+    subtotalValue: bill.subtotal,
+    discountPercent: bill.discount_percent,
+    discountAmount: bill.discount_amount,
+    cashGiven: bill.cash_given,
+    changeDue: bill.change_due,
+    timeValue: new Date(bill.created_at).toLocaleString(language === "de" ? "de-DE" : "vi-VN"),
     billNo: bill.id,
     reprint: true,
     totalLabel: "THÀNH TIỀN",

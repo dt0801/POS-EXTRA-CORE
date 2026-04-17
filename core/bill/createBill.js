@@ -6,7 +6,19 @@
  */
 async function createBill(deps, reqBody) {
   const { mongoDb, getNextMongoId } = deps;
-  const { table_num, total, items, payment_method, actorUser } = reqBody || {};
+  const {
+    table_num,
+    total,
+    subtotal,
+    discount_percent,
+    discount_amount,
+    tip_amount,
+    cash_given,
+    change_due,
+    items,
+    payment_method,
+    actorUser,
+  } = reqBody || {};
   if (!table_num) return { status: 400, body: { error: "Thiếu table_num" } };
   if (!Array.isArray(items) || items.length === 0) {
     return { status: 400, body: { error: "Danh sách món không hợp lệ" } };
@@ -28,6 +40,12 @@ async function createBill(deps, reqBody) {
       sqlite_id: billId,
       table_num: Number(table_num),
       total: Number(total || 0),
+      subtotal: Number(subtotal || 0),
+      discount_percent: Number(discount_percent || 0),
+      discount_amount: Number(discount_amount || 0),
+      tip_amount: Number(tip_amount || 0),
+      cash_given: Number(cash_given || 0),
+      change_due: Number(change_due || 0),
       payment_method: normalizedPaymentMethod,
       created_by: actorUserId,
       created_by_username: actorUsername,

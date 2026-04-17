@@ -63,11 +63,28 @@ export function receiptPayloadTamTinhPrint({ tableNum, items, totalValue }) {
   };
 }
 
-export function receiptPayloadBillPrint({ tableNum, items, totalValue, billId }) {
+export function receiptPayloadBillPrint({
+  tableNum,
+  items,
+  totalValue,
+  billId,
+  subtotalValue,
+  discountPercent,
+  discountAmount,
+  tipAmount,
+  cashGiven,
+  changeDue,
+}) {
   return {
     tableNum,
     items,
     totalValue,
+    subtotalValue,
+    discountPercent,
+    discountAmount,
+    tipAmount,
+    cashGiven,
+    changeDue,
     timeValue: new Date().toLocaleString("vi-VN"),
     billNo: billId != null && billId !== "" ? billId : "--",
     totalLabel: "THÀNH TIỀN",

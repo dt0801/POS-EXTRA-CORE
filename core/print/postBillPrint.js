@@ -4,7 +4,17 @@ async function postBillPrint(
   { useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile, enqueueJobsForType },
   body
 ) {
-  const { table_num, items = [], total } = body;
+  const {
+    table_num,
+    items = [],
+    total,
+    subtotal,
+    discount_percent,
+    discount_amount,
+    tip_amount,
+    cash_given,
+    change_due,
+  } = body;
   if (!Array.isArray(items) || items.length === 0) {
     return { status: 400, body: { error: "Danh sách món không hợp lệ" } };
   }
@@ -19,6 +29,12 @@ async function postBillPrint(
     items,
     totalLabel: "THÀNH TIỀN",
     totalValue: total,
+    subtotalValue: subtotal,
+    discountPercent: discount_percent,
+    discountAmount: discount_amount,
+    tipAmount: tip_amount,
+    cashGiven: cash_given,
+    changeDue: change_due,
     billNo: "--",
     cashier: store.cashierName,
     footer: "",

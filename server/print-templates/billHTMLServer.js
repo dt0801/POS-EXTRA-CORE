@@ -62,6 +62,12 @@ function generateBillHTML(opts) {
     tableNum,
     items,
     total,
+    subtotal,
+    discountPercent,
+    discountAmount,
+    tipAmount,
+    cashGiven,
+    changeDue,
     billId,
     createdAt,
     isReprint = false,
@@ -222,6 +228,13 @@ function generateBillHTML(opts) {
 
   const showQty = cfg.show_qty !== "false";
   const showUnitPrice = cfg.show_unit_price !== "false";
+  const hasSubtotal = Number.isFinite(Number(subtotal)) && Number(subtotal) > 0;
+  const sub = hasSubtotal ? Number(subtotal) : Number(total || 0);
+  const discAmt = Number(discountAmount || 0);
+  const discPct = Number(discountPercent || 0);
+  const tipAmt = Number(tipAmount || 0);
+  const cash = Number(cashGiven || 0);
+  const change = Number(changeDue || 0);
   bodyHTML = `
     ${headerHTML}
     <div class="hr"></div>
@@ -255,8 +268,26 @@ function generateBillHTML(opts) {
     </table>
     <div class="hr"></div>
     <div class="row bold total" style="font-size:${fs + 1}px">
+      <span>TẠM TÍNH</span><span>${fmt(sub)}</span>
+    </div>
+    ${discAmt > 0
+      ? `<div class="row sub" style="margin-top:2px">
+        <span>GIẢM GIÁ${discPct > 0 ? ` (${esc(discPct)}%)` : ""}</span><span style="color:#c00">- ${fmt(discAmt)}</span>
+      </div>`
+      : ""}
+    ${tipAmt > 0
+      ? `<div class="row sub" style="margin-top:2px">
+        <span>TIỀN BO</span><span>+ ${fmt(tipAmt)}</span>
+      </div>`
+      : ""}
+    <div class="row bold total" style="font-size:${fs + 2}px;margin-top:5px">
       <span>THÀNH TIỀN</span><span>${fmt(total)}</span>
     </div>
+    ${cash > 0 || change > 0
+      ? `<div class="hr"></div>
+        <div class="row sub"><span>TIỀN KHÁCH ĐƯA</span><span>${fmt(cash)}</span></div>
+        <div class="row sub bold" style="margin-top:2px"><span>TIỀN THỪA</span><span>${fmt(change)}</span></div>`
+      : ""}
     ${isReprint ? `<div class="center muted" style="margin-top:4px">*** IN LẠI ***</div>` : ""}
     ${footerHTML}${extraFooterHTML}${appendFooterHTML}
   `;

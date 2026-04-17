@@ -269,6 +269,9 @@ export default function App() {
   const [paymentMethod, setPaymentMethod] = useState("CASH"); // "CASH" | "CARD"
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [paymentMode, setPaymentMode] = useState("FULL"); // "FULL" | "SPLIT"
+  const [paymentDiscountPercent, setPaymentDiscountPercent] = useState("0"); // "0".."100"
+  const [paymentTipEuro, setPaymentTipEuro] = useState(""); // euro input string
+  const [paymentCashGivenEuro, setPaymentCashGivenEuro] = useState(""); // euro input string
   const [splitPaySelected, setSplitPaySelected] = useState({}); // { [itemId]: qtyToPay }
   const {
     settings,
@@ -323,6 +326,19 @@ export default function App() {
 
   const currentItems  = Object.values(tableOrders[currentTable] || {});
   const total         = calcTotal(tableOrders[currentTable]);
+  const paymentSubtotalCents = total;
+  const paymentDiscountPct = Math.max(
+    0,
+    Math.min(100, Math.round(Number(String(paymentDiscountPercent || "0").replace(",", ".")) || 0))
+  );
+  const paymentTipCents = parseEuroInputToCents(paymentTipEuro) ?? 0;
+  const paymentDiscountAmountCents = Math.round((paymentSubtotalCents * paymentDiscountPct) / 100);
+  const paymentFinalTotalCents = Math.max(0, paymentSubtotalCents - paymentDiscountAmountCents) + paymentTipCents;
+  const paymentCashGivenCents = parseEuroInputToCents(paymentCashGivenEuro) ?? 0;
+  const paymentChangeCents =
+    paymentMethod === "CASH" ? Math.max(0, paymentCashGivenCents - paymentFinalTotalCents) : 0;
+  const paymentCashEnough =
+    paymentMethod !== "CASH" ? true : paymentCashGivenCents >= paymentFinalTotalCents;
   const filteredMenu = useMemo(() => {
     const byTab = filterMenu(menu, filter, settings);
     if (!searchQuery) return byTab;
@@ -452,6 +468,10 @@ export default function App() {
     if (!currentTable) return;
     if (currentItems.length === 0) return;
     setPaymentMode("FULL");
+    setPaymentMethod("CASH");
+    setPaymentDiscountPercent("0");
+    setPaymentTipEuro("");
+    setPaymentCashGivenEuro("");
     setSplitPaySelected({});
     setShowPaymentMethodModal(true);
   };
@@ -1661,45 +1681,133 @@ export default function App() {
 
                      {paymentMode === "FULL" ? (
                        <>
-                         <button
-                           type="button"
-                           disabled={paymentSubmitting}
-                           onClick={async () => {
-                             try {
-                               setPaymentSubmitting(true);
-                               setPaymentMethod("CASH");
-                               await handlePayment("CASH");
-                               setShowPaymentMethodModal(false);
-                             } finally {
-                               setPaymentSubmitting(false);
-                             }
-                           }}
-                           className={`w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base transition-all flex items-center justify-center gap-2 border
-                             ${paymentMethod === "CASH" ? "bg-primary text-white border-primary shadow-lg shadow-orange-300/30" : "bg-white text-on-surface border-outline-variant/40 hover:bg-surface-container"}`}
-                         >
-                           <span className="material-symbols-outlined">payments</span>
-                           {tt("Trả tiền mặt", "Barzahlung")}
-                         </button>
+                        <div className="flex bg-surface-container-high p-1.5 rounded-2xl">
+                          <button
+                            type="button"
+                            disabled={paymentSubmitting}
+                            onClick={() => setPaymentMethod("CASH")}
+                            className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all disabled:opacity-50 ${
+                              paymentMethod === "CASH"
+                                ? "bg-surface-container-lowest text-primary shadow-sm"
+                                : "text-on-surface-variant hover:text-on-surface"
+                            }`}
+                          >
+                            {tt("Tiền mặt", "Bar")}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={paymentSubmitting}
+                            onClick={() => setPaymentMethod("CARD")}
+                            className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all disabled:opacity-50 ${
+                              paymentMethod === "CARD"
+                                ? "bg-surface-container-lowest text-primary shadow-sm"
+                                : "text-on-surface-variant hover:text-on-surface"
+                            }`}
+                          >
+                            {tt("Thẻ / Card", "Karte")}
+                          </button>
+                        </div>
 
-                         <button
-                           type="button"
-                           disabled={paymentSubmitting}
-                           onClick={async () => {
-                             try {
-                               setPaymentSubmitting(true);
-                               setPaymentMethod("CARD");
-                               await handlePayment("CARD");
-                               setShowPaymentMethodModal(false);
-                             } finally {
-                               setPaymentSubmitting(false);
-                             }
-                           }}
-                           className={`w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base transition-all flex items-center justify-center gap-2 border
-                             ${paymentMethod === "CARD" ? "bg-primary text-white border-primary shadow-lg shadow-orange-300/30" : "bg-white text-on-surface border-outline-variant/40 hover:bg-surface-container"}`}
-                         >
-                           <span className="material-symbols-outlined">credit_card</span>
-                           {tt("Trả thẻ / Card", "Kartenzahlung")}
-                         </button>
+                        <div className="rounded-[1.75rem] bg-white border border-outline-variant/30 p-4 md:p-5 space-y-4 shadow-sm">
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="flex flex-col gap-1.5">
+                              <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                                {tt("Giảm giá (%)", "Rabatt (%)")}
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={paymentDiscountPercent}
+                                onChange={(e) => setPaymentDiscountPercent(e.target.value)}
+                                placeholder="0"
+                                className="w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 border-transparent focus:border-primary focus:bg-white outline-none transition-all"
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1.5">
+                              <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                                {tt("Tiền bo", "Trinkgeld")}
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={paymentTipEuro}
+                                onChange={(e) => setPaymentTipEuro(e.target.value)}
+                                placeholder={tt("VD: 2,00", "z.B. 2,00")}
+                                className="w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 border-transparent focus:border-primary focus:bg-white outline-none transition-all"
+                              />
+                            </label>
+                          </div>
+
+                          {paymentMethod === "CASH" && (
+                            <label className="flex flex-col gap-1.5">
+                              <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                                {tt("Tiền khách đưa", "Gegeben")}
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={paymentCashGivenEuro}
+                                onChange={(e) => setPaymentCashGivenEuro(e.target.value)}
+                                placeholder={tt("VD: 50,00", "z.B. 50,00")}
+                                className={`w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 outline-none transition-all ${
+                                  paymentCashEnough ? "border-transparent focus:border-primary focus:bg-white" : "border-error focus:border-error"
+                                }`}
+                              />
+                            </label>
+                          )}
+
+                          <div className="rounded-2xl bg-surface-container-high border border-outline-variant/20 px-4 py-3 space-y-1.5">
+                            <div className="flex justify-between text-[12px] font-semibold text-on-surface-variant">
+                              <span>{tt("Tạm tính", "Zwischensumme")}</span>
+                              <span className="text-on-surface">{formatMoney(paymentSubtotalCents)}</span>
+                            </div>
+                            <div className="flex justify-between text-[12px] font-semibold text-on-surface-variant">
+                              <span>{tt("Giảm giá", "Rabatt")} ({paymentDiscountPct}%)</span>
+                              <span className="text-error">{paymentDiscountAmountCents > 0 ? `- ${formatMoney(paymentDiscountAmountCents)}` : formatMoney(0)}</span>
+                            </div>
+                            <div className="flex justify-between text-[12px] font-semibold text-on-surface-variant">
+                              <span>{tt("Tiền bo", "Trinkgeld")}</span>
+                              <span className="text-on-surface">{paymentTipCents > 0 ? `+ ${formatMoney(paymentTipCents)}` : formatMoney(0)}</span>
+                            </div>
+                            <div className="pt-2 mt-2 border-t border-dashed border-outline-variant/40 flex justify-between items-end">
+                              <span className="font-bold text-on-surface">{tt("Tổng phải trả", "Zu zahlen")}</span>
+                              <span className="font-headline font-black text-2xl text-primary">{formatMoney(paymentFinalTotalCents)}</span>
+                            </div>
+                            {paymentMethod === "CASH" && (
+                              <div className="flex justify-between text-[12px] font-semibold text-on-surface-variant pt-1">
+                                <span>{tt("Tiền thừa", "Rückgeld")}</span>
+                                <span className="font-black text-on-surface">{formatMoney(paymentChangeCents)}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={paymentSubmitting || (paymentMethod === "CASH" && !paymentCashEnough) || paymentFinalTotalCents < 0}
+                            onClick={async () => {
+                              try {
+                                setPaymentSubmitting(true);
+                                await handlePayment({
+                                  payment_method: paymentMethod,
+                                  total: paymentFinalTotalCents,
+                                  subtotal: paymentSubtotalCents,
+                                  discount_percent: paymentDiscountPct,
+                                  discount_amount: paymentDiscountAmountCents,
+                                  tip_amount: paymentTipCents,
+                                  cash_given: paymentMethod === "CASH" ? paymentCashGivenCents : 0,
+                                  change_due: paymentMethod === "CASH" ? paymentChangeCents : 0,
+                                });
+                                setShowPaymentMethodModal(false);
+                              } finally {
+                                setPaymentSubmitting(false);
+                              }
+                            }}
+                            className="w-full h-14 rounded-[1.25rem] font-headline font-extrabold text-base bg-primary text-white border border-primary shadow-lg shadow-orange-300/30 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:grayscale-[0.5] hover:bg-[#c2410c] active:scale-[0.99]"
+                          >
+                            <span className="material-symbols-outlined">payments</span>
+                            {tt("Xác nhận thanh toán", "Zahlung bestätigen")}
+                          </button>
+                        </div>
                        </>
                      ) : (
                        <>

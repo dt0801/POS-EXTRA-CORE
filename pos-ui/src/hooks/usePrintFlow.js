@@ -120,6 +120,12 @@ export default function usePrintFlow({
     const payment_method = typeof input === "string" ? input : input?.payment_method;
     const overrideItems = typeof input === "object" && input ? input.items : null;
     const overrideTotal = typeof input === "object" && input ? input.total : null;
+    const subtotal = typeof input === "object" && input ? input.subtotal : null;
+    const discount_percent = typeof input === "object" && input ? input.discount_percent : null;
+    const discount_amount = typeof input === "object" && input ? input.discount_amount : null;
+    const tip_amount = typeof input === "object" && input ? input.tip_amount : null;
+    const cash_given = typeof input === "object" && input ? input.cash_given : null;
+    const change_due = typeof input === "object" && input ? input.change_due : null;
     const shouldMarkPaying = typeof input === "object" && input ? input.shouldMarkPaying !== false : true;
 
     const pm = String(payment_method || "").trim().toUpperCase();
@@ -136,6 +142,12 @@ export default function usePrintFlow({
     }));
     const computedTotal = itemsForBill.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 0), 0);
     const billTotal = overrideTotal != null ? Number(overrideTotal || 0) : computedTotal;
+    const billSubtotal = subtotal != null ? Number(subtotal || 0) : computedTotal;
+    const billDiscountPct = discount_percent != null ? Number(discount_percent || 0) : 0;
+    const billDiscountAmount = discount_amount != null ? Number(discount_amount || 0) : 0;
+    const billTipAmount = tip_amount != null ? Number(tip_amount || 0) : 0;
+    const billCashGiven = cash_given != null ? Number(cash_given || 0) : 0;
+    const billChangeDue = change_due != null ? Number(change_due || 0) : 0;
 
     const billRes = await authedFetch(`${API_URL}/bills`, {
       method: "POST",
@@ -143,6 +155,12 @@ export default function usePrintFlow({
       body: JSON.stringify({
         table_num: currentTable,
         total: billTotal,
+        subtotal: billSubtotal,
+        discount_percent: billDiscountPct,
+        discount_amount: billDiscountAmount,
+        tip_amount: billTipAmount,
+        cash_given: billCashGiven,
+        change_due: billChangeDue,
         payment_method: normalizedPaymentMethod,
         items: itemsForBill.map(({ name, price, qty, type }) => ({ name, price, qty, type })),
       }),
@@ -170,6 +188,12 @@ export default function usePrintFlow({
         table_num: currentTable,
         items: itemsPrint,
         total: billTotal,
+        subtotal: billSubtotal,
+        discount_percent: billDiscountPct,
+        discount_amount: billDiscountAmount,
+        tip_amount: billTipAmount,
+        cash_given: billCashGiven,
+        change_due: billChangeDue,
       });
     } catch {
       try {
@@ -179,6 +203,12 @@ export default function usePrintFlow({
             items: itemsPrint,
             totalValue: billTotal,
             billId,
+            subtotalValue: billSubtotal,
+            discountPercent: billDiscountPct,
+            discountAmount: billDiscountAmount,
+            tipAmount: billTipAmount,
+            cashGiven: billCashGiven,
+            changeDue: billChangeDue,
           }),
           paper_size: 80,
           css_override: settings.bill_css_override || "",

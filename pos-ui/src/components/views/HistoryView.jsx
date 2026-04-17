@@ -206,17 +206,40 @@ export default function HistoryView({
                 {/* Calculation Tonal Layer */}
                 <div className="bg-surface-container-low rounded-2xl p-5 space-y-3 border border-outline-variant/20 mt-6 mt-8">
                   <div className="flex justify-between text-sm text-on-surface-variant font-medium">
-                    <span>{tr("Tổng tạm", "Zwischensumme")}</span>
-                    <span>{formatMoney(selectedBill.total)}</span>
+                    <span>{tr("Tạm tính", "Zwischensumme")}</span>
+                    <span>{formatMoney(selectedBill.subtotal || selectedBill.total)}</span>
                   </div>
+
                   <div className="flex justify-between text-sm text-on-surface-variant font-medium">
-                    <span>VAT (0%)</span>
-                    <span>0đ</span>
+                    <span>
+                      {tr("Giảm giá", "Rabatt")} ({Number(selectedBill.discount_percent || 0)}%)
+                    </span>
+                    <span className="text-error">
+                      {Number(selectedBill.discount_amount || 0) > 0
+                        ? `- ${formatMoney(selectedBill.discount_amount)}`
+                        : formatMoney(0)}
+                    </span>
                   </div>
+
                   <div className="pt-3 flex justify-between items-baseline border-t border-dashed border-outline-variant/30">
-                    <span className="font-headline font-extrabold text-on-surface">{tr("Thành tiền", "Gesamtbetrag")}</span>
+                    <span className="font-headline font-extrabold text-on-surface">{tr("Tổng phải trả", "Zu zahlen")}</span>
                     <span className="font-headline font-extrabold text-3xl text-primary">{formatMoney(selectedBill.total)}</span>
                   </div>
+
+                  {Number(selectedBill.cash_given || 0) > 0 && (
+                    <div className="pt-2 mt-1 border-t border-outline-variant/10 space-y-2">
+                      <div className="flex justify-between text-sm text-on-surface-variant font-medium">
+                        <span>{tr("Tiền khách đưa", "Gegeben")}</span>
+                        <span className="text-on-surface">{formatMoney(selectedBill.cash_given)}</span>
+                      </div>
+                      {String(selectedBill.payment_method || "").toUpperCase() === "CASH" && (
+                        <div className="flex justify-between text-sm text-on-surface-variant font-medium">
+                          <span>{tr("Tiền thừa", "Rückgeld")}</span>
+                          <span className="text-on-surface font-black">{formatMoney(selectedBill.change_due || 0)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

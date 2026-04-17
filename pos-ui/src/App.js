@@ -335,20 +335,15 @@ export default function App() {
   const paymentCashGivenRaw = String(paymentCashGivenEuro || "").trim();
   const paymentCashGivenParsedCents = parseEuroInputToCents(paymentCashGivenRaw);
   // Nếu để trống → mặc định khách đưa đúng bằng tổng phải trả (không cần nhập).
+  // "Tiền khách đưa" áp dụng cho cả CASH và CARD (mặc định = tổng phải trả nếu để trống).
   const paymentCashGivenCents =
-    paymentMethod !== "CASH"
-      ? 0
-      : paymentCashGivenRaw === ""
-        ? paymentFinalTotalCents
-        : paymentCashGivenParsedCents ?? 0;
+    paymentCashGivenRaw === ""
+      ? paymentFinalTotalCents
+      : paymentCashGivenParsedCents ?? 0;
   const paymentChangeCents =
     paymentMethod === "CASH" ? Math.max(0, paymentCashGivenCents - paymentFinalTotalCents) : 0;
   const paymentCashEnough =
-    paymentMethod !== "CASH"
-      ? true
-      : paymentCashGivenRaw === ""
-        ? true
-        : paymentCashGivenCents >= paymentFinalTotalCents;
+    paymentCashGivenRaw === "" ? true : paymentCashGivenCents >= paymentFinalTotalCents;
   const filteredMenu = useMemo(() => {
     const byTab = filterMenu(menu, filter, settings);
     if (!searchQuery) return byTab;
@@ -1742,24 +1737,22 @@ export default function App() {
                             </label>
                           </div>
 
-                          {paymentMethod === "CASH" && (
-                            <label className="flex flex-col gap-1.5">
-                              <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                                {tt("Tiền khách đưa", "Gegeben")}
-                              </span>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={paymentCashGivenEuro}
-                                onChange={(e) => setPaymentCashGivenEuro(e.target.value)}
-                                placeholder={tt("VD: 50,00", "z.B. 50,00")}
-                                autoComplete="off"
-                                className={`w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 outline-none transition-all ${
-                                  paymentCashEnough ? "border-transparent focus:border-primary focus:bg-white" : "border-error focus:border-error"
-                                }`}
-                              />
-                            </label>
-                          )}
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                              {tt("Tiền khách đưa", "Gegeben")}
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={paymentCashGivenEuro}
+                              onChange={(e) => setPaymentCashGivenEuro(e.target.value)}
+                              placeholder={tt("Để trống = đủ tiền", "Leer = passend") }
+                              autoComplete="off"
+                              className={`w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 outline-none transition-all ${
+                                paymentCashEnough ? "border-transparent focus:border-primary focus:bg-white" : "border-error focus:border-error"
+                              }`}
+                            />
+                          </label>
 
                           <div className="rounded-2xl bg-surface-container-high border border-outline-variant/20 px-4 py-3 space-y-1.5">
                             <div className="flex justify-between text-[12px] font-semibold text-on-surface-variant">
@@ -1794,7 +1787,7 @@ export default function App() {
                                   subtotal: paymentSubtotalCents,
                                   discount_percent: paymentDiscountPct,
                                   discount_amount: paymentDiscountAmountCents,
-                                  cash_given: paymentMethod === "CASH" ? paymentCashGivenCents : 0,
+                                  cash_given: paymentCashGivenCents,
                                   change_due: paymentMethod === "CASH" ? paymentChangeCents : 0,
                                 });
                                 setShowPaymentMethodModal(false);

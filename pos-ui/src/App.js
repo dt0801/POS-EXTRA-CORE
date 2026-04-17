@@ -750,7 +750,7 @@ export default function App() {
         }
       }
     },
-    [callPrintApi, settings, tt]
+    [callPrintApi, language, settings, tt]
   );
 
   const handleDownloadBillPdf = useCallback(

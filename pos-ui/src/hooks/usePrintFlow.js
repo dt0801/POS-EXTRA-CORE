@@ -112,7 +112,7 @@ export default function usePrintFlow({
         return { ...prev, [currentTable]: newSent };
       });
     },
-    [callPrintApi, currentItems, currentTable, itemNotes, kitchenSent, orderSessionReady, setKitchenSent, settings]
+    [callPrintApi, currentItems, currentTable, itemNotes, kitchenSent, language, orderSessionReady, setKitchenSent, settings]
   );
 
   const handlePayment = useCallback(async (input) => {
@@ -227,6 +227,7 @@ export default function usePrintFlow({
     currentItems,
     currentTable,
     itemNotes,
+    language,
     orderSessionReady,
     settings,
     updateTableStatus,
@@ -272,7 +273,7 @@ export default function usePrintFlow({
         alert(e2.message || "Không in được tạm tính");
       }
     }
-  }, [callPrintApi, currentItems, currentTable, itemNotes, orderSessionReady, settings]);
+  }, [callPrintApi, currentItems, currentTable, itemNotes, language, orderSessionReady, settings]);
 
   return {
     callPrintApi,

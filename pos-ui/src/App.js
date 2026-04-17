@@ -580,6 +580,7 @@ export default function App() {
     orderSessionReady,
     currentTable,
     tableStatus,
+    kitchenSent,
     currentItems,
     splitTarget,
     splitSelected,
@@ -1550,12 +1551,14 @@ export default function App() {
                           <div className="flex items-center gap-3 shrink-0">
                             <div className="text-right flex flex-col items-end justify-center">
                               <div className="flex items-center gap-1.5">
-                                <button onClick={() => {
-                                  if (item.qty - 1 < sentQty) {
-                                    setKitchenSent(prev => ({...prev, [currentTable]: { ...(prev[currentTable] || {}), [item.id]: Math.max(0, item.qty - 1) }}));
-                                  }
-                                  updateQty(item.id, "dec");
-                                }} className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors text-xs font-bold">-</button>
+                                <button
+                                  onClick={() => updateQty(item.id, "dec")}
+                                  disabled={item.qty - 1 < sentQty}
+                                  className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors text-xs font-bold disabled:opacity-40 disabled:hover:bg-stone-100 disabled:cursor-not-allowed"
+                                  title={item.qty - 1 < sentQty ? tt("Đã gửi bếp, không thể giảm", "Schon an Küche gesendet") : ""}
+                                >
+                                  -
+                                </button>
                                 
                                 <span className="font-bold text-[12px] w-5 text-center text-stone-800">{item.qty < 10 ? `0${item.qty}` : item.qty}</span>
                                 
@@ -1569,7 +1572,12 @@ export default function App() {
                                <button className="w-7 h-7 bg-stone-50 text-stone-400 rounded-[0.7rem] flex items-center justify-center hover:bg-orange-50 hover:text-primary transition-all border border-stone-100 shadow-sm" title={tt("Ghi chú", "Notiz")}>
                                   <span className="material-symbols-outlined text-[14px]">edit</span>
                                </button>
-                               <button onClick={() => removeItem(item.id)} className="w-7 h-7 bg-red-50 text-red-500 rounded-[0.7rem] flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm" title={tt("Xóa món", "Gericht löschen")}>
+                               <button
+                                 onClick={() => removeItem(item.id)}
+                                 disabled={sentQty > 0}
+                                 className="w-7 h-7 bg-red-50 text-red-500 rounded-[0.7rem] flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm disabled:opacity-40 disabled:hover:bg-red-50 disabled:hover:text-red-500 disabled:cursor-not-allowed"
+                                 title={sentQty > 0 ? tt("Đã gửi bếp, không thể xóa", "Schon an Küche gesendet") : tt("Xóa món", "Gericht löschen")}
+                               >
                                   <span className="material-symbols-outlined text-[14px]">delete</span>
                                </button>
                             </div>

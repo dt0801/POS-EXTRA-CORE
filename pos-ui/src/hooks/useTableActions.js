@@ -4,6 +4,7 @@ export default function useTableActions({
   orderSessionReady,
   currentTable,
   tableStatus,
+  kitchenSent,
   currentItems,
   splitTarget,
   splitSelected,
@@ -88,20 +89,35 @@ export default function useTableActions({
   const updateQty = useCallback((itemId, action) => {
     if (!orderSessionReady) return;
     if (!currentTable) return;
+    const sentQty = kitchenSent?.[currentTable]?.[itemId] || 0;
     setTableOrders((prev) => {
       const table = prev[currentTable];
       if (!table || !table[itemId]) return prev;
       const newQty = action === "inc" ? table[itemId].qty + 1 : table[itemId].qty - 1;
+      // Chống gian lận: không cho giảm thấp hơn số lượng đã gửi/in bếp.
+      if (action === "dec" && newQty < sentQty) return prev;
       const updated = { ...table };
       if (newQty <= 0) delete updated[itemId];
       else updated[itemId] = { ...table[itemId], qty: newQty };
       return { ...prev, [currentTable]: updated };
     });
-  }, [currentTable, orderSessionReady, setTableOrders]);
+    if (action === "dec" && sentQty > 0) {
+      // Nếu bị chặn do đã gửi bếp, nhắc nhẹ để nhân viên hiểu.
+      const table = (currentItems || []).find((i) => i.id === itemId);
+      if (table && table.qty - 1 < sentQty) {
+        alert("Món đã gửi bếp, không thể giảm/xóa số lượng đã gửi.");
+      }
+    }
+  }, [currentItems, currentTable, kitchenSent, orderSessionReady, setTableOrders]);
 
   const removeItem = useCallback((itemId) => {
     if (!orderSessionReady) return;
     if (!currentTable) return;
+    const sentQty = kitchenSent?.[currentTable]?.[itemId] || 0;
+    if (sentQty > 0) {
+      alert("Món đã gửi bếp, không thể xóa.");
+      return;
+    }
     setTableOrders((prev) => {
       const table = prev[currentTable];
       if (!table) return prev;
@@ -109,7 +125,7 @@ export default function useTableActions({
       void removed;
       return { ...prev, [currentTable]: updated };
     });
-  }, [currentTable, orderSessionReady, setTableOrders]);
+  }, [currentTable, kitchenSent, orderSessionReady, setTableOrders]);
 
   const resetTable = useCallback(() => {
     if (!orderSessionReady) return;

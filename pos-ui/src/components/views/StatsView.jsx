@@ -3,14 +3,13 @@ import { menuImageSrc, removeTones } from "../../utils/posHelpers";
 
 const WEEK_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-function compactMoneyFromThousandVnd(v) {
-  const n = Number(v || 0);
-  const abs = Math.abs(n);
-  const sign = n < 0 ? "-" : "";
-  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}B`;
-  if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(1)}M`;
-  // n is already "thousand VND", so show as K directly.
-  return `${sign}${abs < 100 ? abs.toFixed(1) : abs.toFixed(0)}K`;
+function compactEuroFromCents(v) {
+  const euros = (Number(v || 0) / 100);
+  const abs = Math.abs(euros);
+  const sign = euros < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}€${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1000) return `${sign}€${(abs / 1000).toFixed(1)}K`;
+  return `${sign}€${abs.toFixed(2)}`;
 }
 
 function toWeekdayShort(dateStr) {
@@ -172,8 +171,8 @@ export default function StatsView({
           <div className="relative z-10">
             <div className="text-orange-100/90 text-xs font-semibold uppercase tracking-widest">{tr("TỔNG DOANH THU", "GESAMTUMSATZ")}</div>
             <div className="flex items-baseline gap-2 mt-3">
-              <div className="text-4xl font-headline font-extrabold tracking-tighter">{compactMoneyFromThousandVnd(kpi.revenue)}</div>
-              <div className="text-sm font-bold opacity-90">VND</div>
+              <div className="text-4xl font-headline font-extrabold tracking-tighter">{compactEuroFromCents(kpi.revenue)}</div>
+              <div className="text-sm font-bold opacity-90">EUR</div>
             </div>
             <div className="mt-3 flex items-center gap-2 text-sm font-semibold">
               <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -208,7 +207,7 @@ export default function StatsView({
               <span className="material-symbols-outlined text-primary">analytics</span>
             </div>
             <div className="text-on-surface-variant text-xs font-semibold uppercase tracking-widest mb-2">{tr("TRUNG BÌNH/HĐ", "DURCHSCHNITT/RECHNUNG")}</div>
-            <div className="text-4xl font-headline font-extrabold text-on-surface">{compactMoneyFromThousandVnd(avgPerBill)}</div>
+            <div className="text-4xl font-headline font-extrabold text-on-surface">{compactEuroFromCents(avgPerBill)}</div>
           </div>
         </div>
       </section>

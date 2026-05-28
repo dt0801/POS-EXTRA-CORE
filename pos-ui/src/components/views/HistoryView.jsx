@@ -71,8 +71,8 @@ export default function HistoryView({
               </div>
               <div className="col-span-1 p-5 bg-surface-container-lowest shadow-sm rounded-3xl">
                 <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-widest mb-1">{tr("Doanh thu", "Umsatz")}</p>
-                <p className="font-headline font-extrabold text-2xl text-on-surface">{formatMoney(totalRevenue).replace(/đ/g, '')} đ</p>
-                <p className="text-[10px] text-on-surface-variant/60 mt-1">VND • {new Date(historyDate).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })}</p>
+                <p className="font-headline font-extrabold text-2xl text-on-surface">{formatMoney(totalRevenue)}</p>
+                <p className="text-[10px] text-on-surface-variant/60 mt-1">EUR • {new Date(historyDate).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })}</p>
               </div>
             </div>
           </section>

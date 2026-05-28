@@ -138,6 +138,17 @@ app.get("/debug/uploads", (req, res) => {
 });
 
 // Serve React build nếu tồn tại (production)
+app.get("/debug/build-info", (req, res) => {
+  const { EUROPE_TIME_ZONE, getEuropeDateISO, getEuropeDateTimeString } = require("./core/time/europeTime");
+  res.json({
+    app: "pos-extra-core",
+    featureBuild: "europe-time-discounts-order-guard-2026-05-28",
+    europeTimeZone: EUROPE_TIME_ZONE,
+    europeDate: getEuropeDateISO(),
+    europeDateTime: getEuropeDateTimeString(),
+  });
+});
+
 if (fs.existsSync(UI_BUILD)) {
   app.use(express.static(UI_BUILD));
   console.log("✅ Serving UI từ:", UI_BUILD);

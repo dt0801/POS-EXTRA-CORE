@@ -1,4 +1,5 @@
 const { dispatchToBridge } = require("./dispatchToBridge");
+const { formatEuropeDateTime } = require("../time/europeTime");
 
 async function postBillPrint(
   { useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile, enqueueJobsForType },
@@ -29,7 +30,7 @@ async function postBillPrint(
     subtitle: store.storeSubtitle,
     tableNum: table_num,
     timeLabel: t("Ngày", "Datum"),
-    timeValue: new Date().toLocaleString(locale),
+    timeValue: formatEuropeDateTime(new Date(), locale),
     items,
     totalLabel: t("THÀNH TIỀN", "GESAMT"),
     totalValue: total,

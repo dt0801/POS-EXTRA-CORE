@@ -1,0 +1,11 @@
+node_modules
+pos-ui/node_modules
+pos-ui/build
+dist
+.git
+.cursor
+data
+uploads
+print-bridge
+*.zip
+*.log

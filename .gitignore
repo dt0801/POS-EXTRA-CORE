@@ -9,3 +9,4 @@ pos-ui/build/
 *.zip
 .cursor/
 print-bridge/
+.vercel

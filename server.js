@@ -47,6 +47,7 @@ const { getStatsDaily } = require("./core/stats/getStatsDaily");
 const { getStatsMonthly } = require("./core/stats/getStatsMonthly");
 const { getStatsYearly } = require("./core/stats/getStatsYearly");
 const { getStatsToday } = require("./core/stats/getStatsToday");
+const { getEuropeDateISO } = require("./core/time/europeTime");
 const {
   getStoreProfile: getStoreProfileFromCache,
   getBillCssOverride: getBillCssOverrideFromCache,
@@ -387,7 +388,7 @@ function startServer() {
   });
 
   app.put("/order-session", authMiddleware, async (req, res) => {
-    const result = await putOrderSession({ mongoDb }, { body: req.body || {} });
+    const result = await putOrderSession({ mongoDb }, { body: req.body || {}, actorUser: req.user });
     res.status(result.status).json(result.body);
   });
 
@@ -445,7 +446,7 @@ function startServer() {
   app.get("/bills", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await listBillsByDate(
       { mongoDb },
-      { date: req.query.date || new Date().toISOString().split("T")[0] }
+      { date: req.query.date || getEuropeDateISO() }
     );
     res.status(result.status).json(result.body);
   });

@@ -1,4 +1,5 @@
 const { dispatchToBridge } = require("./dispatchToBridge");
+const { formatEuropeDateTime } = require("../time/europeTime");
 const { parseKitchenCategoriesList } = require("../../server/print-templates/kitchenCategoriesServer");
 
 /**
@@ -66,7 +67,7 @@ async function postKitchenPrint(
 
   const lang = String(language || "").toLowerCase() === "de" ? "de" : "vi";
   const locale = lang === "de" ? "de-DE" : "vi-VN";
-  const nowText = new Date().toLocaleString(locale);
+  const nowText = formatEuropeDateTime(new Date(), locale);
   const settingsWithLang = { ...(settingsCache || {}), language: lang };
 
   // Group items theo groupKey (dest + category) → mỗi group = 1 phiếu riêng

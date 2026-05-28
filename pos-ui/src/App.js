@@ -38,17 +38,14 @@ import KitchenCategoriesSettingsSection from "./components/views/KitchenCategori
 import { fetchPrintPreviewHtml } from "./services/printPreviewApi";
 import { receiptPayloadBillReprint } from "./utils/serverReceiptPayload";
 import { openBillPrintWindow } from "./utils/openBillPrintWindow";
+import { getEuropeDateISO, getEuropeMonthISO, getEuropeYear } from "./utils/europeTime";
 
 // =============================================
 // CONSTANTS
 // =============================================
 const TOTAL_TABLES = 20;
-const getLocalDateISO = () => {
-  const now = new Date();
-  const tzOffsetMs = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - tzOffsetMs).toISOString().split("T")[0];
-};
-const getLocalMonthISO = () => getLocalDateISO().slice(0, 7);
+const getLocalDateISO = () => getEuropeDateISO();
+const getLocalMonthISO = () => getEuropeMonthISO();
 
 function isPdfArrayBuffer(ab) {
   if (!ab || ab.byteLength < 5) return false;
@@ -260,7 +257,7 @@ export default function App() {
   const [historyDate, setHistoryDate] = useState(getLocalDateISO());
   const [statsTab, setStatsTab] = useState("day");
   const statsMonth = getLocalMonthISO();
-  const statsYear = String(new Date().getFullYear());
+  const statsYear = getEuropeYear();
   const [statsToday, setStatsToday] = useState({ bill_count: 0, revenue: 0, top_items: [] });
   const [statsMonthlyData, setStatsMonthlyData] = useState({ bill_count: 0, revenue: 0, days: [], top_items: [] });
   const [statsYearlyData, setStatsYearlyData] = useState({ bill_count: 0, revenue: 0, months: [], top_items: [] });
@@ -270,6 +267,8 @@ export default function App() {
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [paymentMode, setPaymentMode] = useState("FULL"); // "FULL" | "SPLIT"
   const [paymentDiscountPercent, setPaymentDiscountPercent] = useState("0"); // "0".."100"
+  const [paymentBillDiscountEuro, setPaymentBillDiscountEuro] = useState("");
+  const [paymentItemDiscounts, setPaymentItemDiscounts] = useState({});
   const [paymentCashGivenEuro, setPaymentCashGivenEuro] = useState(""); // euro input string
   const [splitPaySelected, setSplitPaySelected] = useState({}); // { [itemId]: qtyToPay }
   const {
@@ -330,7 +329,44 @@ export default function App() {
     0,
     Math.min(100, Math.round(Number(String(paymentDiscountPercent || "0").replace(",", ".")) || 0))
   );
-  const paymentDiscountAmountCents = Math.round((paymentSubtotalCents * paymentDiscountPct) / 100);
+  const getItemDiscountPct = useCallback(
+    (itemId) =>
+      Math.max(
+        0,
+        Math.min(100, Math.round(Number(String(paymentItemDiscounts?.[itemId] || "0").replace(",", ".")) || 0))
+      ),
+    [paymentItemDiscounts]
+  );
+  const buildDiscountedPaymentItems = useCallback(
+    (items) =>
+      (Array.isArray(items) ? items : []).map((it) => {
+        const pct = getItemDiscountPct(it.id);
+        const originalPrice = Number(it.original_price ?? it.price ?? 0);
+        const discountedPrice = Math.max(0, Math.round((originalPrice * (100 - pct)) / 100));
+        return {
+          ...it,
+          original_price: originalPrice,
+          price: discountedPrice,
+          discount_percent: pct,
+          discount_amount: Math.max(0, originalPrice - discountedPrice) * Number(it.qty || 0),
+        };
+      }),
+    [getItemDiscountPct]
+  );
+  const paymentPreviewItems = useMemo(
+    () => buildDiscountedPaymentItems(currentItems),
+    [buildDiscountedPaymentItems, currentItems]
+  );
+  const paymentAfterItemDiscountCents = paymentPreviewItems.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 0), 0);
+  const paymentItemDiscountAmountCents = Math.max(0, paymentSubtotalCents - paymentAfterItemDiscountCents);
+  const paymentPercentDiscountAmountCents = Math.round((paymentAfterItemDiscountCents * paymentDiscountPct) / 100);
+  const paymentBillDiscountParsedCents = parseEuroInputToCents(String(paymentBillDiscountEuro || "").trim());
+  const paymentBillDiscountAmountCents = Math.min(
+    Math.max(0, paymentAfterItemDiscountCents - paymentPercentDiscountAmountCents),
+    paymentBillDiscountParsedCents ?? 0
+  );
+  const paymentDiscountAmountCents =
+    paymentItemDiscountAmountCents + paymentPercentDiscountAmountCents + paymentBillDiscountAmountCents;
   const paymentFinalTotalCents = Math.max(0, paymentSubtotalCents - paymentDiscountAmountCents);
   const paymentCashGivenRaw = String(paymentCashGivenEuro || "").trim();
   const paymentCashGivenParsedCents = parseEuroInputToCents(paymentCashGivenRaw);
@@ -475,6 +511,8 @@ export default function App() {
     setPaymentMode("FULL");
     setPaymentMethod("CASH");
     setPaymentDiscountPercent("0");
+    setPaymentBillDiscountEuro("");
+    setPaymentItemDiscounts({});
     setPaymentCashGivenEuro("");
     setSplitPaySelected({});
     setShowPaymentMethodModal(true);
@@ -573,6 +611,7 @@ export default function App() {
 
   const { addItem, addCustomLineItem, updateQty, removeItem, resetTable, transferTable, executeSplit } = useTableActions({
     orderSessionReady,
+    isAdmin,
     currentTable,
     tableStatus,
     kitchenSent,
@@ -689,7 +728,10 @@ export default function App() {
         }))
         .filter((it) => Number(it.qty || 0) > 0);
 
-      const splitTotal = itemsToPay.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 0), 0);
+      const discountedItemsToPay = buildDiscountedPaymentItems(itemsToPay);
+      const splitSubtotal = itemsToPay.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 0), 0);
+      const splitTotal = discountedItemsToPay.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 0), 0);
+      const splitDiscount = Math.max(0, splitSubtotal - splitTotal);
       const remainingCount = currentItems.reduce((cnt, it) => {
         const qPay = Math.max(0, Math.round(Number(splitPaySelected[it.id]) || 0));
         const remain = Number(it.qty || 0) - qPay;
@@ -701,8 +743,10 @@ export default function App() {
       try {
         await handlePayment({
           payment_method: method,
-          items: itemsToPay,
+          items: discountedItemsToPay,
           total: splitTotal,
+          subtotal: splitSubtotal,
+          discount_amount: splitDiscount,
           shouldMarkPaying: false,
         });
         applySplitPayDeduction({ selected: splitPaySelected });
@@ -716,6 +760,7 @@ export default function App() {
     },
     [
       applySplitPayDeduction,
+      buildDiscountedPaymentItems,
       currentItems,
       currentTable,
       handlePayment,
@@ -1549,7 +1594,7 @@ export default function App() {
                               <div className="flex items-center gap-1.5">
                                 <button
                                   onClick={() => updateQty(item.id, "dec")}
-                                  disabled={item.qty - 1 < sentQty}
+                                  disabled={!isAdmin || item.qty - 1 < sentQty}
                                   className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors text-xs font-bold disabled:opacity-40 disabled:hover:bg-stone-100 disabled:cursor-not-allowed"
                                   title={item.qty - 1 < sentQty ? tt("Đã gửi bếp, không thể giảm", "Schon an Küche gesendet") : ""}
                                 >
@@ -1570,7 +1615,7 @@ export default function App() {
                                </button>
                                <button
                                  onClick={() => removeItem(item.id)}
-                                 disabled={sentQty > 0}
+                                  disabled={!isAdmin || sentQty > 0}
                                  className="w-7 h-7 bg-red-50 text-red-500 rounded-[0.7rem] flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm disabled:opacity-40 disabled:hover:bg-red-50 disabled:hover:text-red-500 disabled:cursor-not-allowed"
                                  title={sentQty > 0 ? tt("Đã gửi bếp, không thể xóa", "Schon an Küche gesendet") : tt("Xóa món", "Gericht löschen")}
                                >
@@ -1617,7 +1662,8 @@ export default function App() {
                    {tableStatus[currentTable] === "PAYING" ? (
                      <button
                        onClick={resetTable}
-                       className="w-full py-4 bg-error-container text-error hover:bg-red-200 font-bold text-sm rounded-[1.2rem] shadow-sm transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                       disabled={!isAdmin}
+                       className="w-full py-4 bg-error-container text-error hover:bg-red-200 font-bold text-sm rounded-[1.2rem] shadow-sm transition-all uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                      >
                        <span className="material-symbols-outlined text-[18px]">restart_alt</span>
                       {tt("RESET BÀN TRỐNG", "TISCH ZURÜCKSETZEN")}
@@ -1656,7 +1702,7 @@ export default function App() {
                      </div>
                      <button
                        type="button"
-                       disabled={paymentSubmitting}
+                          disabled={paymentSubmitting || !isAdmin}
                        onClick={() => setShowPaymentMethodModal(false)}
                        className="w-11 h-11 bg-surface-container-high hover:bg-outline-variant/30 text-on-surface flex items-center justify-center rounded-full transition-colors shadow-sm disabled:opacity-40 disabled:pointer-events-none"
                      >
@@ -1722,7 +1768,7 @@ export default function App() {
                         </div>
 
                         <div className="rounded-[1.75rem] bg-white border border-outline-variant/30 p-4 md:p-5 space-y-4 shadow-sm">
-                          <div className="grid grid-cols-1 gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <label className="flex flex-col gap-1.5">
                               <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                                 {tt("Giảm giá (%)", "Rabatt (%)")}
@@ -1736,7 +1782,54 @@ export default function App() {
                                 className="w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 border-transparent focus:border-primary focus:bg-white outline-none transition-all"
                               />
                             </label>
+                            <label className="flex flex-col gap-1.5">
+                              <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                                {tt("Giảm tiền bill", "Rechnungsrabatt")}
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={paymentBillDiscountEuro}
+                                onChange={(e) => setPaymentBillDiscountEuro(e.target.value)}
+                                placeholder="0,00"
+                                autoComplete="off"
+                                className="w-full px-4 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border-2 border-transparent focus:border-primary focus:bg-white outline-none transition-all"
+                              />
+                            </label>
                           </div>
+
+                          {currentItems.length > 0 && (
+                            <div className="rounded-2xl bg-surface-container-low border border-outline-variant/20 p-3 space-y-2">
+                              <div className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                                {tt("Giảm % từng món", "Rabatt je Artikel")}
+                              </div>
+                              <div className="space-y-2 max-h-44 overflow-y-auto pr-1 custom-scrollbar">
+                                {currentItems.map((it) => {
+                                  const pct = paymentItemDiscounts?.[it.id] || "";
+                                  const discounted = paymentPreviewItems.find((p) => p.id === it.id);
+                                  return (
+                                    <div key={it.id} className="flex items-center gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-[12px] font-bold truncate text-on-surface">{it.name}</div>
+                                        <div className="text-[11px] text-on-surface-variant">
+                                          {formatMoney(it.price)} -&gt; {formatMoney(discounted?.price ?? it.price)}
+                                        </div>
+                                      </div>
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={pct}
+                                        onChange={(e) => setPaymentItemDiscounts((prev) => ({ ...(prev || {}), [it.id]: e.target.value }))}
+                                        placeholder="0"
+                                        className="w-20 px-3 py-2 rounded-xl bg-white text-on-surface font-black text-center border border-outline-variant/30 focus:border-primary outline-none"
+                                      />
+                                      <span className="text-[11px] font-bold text-on-surface-variant">%</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
 
                           <label className="flex flex-col gap-1.5">
                             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
@@ -1761,8 +1854,12 @@ export default function App() {
                               <span className="text-on-surface">{formatMoney(paymentSubtotalCents)}</span>
                             </div>
                             <div className="flex justify-between text-[12px] font-semibold text-on-surface-variant">
-                              <span>{tt("Giảm giá", "Rabatt")} ({paymentDiscountPct}%)</span>
-                              <span className="text-error">{paymentDiscountAmountCents > 0 ? `- ${formatMoney(paymentDiscountAmountCents)}` : formatMoney(0)}</span>
+                              <span>{tt("Giảm từng món", "Artikelrabatt")}</span>
+                              <span className="text-error">{paymentItemDiscountAmountCents > 0 ? `- ${formatMoney(paymentItemDiscountAmountCents)}` : formatMoney(0)}</span>
+                            </div>
+                            <div className="flex justify-between text-[12px] font-semibold text-on-surface-variant">
+                              <span>{tt("Giảm bill", "Rechnungsrabatt")} ({paymentDiscountPct}% + {formatMoney(paymentBillDiscountAmountCents)})</span>
+                              <span className="text-error">{paymentPercentDiscountAmountCents + paymentBillDiscountAmountCents > 0 ? `- ${formatMoney(paymentPercentDiscountAmountCents + paymentBillDiscountAmountCents)}` : formatMoney(0)}</span>
                             </div>
                             <div className="pt-2 mt-2 border-t border-dashed border-outline-variant/40 flex justify-between items-end">
                               <span className="font-bold text-on-surface">{tt("Tổng phải trả", "Zu zahlen")}</span>
@@ -1784,10 +1881,12 @@ export default function App() {
                                 setPaymentSubmitting(true);
                                 await handlePayment({
                                   payment_method: paymentMethod,
+                                  items: paymentPreviewItems,
                                   total: paymentFinalTotalCents,
                                   subtotal: paymentSubtotalCents,
                                   discount_percent: paymentDiscountPct,
                                   discount_amount: paymentDiscountAmountCents,
+                                  bill_discount_amount: paymentBillDiscountAmountCents,
                                   cash_given: paymentCashGivenCents,
                                   change_due: paymentMethod === "CASH" ? paymentChangeCents : 0,
                                 });
@@ -2906,7 +3005,7 @@ export default function App() {
                         
                         <div className="flex items-center gap-4 shrink-0">
                           <div className="flex items-center bg-stone-100 rounded-xl p-1 gap-1.5">
-                            <button onClick={() => updateQty(item.id, "dec")} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-stone-600 font-bold">-</button>
+                            <button onClick={() => updateQty(item.id, "dec")} disabled={!isAdmin || item.qty - 1 < sentQty} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-stone-600 font-bold disabled:opacity-40 disabled:cursor-not-allowed">-</button>
                             <span className="font-bold text-sm w-4 text-center">{item.qty}</span>
                             <button onClick={() => updateQty(item.id, "inc")} className="w-8 h-8 rounded-lg bg-primary text-white shadow-sm flex items-center justify-center font-bold">+</button>
                           </div>

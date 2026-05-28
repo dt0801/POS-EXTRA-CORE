@@ -3,8 +3,9 @@
  * @returns {Promise<{ status: number, body: object }>}
  */
 async function getStatsToday(deps) {
+  const { getEuropeDateISO } = require("../time/europeTime");
   const { mongoDb } = deps;
-  const today = new Date().toISOString().split("T")[0];
+  const today = getEuropeDateISO();
   try {
     const bills = await mongoDb.collection("bills").find({ created_at: { $regex: `^${today}` } }).toArray();
 
@@ -23,9 +24,7 @@ async function getStatsToday(deps) {
         itemMap[name].total_qty += Number(it.qty || 0);
         itemMap[name].total_revenue += Number(it.price || 0) * Number(it.qty || 0);
       });
-      topItems = Object.values(itemMap)
-        .sort((a, b) => b.total_qty - a.total_qty)
-        .slice(0, 5);
+      topItems = Object.values(itemMap).sort((a, b) => b.total_qty - a.total_qty);
     }
 
     return { status: 200, body: { bill_count, revenue, top_items: topItems } };

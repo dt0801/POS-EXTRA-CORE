@@ -5,6 +5,7 @@
  * @returns {Promise<{ status: number, body: object }>}
  */
 async function createBill(deps, reqBody) {
+  const { getEuropeDateTimeString } = require("../time/europeTime");
   const { mongoDb, getNextMongoId } = deps;
   const {
     table_num,
@@ -32,7 +33,7 @@ async function createBill(deps, reqBody) {
   const actorUsername = actor?.username ? String(actor.username) : null;
   const actorFullName = actor?.full_name ? String(actor.full_name) : actorUsername;
 
-  const now = new Date().toLocaleString("sv-SE").replace("T", " "); // "YYYY-MM-DD HH:MM:SS"
+  const now = getEuropeDateTimeString();
   try {
     const billId = await getNextMongoId("bills");
     await mongoDb.collection("bills").insertOne({
@@ -42,6 +43,7 @@ async function createBill(deps, reqBody) {
       subtotal: Number(subtotal || 0),
       discount_percent: Number(discount_percent || 0),
       discount_amount: Number(discount_amount || 0),
+      bill_discount_amount: Number(reqBody.bill_discount_amount || 0),
       cash_given: Number(cash_given || 0),
       change_due: Number(change_due || 0),
       payment_method: normalizedPaymentMethod,
@@ -57,7 +59,10 @@ async function createBill(deps, reqBody) {
       bill_id: billId,
       name: item.name || "",
       price: Number(item.price || 0),
+      original_price: Number(item.original_price ?? item.price ?? 0),
       qty: Number(item.qty || 0),
+      discount_percent: Number(item.discount_percent || item.item_discount_percent || 0),
+      discount_amount: Number(item.discount_amount || 0),
       item_type: item.type || null,
     }));
     if (billItems.length) {

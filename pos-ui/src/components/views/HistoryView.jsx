@@ -194,6 +194,11 @@ export default function HistoryView({
                         <div className="flex items-center gap-2 mt-1.5">
                           <span className="bg-surface-container-high px-2 py-0.5 rounded text-[11px] font-bold text-on-surface-variant">{tr("SL", "Menge")}: {item.qty}</span>
                           <span className="text-on-surface-variant text-xs">{formatMoney(item.price)}</span>
+                          {Number(item.discount_percent || 0) > 0 && (
+                            <span className="bg-red-50 text-error px-2 py-0.5 rounded text-[11px] font-bold">
+                              -{Number(item.discount_percent || 0)}%
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="text-right shrink-0">

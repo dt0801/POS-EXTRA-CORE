@@ -4,8 +4,9 @@
  * @returns {Promise<{ status: number, body: object }>}
  */
 async function getStatsMonthly(deps, input) {
+  const { getEuropeMonthISO } = require("../time/europeTime");
   const { mongoDb } = deps;
-  const month = input.month || new Date().toISOString().slice(0, 7);
+  const month = input.month || getEuropeMonthISO();
   try {
     const bills = await mongoDb
       .collection("bills")
@@ -38,9 +39,7 @@ async function getStatsMonthly(deps, input) {
         itemMap[name].total_qty += Number(it.qty || 0);
         itemMap[name].total_revenue += Number(it.price || 0) * Number(it.qty || 0);
       });
-      topItems = Object.values(itemMap)
-        .sort((a, b) => b.total_qty - a.total_qty)
-        .slice(0, 5);
+      topItems = Object.values(itemMap).sort((a, b) => b.total_qty - a.total_qty);
     }
 
     return {

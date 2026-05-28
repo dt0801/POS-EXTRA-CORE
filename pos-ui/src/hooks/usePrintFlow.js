@@ -126,6 +126,7 @@ export default function usePrintFlow({
     const subtotal = typeof input === "object" && input ? input.subtotal : null;
     const discount_percent = typeof input === "object" && input ? input.discount_percent : null;
     const discount_amount = typeof input === "object" && input ? input.discount_amount : null;
+    const bill_discount_amount = typeof input === "object" && input ? input.bill_discount_amount : null;
     const cash_given = typeof input === "object" && input ? input.cash_given : null;
     const change_due = typeof input === "object" && input ? input.change_due : null;
     const shouldMarkPaying = typeof input === "object" && input ? input.shouldMarkPaying !== false : true;
@@ -138,8 +139,11 @@ export default function usePrintFlow({
     const itemsForBill = baseItems.map((i) => ({
       name: i.name,
       price: i.price,
+      original_price: i.original_price ?? i.price,
       qty: i.qty,
       type: i.type || "FOOD",
+      discount_percent: i.discount_percent || 0,
+      discount_amount: i.discount_amount || 0,
       note: notes[i.id] || "",
     }));
     const computedTotal = itemsForBill.reduce((s, i) => s + Number(i.price || 0) * Number(i.qty || 0), 0);
@@ -147,6 +151,7 @@ export default function usePrintFlow({
     const billSubtotal = subtotal != null ? Number(subtotal || 0) : computedTotal;
     const billDiscountPct = discount_percent != null ? Number(discount_percent || 0) : 0;
     const billDiscountAmount = discount_amount != null ? Number(discount_amount || 0) : 0;
+    const billFixedDiscountAmount = bill_discount_amount != null ? Number(bill_discount_amount || 0) : 0;
     const billCashGiven = cash_given != null ? Number(cash_given || 0) : 0;
     const billChangeDue = change_due != null ? Number(change_due || 0) : 0;
 
@@ -159,10 +164,19 @@ export default function usePrintFlow({
         subtotal: billSubtotal,
         discount_percent: billDiscountPct,
         discount_amount: billDiscountAmount,
+        bill_discount_amount: billFixedDiscountAmount,
         cash_given: billCashGiven,
         change_due: billChangeDue,
         payment_method: normalizedPaymentMethod,
-        items: itemsForBill.map(({ name, price, qty, type }) => ({ name, price, qty, type })),
+        items: itemsForBill.map(({ name, price, original_price, qty, type, discount_percent, discount_amount }) => ({
+          name,
+          price,
+          original_price,
+          qty,
+          type,
+          discount_percent,
+          discount_amount,
+        })),
       }),
     });
 
@@ -181,7 +195,13 @@ export default function usePrintFlow({
     } catch {}
     const billId = saved?.id ?? saved?.bill_id;
 
-    const itemsPrint = itemsForBill.map((i) => ({ name: i.name, price: i.price, qty: i.qty }));
+    const itemsPrint = itemsForBill.map((i) => ({
+      name: i.name,
+      price: i.price,
+      original_price: i.original_price,
+      discount_percent: i.discount_percent,
+      qty: i.qty,
+    }));
 
     try {
       await callPrintApi("/print/bill", {

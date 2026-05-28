@@ -4,8 +4,9 @@
  * @returns {Promise<{ status: number, body: unknown }>}
  */
 async function getStatsDaily(deps, input) {
+  const { getEuropeMonthISO } = require("../time/europeTime");
   const { mongoDb } = deps;
-  const month = input.month || new Date().toISOString().slice(0, 7);
+  const month = input.month || getEuropeMonthISO();
   try {
     const bills = await mongoDb
       .collection("bills")

@@ -2,6 +2,7 @@ import { useCallback } from "react";
 
 export default function useTableActions({
   orderSessionReady,
+  isAdmin = false,
   currentTable,
   tableStatus,
   kitchenSent,
@@ -89,6 +90,10 @@ export default function useTableActions({
   const updateQty = useCallback((itemId, action) => {
     if (!orderSessionReady) return;
     if (!currentTable) return;
+    if (action === "dec" && !isAdmin) {
+      alert("Chi admin moi duoc giam/xoa mon.");
+      return;
+    }
     const sentQty = kitchenSent?.[currentTable]?.[itemId] || 0;
     setTableOrders((prev) => {
       const table = prev[currentTable];
@@ -108,11 +113,15 @@ export default function useTableActions({
         alert("Món đã gửi bếp, không thể giảm/xóa số lượng đã gửi.");
       }
     }
-  }, [currentItems, currentTable, kitchenSent, orderSessionReady, setTableOrders]);
+  }, [currentItems, currentTable, isAdmin, kitchenSent, orderSessionReady, setTableOrders]);
 
   const removeItem = useCallback((itemId) => {
     if (!orderSessionReady) return;
     if (!currentTable) return;
+    if (!isAdmin) {
+      alert("Chi admin moi duoc xoa mon.");
+      return;
+    }
     const sentQty = kitchenSent?.[currentTable]?.[itemId] || 0;
     if (sentQty > 0) {
       alert("Món đã gửi bếp, không thể xóa.");
@@ -125,18 +134,19 @@ export default function useTableActions({
       void removed;
       return { ...prev, [currentTable]: updated };
     });
-  }, [currentTable, kitchenSent, orderSessionReady, setTableOrders]);
+  }, [currentTable, isAdmin, kitchenSent, orderSessionReady, setTableOrders]);
 
   const resetTable = useCallback(() => {
     if (!orderSessionReady) return;
     if (!currentTable) return;
+    if (!isAdmin) return alert("Chi admin moi duoc reset/xoa order.");
     if (!window.confirm(`Reset ban ${currentTable}? Toan bo order se bi xoa.`)) return;
 
     setTableOrders((prev) => { const c = { ...prev }; delete c[currentTable]; return c; });
     setKitchenSent((prev) => { const c = { ...prev }; delete c[currentTable]; return c; });
     setItemNotes((prev) => { const c = { ...prev }; delete c[currentTable]; return c; });
     updateTableStatus(currentTable, "PAID");
-  }, [currentTable, orderSessionReady, setItemNotes, setKitchenSent, setTableOrders, updateTableStatus]);
+  }, [currentTable, isAdmin, orderSessionReady, setItemNotes, setKitchenSent, setTableOrders, updateTableStatus]);
 
   const transferTable = useCallback(async (targetTable) => {
     if (!orderSessionReady) return;

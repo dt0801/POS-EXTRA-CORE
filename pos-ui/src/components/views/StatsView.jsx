@@ -105,7 +105,8 @@ export default function StatsView({
         ? statsMonthlyData?.top_items
         : statsToday?.top_items;
 
-  const topList = Array.isArray(topItems) ? topItems.slice(0, 5) : [];
+  const allSoldItems = Array.isArray(topItems) ? topItems : [];
+  const topList = allSoldItems.slice(0, 5);
   const avgTopQty = mean(topList.map((i) => Number(i.total_qty || 0)));
 
   const getImageForName = (name) => {
@@ -368,6 +369,43 @@ export default function StatsView({
                 </div>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      <section className="bg-surface-container-lowest rounded-[2rem] p-6 mt-6">
+        <div className="flex items-center justify-between mb-5 gap-4">
+          <h3 className="font-headline font-extrabold text-xl">{tr("Chi tiết số lượng món đã bán", "Verkaufte Artikel im Detail")}</h3>
+          <span className="text-xs font-bold text-on-surface-variant bg-surface-container-high px-3 py-1 rounded-full">
+            {allSoldItems.length} {tr("món", "Artikel")}
+          </span>
+        </div>
+
+        {allSoldItems.length === 0 ? (
+          <div className="min-h-[120px] flex items-center justify-center opacity-40">
+            <span className="material-symbols-outlined">inventory_2</span>
+            <div className="ml-3 font-semibold">{tr("Chưa có dữ liệu số lượng", "Keine Mengendaten")}</div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px] text-sm">
+              <thead>
+                <tr className="text-left text-on-surface-variant uppercase tracking-widest text-[11px] border-b border-outline-variant/20">
+                  <th className="py-3 pr-4 font-black">{tr("Món", "Artikel")}</th>
+                  <th className="py-3 px-4 font-black text-right">{tr("Số lượng", "Menge")}</th>
+                  <th className="py-3 pl-4 font-black text-right">{tr("Doanh thu", "Umsatz")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allSoldItems.map((it, idx) => (
+                  <tr key={`${it.name}-${idx}`} className="border-b border-outline-variant/10 last:border-0">
+                    <td className="py-3 pr-4 font-bold text-on-surface">{it.name || "-"}</td>
+                    <td className="py-3 px-4 text-right font-headline font-black text-primary">{Number(it.total_qty || 0)}</td>
+                    <td className="py-3 pl-4 text-right font-bold text-on-surface">{_formatMoney(Number(it.total_revenue || 0))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

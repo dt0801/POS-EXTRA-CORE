@@ -1,4 +1,5 @@
 const { dispatchToBridge } = require("./dispatchToBridge");
+const { formatEuropeDateTime } = require("../time/europeTime");
 
 async function postTamtinhPrint(
   { useBridgeQueue, createPrintJob, dispatchReceiptToType, getStoreProfile, enqueueJobsForType },
@@ -14,7 +15,7 @@ async function postTamtinhPrint(
     title: store.storeName || "TẠM TÍNH",
     tableNum: table_num,
     timeLabel: "Giờ",
-    timeValue: new Date().toLocaleString("vi-VN"),
+    timeValue: formatEuropeDateTime(new Date(), "vi-VN"),
     items,
     totalLabel: "TẠM TÍNH",
     totalValue: total,

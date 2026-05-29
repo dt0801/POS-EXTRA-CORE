@@ -139,14 +139,13 @@ export default function useTableActions({
   const resetTable = useCallback(() => {
     if (!orderSessionReady) return;
     if (!currentTable) return;
-    if (!isAdmin) return alert("Chi admin moi duoc reset/xoa order.");
     if (!window.confirm(`Reset ban ${currentTable}? Toan bo order se bi xoa.`)) return;
 
     setTableOrders((prev) => { const c = { ...prev }; delete c[currentTable]; return c; });
     setKitchenSent((prev) => { const c = { ...prev }; delete c[currentTable]; return c; });
     setItemNotes((prev) => { const c = { ...prev }; delete c[currentTable]; return c; });
     updateTableStatus(currentTable, "PAID");
-  }, [currentTable, isAdmin, orderSessionReady, setItemNotes, setKitchenSent, setTableOrders, updateTableStatus]);
+  }, [currentTable, orderSessionReady, setItemNotes, setKitchenSent, setTableOrders, updateTableStatus]);
 
   const transferTable = useCallback(async (targetTable) => {
     if (!orderSessionReady) return;

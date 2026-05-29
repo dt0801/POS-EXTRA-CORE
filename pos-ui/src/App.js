@@ -1389,7 +1389,6 @@ export default function App() {
           formatMoney={formatMoney}
           setCurrentTable={setCurrentTable}
           setSidebarView={setSidebarView}
-          isAdmin={isAdmin}
           language={language}
         />
       )}
@@ -1661,7 +1660,7 @@ export default function App() {
                      </button>
                    </div>
                    
-                   {tableStatus[currentTable] === "PAYING" && isAdmin ? (
+                   {tableStatus[currentTable] === "PAYING" ? (
                      <button
                        onClick={resetTable}
                        className="w-full py-4 bg-error-container text-error hover:bg-red-200 font-bold text-sm rounded-[1.2rem] shadow-sm transition-all uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1669,11 +1668,6 @@ export default function App() {
                        <span className="material-symbols-outlined text-[18px]">restart_alt</span>
                       {tt("RESET BÀN TRỐNG", "TISCH ZURÜCKSETZEN")}
                      </button>
-                   ) : tableStatus[currentTable] === "PAYING" ? (
-                     <div className="w-full py-4 bg-stone-100 text-stone-500 font-bold text-sm rounded-[1.2rem] shadow-sm uppercase tracking-wider flex items-center justify-center gap-2">
-                       <span className="material-symbols-outlined text-[18px]">cleaning_services</span>
-                       {tt("BAN DANG CHO DON", "TISCH WARTET")}
-                     </div>
                    ) : (
                      <button
                       onClick={() => openPaymentMethodModal()}
@@ -3031,17 +3025,13 @@ export default function App() {
                    <span className="font-headline font-black text-3xl text-primary tracking-tight">{formatMoney(total)}</span>
                  </div>
                  
-                 {tableStatus[currentTable] === "PAYING" && isAdmin ? (
+                 {tableStatus[currentTable] === "PAYING" ? (
                    <button
                      onClick={() => { resetTable(); setShowMobileCart(false); }}
                      className="w-full py-4 bg-error-container text-error font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm"
                    >
                      RESET BAN TRONG
                    </button>
-                 ) : tableStatus[currentTable] === "PAYING" ? (
-                   <div className="w-full py-4 bg-stone-100 text-stone-500 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm">
-                     BAN DANG CHO DON
-                   </div>
                  ) : (
                  <div className="grid grid-cols-2 gap-3 pb-safe">
                    <button

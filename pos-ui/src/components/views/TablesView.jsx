@@ -8,7 +8,6 @@ export default function TablesView({
   formatMoney,
   setCurrentTable,
   setSidebarView,
-  isAdmin = false,
   language = "vi",
 }) {
   const tr = (vi, de) => (language === "de" ? de : vi);
@@ -95,13 +94,7 @@ export default function TablesView({
                   </div>
                 </div>
                 <div className="mt-4">
-                  {isAdmin ? (
-                    <button className="w-full bg-white text-error font-bold text-xs py-2 md:py-3 rounded-xl shadow-sm border border-error/10 active:scale-95 transition-transform">{tr("XÁC NHẬN DỌN", "REINIGUNG BESTÄTIGEN")}</button>
-                  ) : (
-                    <div className="w-full bg-white/70 text-error/70 font-bold text-xs py-2 md:py-3 rounded-xl shadow-sm border border-error/10 text-center">
-                      {tr("CHỜ ADMIN", "ADMIN")}
-                    </div>
-                  )}
+                  <button className="w-full bg-white text-error font-bold text-xs py-2 md:py-3 rounded-xl shadow-sm border border-error/10 active:scale-95 transition-transform">{tr("XÁC NHẬN DỌN", "REINIGUNG BESTÄTIGEN")}</button>
                 </div>
               </div>
             );

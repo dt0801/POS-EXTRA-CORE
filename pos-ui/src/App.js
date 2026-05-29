@@ -1389,6 +1389,7 @@ export default function App() {
           formatMoney={formatMoney}
           setCurrentTable={setCurrentTable}
           setSidebarView={setSidebarView}
+          isAdmin={isAdmin}
           language={language}
         />
       )}
@@ -1503,7 +1504,7 @@ export default function App() {
                      <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">
                        {currentTable ? (
                           tableStatus[currentTable] === "OPEN" ? `ORDER #${new Date().getTime().toString().slice(-4)}` :
-                         tableStatus[currentTable] === "PAYING" ? tt("CHỜ RESET", "WARTET AUF RESET") : tt("TRỐNG", "FREI")
+                         tableStatus[currentTable] === "PAYING" ? tt("CHỜ DỌN", "WARTET AUF REINIGUNG") : tt("TRỐNG", "FREI")
                        ) : tt("Chưa chọn bàn", "Kein Tisch gewählt")}
                      </span>
                    </div>
@@ -1660,15 +1661,19 @@ export default function App() {
                      </button>
                    </div>
                    
-                   {tableStatus[currentTable] === "PAYING" ? (
+                   {tableStatus[currentTable] === "PAYING" && isAdmin ? (
                      <button
                        onClick={resetTable}
-                       disabled={!isAdmin}
                        className="w-full py-4 bg-error-container text-error hover:bg-red-200 font-bold text-sm rounded-[1.2rem] shadow-sm transition-all uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                      >
                        <span className="material-symbols-outlined text-[18px]">restart_alt</span>
                       {tt("RESET BÀN TRỐNG", "TISCH ZURÜCKSETZEN")}
                      </button>
+                   ) : tableStatus[currentTable] === "PAYING" ? (
+                     <div className="w-full py-4 bg-stone-100 text-stone-500 font-bold text-sm rounded-[1.2rem] shadow-sm uppercase tracking-wider flex items-center justify-center gap-2">
+                       <span className="material-symbols-outlined text-[18px]">cleaning_services</span>
+                       {tt("BAN DANG CHO DON", "TISCH WARTET")}
+                     </div>
                    ) : (
                      <button
                       onClick={() => openPaymentMethodModal()}
@@ -2929,7 +2934,7 @@ export default function App() {
                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1 truncate">
                      {currentTable ? (
                         tableStatus[currentTable] === "OPEN" ? `ORDER #${new Date().getTime().toString().slice(-4)}` :
-                        tableStatus[currentTable] === "PAYING" ? "CHỜ RESET" : "TRỐNG"
+                        tableStatus[currentTable] === "PAYING" ? "CHỜ DỌN" : "TRỐNG"
                      ) : tt("Chưa chọn bàn", "Kein Tisch gewählt")}
                    </span>
                  </div>
@@ -3026,6 +3031,18 @@ export default function App() {
                    <span className="font-headline font-black text-3xl text-primary tracking-tight">{formatMoney(total)}</span>
                  </div>
                  
+                 {tableStatus[currentTable] === "PAYING" && isAdmin ? (
+                   <button
+                     onClick={() => { resetTable(); setShowMobileCart(false); }}
+                     className="w-full py-4 bg-error-container text-error font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm"
+                   >
+                     RESET BAN TRONG
+                   </button>
+                 ) : tableStatus[currentTable] === "PAYING" ? (
+                   <div className="w-full py-4 bg-stone-100 text-stone-500 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm">
+                     BAN DANG CHO DON
+                   </div>
+                 ) : (
                  <div className="grid grid-cols-2 gap-3 pb-safe">
                    <button
                      onClick={() => { printOrderTicket('ALL'); setShowMobileCart(false); }}
@@ -3042,6 +3059,7 @@ export default function App() {
                      THANH TOÁN
                    </button>
                  </div>
+                 )}
                </div>
             </aside>
           </div>

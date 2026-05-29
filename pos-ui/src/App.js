@@ -1395,7 +1395,8 @@ export default function App() {
 
         {/* ===== ORDER VIEW ===== */}
         {sidebarView === "order" && (
-          isMobile ? (
+          <>
+          {isMobile ? (
             <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden -mx-2">
             <MobileOrderView
               menu={menu}
@@ -1680,6 +1681,8 @@ export default function App() {
                    )}
                  </div>
               </aside>
+            </div>
+          )}
              
              {/* Payment Method Modal */}
              {showPaymentMethodModal && (
@@ -2051,8 +2054,7 @@ export default function App() {
                  </div>
                </div>
              )}
-            </div>
-          )
+          </>
         )}
 
         {/* ===== MANAGE VIEW ===== */}

@@ -6,8 +6,10 @@ export default function useTableActions({
   orderSessionReady,
   isAdmin = false,
   currentTable,
+  tableOrders,
   tableStatus,
   kitchenSent,
+  itemNotes,
   currentItems,
   splitTarget,
   splitSelected,
@@ -148,14 +150,40 @@ export default function useTableActions({
       method: "POST",
     });
     if (!response.ok) {
+      if (response.status === 404 && isAdmin) {
+        const nextTableOrders = { ...tableOrders };
+        const nextKitchenSent = { ...kitchenSent };
+        const nextItemNotes = { ...itemNotes };
+        delete nextTableOrders[currentTable];
+        delete nextKitchenSent[currentTable];
+        delete nextItemNotes[currentTable];
+
+        const legacyResponse = await authedFetch(`${API_URL}/order-session`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tableOrders: nextTableOrders,
+            kitchenSent: nextKitchenSent,
+            itemNotes: nextItemNotes,
+          }),
+        });
+        if (legacyResponse.ok) {
+          await updateTableStatus(currentTable, "PAID");
+          applyServerTableReset(currentTable);
+          return;
+        }
+      }
       const data = await response.json().catch(() => ({}));
-      alert(data.error || "Khong reset duoc ban. Vui long thu lai.");
+      const fallbackMessage = response.status === 404
+        ? "Backend chua duoc cap nhat. Vui long deploy commit moi tren Render."
+        : "Khong reset duoc ban. Vui long thu lai.";
+      alert(data.error || fallbackMessage);
       return;
     }
 
     applyServerTableReset(currentTable);
     setTableStatus((prev) => ({ ...prev, [currentTable]: "PAID" }));
-  }, [applyServerTableReset, authedFetch, currentTable, orderSessionReady, setTableStatus]);
+  }, [applyServerTableReset, authedFetch, currentTable, isAdmin, itemNotes, kitchenSent, orderSessionReady, tableOrders, updateTableStatus, setTableStatus]);
 
   const transferTable = useCallback(async (targetTable) => {
     if (!orderSessionReady) return;

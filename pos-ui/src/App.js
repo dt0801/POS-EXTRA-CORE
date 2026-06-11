@@ -237,6 +237,7 @@ export default function App() {
     itemNotes,
     setItemNotes,
     orderSessionReady,
+    applyServerTableReset,
   } = useOrderSession({ authedFetch, authToken, authValidated });
 
   // ----- MANAGE STATE -----
@@ -610,6 +611,7 @@ export default function App() {
   }, [authedFetch]);
 
   const { addItem, addCustomLineItem, updateQty, removeItem, resetTable, transferTable, executeSplit } = useTableActions({
+    authedFetch,
     orderSessionReady,
     isAdmin,
     currentTable,
@@ -622,6 +624,7 @@ export default function App() {
     setTableOrders,
     setKitchenSent,
     setItemNotes,
+    applyServerTableReset,
     updateTableStatus,
     setTableStatus,
     setCurrentTable,
@@ -629,6 +632,15 @@ export default function App() {
     setSplitSelected,
     setSplitTarget,
   });
+
+  useEffect(() => {
+    if (!authUser || !authValidated) return;
+    const handlePosDataUpdated = (event) => {
+      if (event.detail?.event === "TABLES_UPDATED") fetchTableStatus();
+    };
+    window.addEventListener("pos-data-updated", handlePosDataUpdated);
+    return () => window.removeEventListener("pos-data-updated", handlePosDataUpdated);
+  }, [authUser, authValidated, fetchTableStatus]);
 
   const { callPrintApi, printOrderTicket, handlePayment, printTamTinh } = usePrintFlow({
     authedFetch,

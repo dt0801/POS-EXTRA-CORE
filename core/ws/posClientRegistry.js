@@ -26,7 +26,23 @@ function createPosClientRegistry() {
     }
   }
 
-  return { posClients, addPosClient, removePosClient, notifyForceLogout };
+  function broadcastPosClients(payload, { excludeSessionId = "" } = {}) {
+    const message = JSON.stringify(payload);
+    for (const set of posClients.values()) {
+      for (const ws of set) {
+        if (excludeSessionId && ws.sessionId === excludeSessionId) continue;
+        if (ws.readyState === WebSocket.OPEN) ws.send(message);
+      }
+    }
+  }
+
+  return {
+    posClients,
+    addPosClient,
+    removePosClient,
+    notifyForceLogout,
+    broadcastPosClients,
+  };
 }
 
 module.exports = { createPosClientRegistry };

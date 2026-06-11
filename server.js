@@ -31,6 +31,7 @@ const { updateUser } = require("./core/users/updateUser");
 const { deleteUser } = require("./core/users/deleteUser");
 const { getOrderSession } = require("./core/orderSession/getOrderSession");
 const { putOrderSession } = require("./core/orderSession/putOrderSession");
+const { resetOrderSessionTable } = require("./core/orderSession/resetOrderSessionTable");
 const { getMenuList } = require("./core/menu/getMenuList");
 const { createMenuItem } = require("./core/menu/createMenuItem");
 const { updateMenuItem } = require("./core/menu/updateMenuItem");
@@ -184,7 +185,12 @@ const MENU_LIST_CACHE_TTL_MS = Math.max(5000, Number(process.env.MENU_LIST_CACHE
 const PRINT_BRIDGE_SECRET = (process.env.PRINT_BRIDGE_SECRET || "bbq-pos-bridge-secret-2024").trim();
 const PRINT_DISPATCH_MODE = (process.env.PRINT_DISPATCH_MODE || "queue").trim().toLowerCase();
 const bridgeClients = new Set();
-const { addPosClient, removePosClient, notifyForceLogout } = createPosClientRegistry();
+const {
+  addPosClient,
+  removePosClient,
+  notifyForceLogout,
+  broadcastPosClients,
+} = createPosClientRegistry();
 
 function makeSessionId() {
   return Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
@@ -400,8 +406,30 @@ function startServer() {
 
   app.put("/order-session", authMiddleware, async (req, res) => {
     const result = await putOrderSession({ mongoDb }, { body: req.body || {}, actorUser: req.user });
+    if (result.status === 200) {
+      broadcastPosClients(
+        { event: "ORDER_SESSION_UPDATED" },
+        { excludeSessionId: req.user.session_id }
+      );
+    }
     res.status(result.status).json(result.body);
   });
+
+  app.post(
+    "/order-session/tables/:num/reset",
+    authMiddleware,
+    requireRole("admin", "staff"),
+    async (req, res) => {
+      const result = await resetOrderSessionTable({ mongoDb }, { num: req.params.num });
+      if (result.status === 200) {
+        const eventOptions = { excludeSessionId: req.user.session_id };
+        const tableNum = Number(req.params.num);
+        broadcastPosClients({ event: "ORDER_SESSION_UPDATED", table_num: tableNum }, eventOptions);
+        broadcastPosClients({ event: "TABLES_UPDATED", table_num: tableNum }, eventOptions);
+      }
+      res.status(result.status).json(result.body);
+    }
+  );
 
   // =============================================
   // TABLE STATUS APIs
@@ -416,6 +444,12 @@ function startServer() {
   // Cập nhật trạng thái bàn
   app.post("/tables/:num/status", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await updateTableStatus({ mongoDb }, { num: req.params.num, body: req.body });
+    if (result.status === 200) {
+      broadcastPosClients(
+        { event: "TABLES_UPDATED", table_num: Number(req.params.num) },
+        { excludeSessionId: req.user.session_id }
+      );
+    }
     res.status(result.status).json(result.body);
   });
 

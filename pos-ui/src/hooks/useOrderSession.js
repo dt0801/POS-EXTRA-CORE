@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { API_URL } from "../config/api";
 
 const LOCAL_FALLBACK_KEY = "pos_order_session_cache_v1";
@@ -32,6 +32,18 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
   const [itemNotes, setItemNotes] = useState(localSnapshot?.itemNotes || {});
   const [orderSessionReady, setOrderSessionReady] = useState(false);
   const [remoteHydrated, setRemoteHydrated] = useState(false);
+  const skipNextRemoteSaveRef = useRef(false);
+
+  const hydrateFromServer = useCallback(async () => {
+    const response = await authedFetch(`${API_URL}/order-session`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    skipNextRemoteSaveRef.current = true;
+    setTableOrders(data.tableOrders && typeof data.tableOrders === "object" ? data.tableOrders : {});
+    setItemNotes(data.itemNotes && typeof data.itemNotes === "object" ? data.itemNotes : {});
+    setKitchenSent(data.kitchenSent && typeof data.kitchenSent === "object" ? data.kitchenSent : {});
+    setRemoteHydrated(true);
+  }, [authedFetch]);
 
   useEffect(() => {
     if (!authToken || !authValidated) {
@@ -41,14 +53,9 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
     }
 
     let cancelled = false;
-    authedFetch(`${API_URL}/order-session`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data) => {
+    hydrateFromServer()
+      .then(() => {
         if (cancelled) return;
-        if (data.tableOrders && typeof data.tableOrders === "object") setTableOrders(data.tableOrders);
-        if (data.itemNotes && typeof data.itemNotes === "object") setItemNotes(data.itemNotes);
-        if (data.kitchenSent && typeof data.kitchenSent === "object") setKitchenSent(data.kitchenSent);
-        setRemoteHydrated(true);
       })
       .catch(() => {})
       .finally(() => {
@@ -58,7 +65,17 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
     return () => {
       cancelled = true;
     };
-  }, [authedFetch, authToken, authValidated]);
+  }, [authToken, authValidated, hydrateFromServer]);
+
+  useEffect(() => {
+    if (!authToken || !authValidated) return;
+    const handlePosDataUpdated = (event) => {
+      if (event.detail?.event !== "ORDER_SESSION_UPDATED") return;
+      hydrateFromServer().catch(() => {});
+    };
+    window.addEventListener("pos-data-updated", handlePosDataUpdated);
+    return () => window.removeEventListener("pos-data-updated", handlePosDataUpdated);
+  }, [authToken, authValidated, hydrateFromServer]);
 
   useEffect(() => {
     if (!orderSessionReady) return;
@@ -67,15 +84,46 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
 
   useEffect(() => {
     if (!authToken || !authValidated || !orderSessionReady || !remoteHydrated) return;
+    if (skipNextRemoteSaveRef.current) {
+      skipNextRemoteSaveRef.current = false;
+      return;
+    }
     const t = setTimeout(() => {
       authedFetch(`${API_URL}/order-session`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tableOrders, itemNotes, kitchenSent }),
-      }).catch(() => {});
+      }).then(async (response) => {
+        if (response.ok) return;
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }).catch((error) => {
+        console.error("Khong dong bo duoc order session:", error);
+        hydrateFromServer().catch(() => {});
+      });
     }, 700);
     return () => clearTimeout(t);
-  }, [tableOrders, itemNotes, kitchenSent, orderSessionReady, remoteHydrated, authedFetch, authToken, authValidated]);
+  }, [tableOrders, itemNotes, kitchenSent, orderSessionReady, remoteHydrated, authedFetch, authToken, authValidated, hydrateFromServer]);
+
+  const applyServerTableReset = useCallback((tableNum) => {
+    const tableKey = String(tableNum);
+    skipNextRemoteSaveRef.current = true;
+    setTableOrders((prev) => {
+      const next = { ...prev };
+      delete next[tableKey];
+      return next;
+    });
+    setItemNotes((prev) => {
+      const next = { ...prev };
+      delete next[tableKey];
+      return next;
+    });
+    setKitchenSent((prev) => {
+      const next = { ...prev };
+      delete next[tableKey];
+      return next;
+    });
+  }, []);
 
   return {
     tableOrders,
@@ -85,5 +133,6 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
     itemNotes,
     setItemNotes,
     orderSessionReady,
+    applyServerTableReset,
   };
 }

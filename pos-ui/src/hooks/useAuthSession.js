@@ -95,6 +95,8 @@ export default function useAuthSession() {
         const payload = JSON.parse(evt.data);
         if (payload?.event === "FORCE_LOGOUT") {
           forceLogout(payload.reason || "Phien dang nhap da bi thay the tu dong.");
+        } else if (payload?.event === "ORDER_SESSION_UPDATED" || payload?.event === "TABLES_UPDATED") {
+          window.dispatchEvent(new CustomEvent("pos-data-updated", { detail: payload }));
         }
       } catch {}
     };

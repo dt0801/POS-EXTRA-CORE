@@ -1,6 +1,8 @@
 import { useCallback } from "react";
+import { API_URL } from "../config/api";
 
 export default function useTableActions({
+  authedFetch,
   orderSessionReady,
   isAdmin = false,
   currentTable,
@@ -13,6 +15,7 @@ export default function useTableActions({
   setTableOrders,
   setKitchenSent,
   setItemNotes,
+  applyServerTableReset,
   updateTableStatus,
   setTableStatus,
   setCurrentTable,
@@ -136,16 +139,23 @@ export default function useTableActions({
     });
   }, [currentTable, isAdmin, kitchenSent, orderSessionReady, setTableOrders]);
 
-  const resetTable = useCallback(() => {
+  const resetTable = useCallback(async () => {
     if (!orderSessionReady) return;
     if (!currentTable) return;
     if (!window.confirm(`Reset ban ${currentTable}? Toan bo order se bi xoa.`)) return;
 
-    setTableOrders((prev) => { const c = { ...prev }; delete c[currentTable]; return c; });
-    setKitchenSent((prev) => { const c = { ...prev }; delete c[currentTable]; return c; });
-    setItemNotes((prev) => { const c = { ...prev }; delete c[currentTable]; return c; });
-    updateTableStatus(currentTable, "PAID");
-  }, [currentTable, orderSessionReady, setItemNotes, setKitchenSent, setTableOrders, updateTableStatus]);
+    const response = await authedFetch(`${API_URL}/order-session/tables/${currentTable}/reset`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      alert(data.error || "Khong reset duoc ban. Vui long thu lai.");
+      return;
+    }
+
+    applyServerTableReset(currentTable);
+    setTableStatus((prev) => ({ ...prev, [currentTable]: "PAID" }));
+  }, [applyServerTableReset, authedFetch, currentTable, orderSessionReady, setTableStatus]);
 
   const transferTable = useCallback(async (targetTable) => {
     if (!orderSessionReady) return;

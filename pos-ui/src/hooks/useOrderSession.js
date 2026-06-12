@@ -33,6 +33,8 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
   const [orderSessionReady, setOrderSessionReady] = useState(false);
   const [remoteHydrated, setRemoteHydrated] = useState(false);
   const skipNextRemoteSaveRef = useRef(false);
+  const saveTimerRef = useRef(null);
+  const inFlightSaveRef = useRef(null);
 
   const hydrateFromServer = useCallback(async () => {
     const response = await authedFetch(`${API_URL}/order-session`);
@@ -84,12 +86,17 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
 
   useEffect(() => {
     if (!authToken || !authValidated || !orderSessionReady || !remoteHydrated) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
     if (skipNextRemoteSaveRef.current) {
       skipNextRemoteSaveRef.current = false;
       return;
     }
-    const t = setTimeout(() => {
-      authedFetch(`${API_URL}/order-session`, {
+    const timer = setTimeout(() => {
+      saveTimerRef.current = null;
+      const request = authedFetch(`${API_URL}/order-session`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tableOrders, itemNotes, kitchenSent }),
@@ -101,9 +108,26 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
         console.error("Khong dong bo duoc order session:", error);
         hydrateFromServer().catch(() => {});
       });
+      inFlightSaveRef.current = request;
+      request.finally(() => {
+        if (inFlightSaveRef.current === request) inFlightSaveRef.current = null;
+      });
     }, 700);
-    return () => clearTimeout(t);
+    saveTimerRef.current = timer;
+    return () => {
+      clearTimeout(timer);
+      if (saveTimerRef.current === timer) saveTimerRef.current = null;
+    };
   }, [tableOrders, itemNotes, kitchenSent, orderSessionReady, remoteHydrated, authedFetch, authToken, authValidated, hydrateFromServer]);
+
+  const prepareForTableReset = useCallback(async () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const inFlightSave = inFlightSaveRef.current;
+    if (inFlightSave) await inFlightSave.catch(() => {});
+  }, []);
 
   const applyServerTableReset = useCallback((tableNum) => {
     const tableKey = String(tableNum);
@@ -134,5 +158,6 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
     setItemNotes,
     orderSessionReady,
     applyServerTableReset,
+    prepareForTableReset,
   };
 }

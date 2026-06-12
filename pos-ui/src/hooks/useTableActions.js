@@ -18,6 +18,7 @@ export default function useTableActions({
   setKitchenSent,
   setItemNotes,
   applyServerTableReset,
+  prepareForTableReset,
   updateTableStatus,
   setTableStatus,
   setCurrentTable,
@@ -146,6 +147,7 @@ export default function useTableActions({
     if (!currentTable) return;
     if (!window.confirm(`Reset ban ${currentTable}? Toan bo order se bi xoa.`)) return;
 
+    await prepareForTableReset();
     const response = await authedFetch(`${API_URL}/order-session/tables/${currentTable}/reset`, {
       method: "POST",
     });
@@ -183,7 +185,7 @@ export default function useTableActions({
 
     applyServerTableReset(currentTable);
     setTableStatus((prev) => ({ ...prev, [currentTable]: "PAID" }));
-  }, [applyServerTableReset, authedFetch, currentTable, isAdmin, itemNotes, kitchenSent, orderSessionReady, tableOrders, updateTableStatus, setTableStatus]);
+  }, [applyServerTableReset, authedFetch, currentTable, isAdmin, itemNotes, kitchenSent, orderSessionReady, prepareForTableReset, tableOrders, updateTableStatus, setTableStatus]);
 
   const transferTable = useCallback(async (targetTable) => {
     if (!orderSessionReady) return;

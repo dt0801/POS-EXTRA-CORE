@@ -238,6 +238,7 @@ export default function App() {
     setItemNotes,
     orderSessionReady,
     applyServerTableReset,
+    prepareForTableReset,
   } = useOrderSession({ authedFetch, authToken, authValidated });
 
   // ----- MANAGE STATE -----
@@ -627,6 +628,7 @@ export default function App() {
     setKitchenSent,
     setItemNotes,
     applyServerTableReset,
+    prepareForTableReset,
     updateTableStatus,
     setTableStatus,
     setCurrentTable,

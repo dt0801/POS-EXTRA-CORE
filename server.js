@@ -61,6 +61,7 @@ const { listWindowsPrintersApi } = require("./core/windowsPrinters/listWindowsPr
 const { createWindowsPrinter } = require("./core/windowsPrinters/createWindowsPrinter");
 const { updateWindowsPrinter } = require("./core/windowsPrinters/updateWindowsPrinter");
 const { deleteWindowsPrinter } = require("./core/windowsPrinters/deleteWindowsPrinter");
+const { sendBillToZalo, getZaloConfig } = require("./core/zalo/sendBillToZalo");
 const { listLegacyPrinters } = require("./core/print/listLegacyPrinters");
 const { legacyCreatePrinter } = require("./core/print/legacyCreatePrinter");
 const { legacyUpdatePrinter } = require("./core/print/legacyUpdatePrinter");
@@ -500,6 +501,27 @@ function startServer() {
   app.get("/bills/:id", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     const result = await getBillById({ mongoDb }, { id: req.params.id });
     res.status(result.status).json(result.body);
+  });
+
+  app.get("/zalo/status", authMiddleware, requireRole("admin"), (req, res) => {
+    const config = getZaloConfig();
+    res.json({
+      enabled: config.enabled,
+      threadIdConfigured: Boolean(config.threadId),
+      threadType: config.threadType,
+    });
+  });
+
+  app.post("/zalo/send-bill", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
+    try {
+      const result = await sendBillToZalo({
+        ...(req.body || {}),
+        cashierName: req.user?.full_name || req.user?.username || "",
+      });
+      res.status(200).json(result);
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message || String(e) });
+    }
   });
 
   // =============================================

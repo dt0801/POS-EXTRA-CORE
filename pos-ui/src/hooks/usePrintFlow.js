@@ -239,6 +239,31 @@ export default function usePrintFlow({
       }
     }
 
+    authedFetch(`${API_URL}/zalo/send-bill`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        billId,
+        tableNum: currentTable,
+        items: itemsForBill,
+        total: billTotal,
+        subtotal: billSubtotal,
+        discountAmount: billDiscountAmount,
+        billDiscountAmount: billFixedDiscountAmount,
+        cashGiven: billCashGiven,
+        changeDue: billChangeDue,
+        paymentMethod: normalizedPaymentMethod,
+      }),
+    })
+      .then(async (response) => {
+        if (response.ok) return;
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${response.status}`);
+      })
+      .catch((error) => {
+        console.error("Khong gui duoc bill ve Zalo:", error);
+      });
+
     if (shouldMarkPaying) updateTableStatus(currentTable, "PAYING");
     return { ok: true, billId, payment_method: normalizedPaymentMethod, total: billTotal };
   }, [

@@ -23,7 +23,8 @@
     "multer": "^1.4.5-lts.1",
     "node-thermal-printer": "^4.3.3",
     "pdfkit": "^0.18.0",
-    "ws": "^8.20.0"
+    "ws": "^8.20.0",
+    "zalo-api-final": "^2.1.1"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",

@@ -507,6 +507,9 @@ function startServer() {
     const config = getZaloConfig();
     res.json({
       enabled: config.enabled,
+      cookieConfigured: Boolean(config.cookie),
+      imeiConfigured: Boolean(config.imei),
+      userAgentConfigured: Boolean(config.userAgent),
       threadIdConfigured: Boolean(config.threadId),
       threadType: config.threadType,
     });

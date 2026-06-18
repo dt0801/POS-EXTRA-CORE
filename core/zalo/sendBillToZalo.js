@@ -53,7 +53,17 @@ async function getZaloApi(config) {
 async function sendBillToZalo(input = {}) {
   const config = getZaloConfig();
   if (!config.enabled) {
-    return { ok: true, skipped: true, reason: "Zalo chua duoc cau hinh" };
+    const missing = [];
+    if (!config.cookie) missing.push("ZALO_COOKIE_JSON");
+    if (!config.imei) missing.push("ZALO_IMEI");
+    if (!config.userAgent) missing.push("ZALO_USER_AGENT");
+    if (!config.threadId) missing.push("ZALO_THREAD_ID");
+    return {
+      ok: true,
+      skipped: true,
+      reason: `Zalo chua duoc cau hinh: thieu ${missing.join(", ")}`,
+      missing,
+    };
   }
 
   const api = await getZaloApi(config);

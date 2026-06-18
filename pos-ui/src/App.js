@@ -96,6 +96,7 @@ export default function App() {
   // Responsive & Mobile Cart state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [showMobileCart, setShowMobileCart] = useState(false);
+  const [zaloTesting, setZaloTesting] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -518,6 +519,49 @@ export default function App() {
     setPaymentCashGivenEuro("");
     setSplitPaySelected({});
     setShowPaymentMethodModal(true);
+  };
+
+  const testZaloBillSend = async () => {
+    if (zaloTesting) return;
+    setZaloTesting(true);
+    try {
+      const statusRes = await authedFetch(`${API_URL}/zalo/status`);
+      const status = await statusRes.json().catch(() => ({}));
+      if (!statusRes.ok) throw new Error(status.error || `HTTP ${statusRes.status}`);
+      if (!status.enabled) {
+        const missing = [];
+        if (!status.cookieConfigured) missing.push("ZALO_COOKIE_JSON");
+        if (!status.imeiConfigured) missing.push("ZALO_IMEI");
+        if (!status.userAgentConfigured) missing.push("ZALO_USER_AGENT");
+        if (!status.threadIdConfigured) missing.push("ZALO_THREAD_ID");
+        alert(`Zalo chua san sang. Thieu: ${missing.join(", ") || "khong ro"}`);
+        return;
+      }
+
+      const sendRes = await authedFetch(`${API_URL}/zalo/send-bill`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          billId: "TEST",
+          tableNum: "TEST",
+          items: [{ name: "Test gui bill tu POS", price: 100, qty: 1 }],
+          total: 100,
+          subtotal: 100,
+          paymentMethod: "CASH",
+        }),
+      });
+      const data = await sendRes.json().catch(() => ({}));
+      if (!sendRes.ok || data.ok === false) throw new Error(data.error || `HTTP ${sendRes.status}`);
+      if (data.skipped) {
+        alert(data.reason || "Zalo chua duoc cau hinh.");
+        return;
+      }
+      alert("Da gui bill test ve Zalo. Anh kiem tra tin nhan Zalo.");
+    } catch (e) {
+      alert(`Khong gui duoc Zalo: ${e.message || e}`);
+    } finally {
+      setZaloTesting(false);
+    }
   };
 
   /** Fetch danh sách bàn đầy đủ cho trang quản lý
@@ -2454,6 +2498,15 @@ export default function App() {
                     Report Bill
                   </button>
                 </div>
+                 <button
+                   type="button"
+                   disabled={zaloTesting}
+                   onClick={testZaloBillSend}
+                   className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm disabled:opacity-60 disabled:pointer-events-none bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
+                 >
+                    <span className={`material-symbols-outlined text-[20px] ${zaloTesting ? "animate-spin" : ""}`}>{zaloTesting ? "progress_activity" : "chat"}</span>
+                    {zaloTesting ? "Dang test Zalo..." : "Test Zalo"}
+                 </button>
                  <button type="button" disabled={settingsSaving} onClick={() => { if (!settingsSaving) saveAllSettings(); }} className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm disabled:opacity-60 disabled:pointer-events-none ${settingsSaved ? "bg-green-500 text-white" : "bg-primary text-white shadow-primary/20 hover:opacity-90 active:scale-95"}`}>
                     <span className={`material-symbols-outlined text-[20px] ${settingsSaving ? "animate-spin" : ""}`}>{settingsSaving ? "progress_activity" : settingsSaved ? "check_circle" : "save"}</span>
                     {settingsSaving ? tt("Đang lưu...", "Wird gespeichert...") : settingsSaved ? tt("Đã lưu cài đặt", "Einstellungen gespeichert") : tt("Lưu thay đổi", "Änderungen speichern")}

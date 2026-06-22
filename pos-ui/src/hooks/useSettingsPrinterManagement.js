@@ -19,6 +19,11 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     cashier_name: "",
     total_tables: "20",
     kitchen_categories_json: DEFAULT_KITCHEN_CATEGORIES_JSON,
+    zalo_cookie_json: "",
+    zalo_imei: "",
+    zalo_user_agent: "",
+    zalo_thread_id: "",
+    zalo_thread_type: "user",
   });
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);

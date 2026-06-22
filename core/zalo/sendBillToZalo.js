@@ -1,6 +1,7 @@
 const { buildZaloBillMessage } = require("./billMessage");
 
 let apiPromise = null;
+let apiConfigKey = "";
 
 function parseCookie(raw) {
   if (!raw) return null;
@@ -11,12 +12,19 @@ function parseCookie(raw) {
   }
 }
 
-function getZaloConfig() {
-  const cookie = parseCookie(process.env.ZALO_COOKIE_JSON || "");
-  const imei = String(process.env.ZALO_IMEI || "").trim();
-  const userAgent = String(process.env.ZALO_USER_AGENT || "").trim();
-  const threadId = String(process.env.ZALO_THREAD_ID || "").trim();
-  const threadType = String(process.env.ZALO_THREAD_TYPE || "user").trim().toLowerCase();
+function settingOrEnv(settings, settingKey, envKey, fallback = "") {
+  const settingValue = settings && settings[settingKey] != null ? String(settings[settingKey]).trim() : "";
+  if (settingValue) return settingValue;
+  return String(process.env[envKey] || fallback).trim();
+}
+
+function getZaloConfig(settings = {}) {
+  const cookieRaw = settingOrEnv(settings, "zalo_cookie_json", "ZALO_COOKIE_JSON");
+  const cookie = parseCookie(cookieRaw);
+  const imei = settingOrEnv(settings, "zalo_imei", "ZALO_IMEI");
+  const userAgent = settingOrEnv(settings, "zalo_user_agent", "ZALO_USER_AGENT");
+  const threadId = settingOrEnv(settings, "zalo_thread_id", "ZALO_THREAD_ID");
+  const threadType = settingOrEnv(settings, "zalo_thread_type", "ZALO_THREAD_TYPE", "user").toLowerCase();
 
   return {
     enabled: Boolean(cookie && imei && userAgent && threadId),
@@ -25,10 +33,15 @@ function getZaloConfig() {
     userAgent,
     threadId,
     threadType,
+    configKey: JSON.stringify({ cookieRaw, imei, userAgent, threadId, threadType }),
   };
 }
 
 async function getZaloApi(config) {
+  if (apiConfigKey !== config.configKey) {
+    apiPromise = null;
+    apiConfigKey = config.configKey;
+  }
   if (!apiPromise) {
     apiPromise = (async () => {
       const { Zalo } = await import("zalo-api-final");
@@ -50,8 +63,8 @@ async function getZaloApi(config) {
   return apiPromise;
 }
 
-async function sendBillToZalo(input = {}) {
-  const config = getZaloConfig();
+async function sendBillToZalo(input = {}, settings = {}) {
+  const config = getZaloConfig(settings);
   if (!config.enabled) {
     const missing = [];
     if (!config.cookie) missing.push("ZALO_COOKIE_JSON");

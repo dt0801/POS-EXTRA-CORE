@@ -504,7 +504,7 @@ function startServer() {
   });
 
   app.get("/zalo/status", authMiddleware, requireRole("admin"), (req, res) => {
-    const config = getZaloConfig();
+    const config = getZaloConfig(settingsCache);
     res.json({
       enabled: config.enabled,
       cookieConfigured: Boolean(config.cookie),
@@ -520,7 +520,7 @@ function startServer() {
       const result = await sendBillToZalo({
         ...(req.body || {}),
         cashierName: req.user?.full_name || req.user?.username || "",
-      });
+      }, settingsCache);
       res.status(200).json(result);
     } catch (e) {
       res.status(500).json({ ok: false, error: e.message || String(e) });

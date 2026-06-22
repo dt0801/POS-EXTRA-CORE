@@ -525,6 +525,7 @@ export default function App() {
     if (zaloTesting) return;
     setZaloTesting(true);
     try {
+      await saveAllSettings();
       const statusRes = await authedFetch(`${API_URL}/zalo/status`);
       const status = await statusRes.json().catch(() => ({}));
       if (!statusRes.ok) throw new Error(status.error || `HTTP ${statusRes.status}`);
@@ -2590,6 +2591,85 @@ export default function App() {
                       />
                     </div>
                   </div>
+                </section>
+
+                <section className="bg-surface-container-lowest p-6 rounded-[2rem] space-y-6 border border-outline-variant/30 shadow-sm shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center">
+                      <span className="material-symbols-outlined">chat</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg font-headline text-on-surface">Zalo Bill</h4>
+                      <p className="text-xs text-on-surface-variant font-medium">Gui noi dung bill ve Zalo sau khi in hoa don.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Cookie JSON</label>
+                    <textarea
+                      rows={4}
+                      value={settings.zalo_cookie_json || ""}
+                      onChange={(e) => setSettings((s) => ({ ...s, zalo_cookie_json: e.target.value }))}
+                      placeholder='[{"domain":".zalo.me","name":"...","value":"..."}]'
+                      className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono text-xs text-on-surface outline-none resize-y"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">IMEI</label>
+                      <input
+                        className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none"
+                        type="text"
+                        value={settings.zalo_imei || ""}
+                        onChange={(e) => setSettings((s) => ({ ...s, zalo_imei: e.target.value }))}
+                        placeholder="localStorage z_uuid"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Thread ID</label>
+                      <input
+                        className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none"
+                        type="text"
+                        value={settings.zalo_thread_id || ""}
+                        onChange={(e) => setSettings((s) => ({ ...s, zalo_thread_id: e.target.value }))}
+                        placeholder="ID ca nhan hoac nhom"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">User Agent</label>
+                    <input
+                      className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none"
+                      type="text"
+                      value={settings.zalo_user_agent || ""}
+                      onChange={(e) => setSettings((s) => ({ ...s, zalo_user_agent: e.target.value }))}
+                      placeholder="navigator.userAgent"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Nguoi nhan</label>
+                    <select
+                      value={settings.zalo_thread_type || "user"}
+                      onChange={(e) => setSettings((s) => ({ ...s, zalo_thread_type: e.target.value }))}
+                      className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-bold text-on-surface outline-none"
+                    >
+                      <option value="user">Ca nhan</option>
+                      <option value="group">Nhom</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={zaloTesting || settingsSaving}
+                    onClick={testZaloBillSend}
+                    className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold transition-all shadow-sm disabled:opacity-60 disabled:pointer-events-none bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
+                  >
+                    <span className={`material-symbols-outlined text-[20px] ${zaloTesting ? "animate-spin" : ""}`}>{zaloTesting ? "progress_activity" : "send"}</span>
+                    {zaloTesting ? "Dang test Zalo..." : "Luu xong roi test Zalo"}
+                  </button>
                 </section>
               </div>
 

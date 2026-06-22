@@ -517,10 +517,11 @@ function startServer() {
 
   app.post("/zalo/send-bill", authMiddleware, requireRole("admin", "staff"), async (req, res) => {
     try {
+      const body = req.body || {};
       const result = await sendBillToZalo({
-        ...(req.body || {}),
+        ...body,
         cashierName: req.user?.full_name || req.user?.username || "",
-      }, settingsCache);
+      }, settingsCache, body.zaloConfig || {});
       res.status(200).json(result);
     } catch (e) {
       res.status(500).json({ ok: false, error: e.message || String(e) });

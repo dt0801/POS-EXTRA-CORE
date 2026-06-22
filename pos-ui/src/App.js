@@ -531,12 +531,14 @@ export default function App() {
       if (!statusRes.ok) throw new Error(status.error || `HTTP ${statusRes.status}`);
       if (!status.enabled) {
         const missing = [];
-        if (!status.cookieConfigured) missing.push("ZALO_COOKIE_JSON");
-        if (!status.imeiConfigured) missing.push("ZALO_IMEI");
-        if (!status.userAgentConfigured) missing.push("ZALO_USER_AGENT");
-        if (!status.threadIdConfigured) missing.push("ZALO_THREAD_ID");
-        alert(`Zalo chua san sang. Thieu: ${missing.join(", ") || "khong ro"}`);
-        return;
+        if (!String(settings.zalo_cookie_json || "").trim()) missing.push("ZALO_COOKIE_JSON");
+        if (!String(settings.zalo_imei || "").trim()) missing.push("ZALO_IMEI");
+        if (!String(settings.zalo_user_agent || "").trim()) missing.push("ZALO_USER_AGENT");
+        if (!String(settings.zalo_thread_id || "").trim()) missing.push("ZALO_THREAD_ID");
+        if (missing.length) {
+          alert(`Zalo chua san sang. Thieu: ${missing.join(", ")}`);
+          return;
+        }
       }
 
       const sendRes = await authedFetch(`${API_URL}/zalo/send-bill`, {
@@ -549,6 +551,13 @@ export default function App() {
           total: 100,
           subtotal: 100,
           paymentMethod: "CASH",
+          zaloConfig: {
+            zalo_cookie_json: settings.zalo_cookie_json || "",
+            zalo_imei: settings.zalo_imei || "",
+            zalo_user_agent: settings.zalo_user_agent || "",
+            zalo_thread_id: settings.zalo_thread_id || "",
+            zalo_thread_type: settings.zalo_thread_type || "user",
+          },
         }),
       });
       const data = await sendRes.json().catch(() => ({}));

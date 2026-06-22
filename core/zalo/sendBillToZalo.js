@@ -18,13 +18,14 @@ function settingOrEnv(settings, settingKey, envKey, fallback = "") {
   return String(process.env[envKey] || fallback).trim();
 }
 
-function getZaloConfig(settings = {}) {
-  const cookieRaw = settingOrEnv(settings, "zalo_cookie_json", "ZALO_COOKIE_JSON");
+function getZaloConfig(settings = {}, overrides = {}) {
+  const source = { ...(settings || {}), ...(overrides || {}) };
+  const cookieRaw = settingOrEnv(source, "zalo_cookie_json", "ZALO_COOKIE_JSON");
   const cookie = parseCookie(cookieRaw);
-  const imei = settingOrEnv(settings, "zalo_imei", "ZALO_IMEI");
-  const userAgent = settingOrEnv(settings, "zalo_user_agent", "ZALO_USER_AGENT");
-  const threadId = settingOrEnv(settings, "zalo_thread_id", "ZALO_THREAD_ID");
-  const threadType = settingOrEnv(settings, "zalo_thread_type", "ZALO_THREAD_TYPE", "user").toLowerCase();
+  const imei = settingOrEnv(source, "zalo_imei", "ZALO_IMEI");
+  const userAgent = settingOrEnv(source, "zalo_user_agent", "ZALO_USER_AGENT");
+  const threadId = settingOrEnv(source, "zalo_thread_id", "ZALO_THREAD_ID");
+  const threadType = settingOrEnv(source, "zalo_thread_type", "ZALO_THREAD_TYPE", "user").toLowerCase();
 
   return {
     enabled: Boolean(cookie && imei && userAgent && threadId),
@@ -63,8 +64,8 @@ async function getZaloApi(config) {
   return apiPromise;
 }
 
-async function sendBillToZalo(input = {}, settings = {}) {
-  const config = getZaloConfig(settings);
+async function sendBillToZalo(input = {}, settings = {}, overrides = {}) {
+  const config = getZaloConfig(settings, overrides);
   if (!config.enabled) {
     const missing = [];
     if (!config.cookie) missing.push("ZALO_COOKIE_JSON");

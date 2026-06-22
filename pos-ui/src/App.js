@@ -595,7 +595,12 @@ export default function App() {
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || data.ok === false) throw new Error(data.error || `HTTP ${response.status}`);
+      if (!response.ok || data.ok === false) {
+        if (response.status === 404) {
+          throw new Error("Backend chua deploy chuc nang lay danh sach Zalo. Vao Render deploy latest commit 1544985.");
+        }
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }
       const nextThreads = [
         ...(Array.isArray(data.friends) ? data.friends : []),
         ...(Array.isArray(data.groups) ? data.groups : []),
@@ -2615,6 +2620,8 @@ export default function App() {
                   </div>
                 </section>
 
+                {isAdmin && (
+                <>
                 <section className="bg-surface-container-lowest p-6 rounded-[2rem] space-y-6 border border-outline-variant/30 shadow-sm shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center">
@@ -2752,6 +2759,8 @@ export default function App() {
                     {zaloTesting ? "Dang test Zalo..." : "Luu xong roi test Zalo"}
                   </button>
                 </section>
+                </>
+                )}
               </div>
 
               {/* Right Column: Printer Management */}

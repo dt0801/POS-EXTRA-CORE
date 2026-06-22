@@ -97,6 +97,8 @@ export default function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [zaloTesting, setZaloTesting] = useState(false);
+  const [zaloThreadsLoading, setZaloThreadsLoading] = useState(false);
+  const [zaloThreads, setZaloThreads] = useState([]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -571,6 +573,39 @@ export default function App() {
       alert(`Khong gui duoc Zalo: ${e.message || e}`);
     } finally {
       setZaloTesting(false);
+    }
+  };
+
+  const loadZaloThreads = async () => {
+    if (zaloThreadsLoading) return;
+    setZaloThreadsLoading(true);
+    try {
+      await saveAllSettings();
+      const response = await authedFetch(`${API_URL}/zalo/threads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          zaloConfig: {
+            zalo_cookie_json: settings.zalo_cookie_json || "",
+            zalo_imei: settings.zalo_imei || "",
+            zalo_user_agent: settings.zalo_user_agent || "",
+            zalo_thread_id: settings.zalo_thread_id || "",
+            zalo_thread_type: settings.zalo_thread_type || "user",
+          },
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.ok === false) throw new Error(data.error || `HTTP ${response.status}`);
+      const nextThreads = [
+        ...(Array.isArray(data.friends) ? data.friends : []),
+        ...(Array.isArray(data.groups) ? data.groups : []),
+      ];
+      setZaloThreads(nextThreads);
+      if (!nextThreads.length) alert("Khong tim thay ban be/nhom Zalo nao.");
+    } catch (e) {
+      alert(`Khong lay duoc danh sach Zalo: ${e.message || e}`);
+    } finally {
+      setZaloThreadsLoading(false);
     }
   };
 
@@ -2645,6 +2680,43 @@ export default function App() {
                         placeholder="ID ca nhan hoac nhom"
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      disabled={zaloThreadsLoading || settingsSaving}
+                      onClick={loadZaloThreads}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold transition-all shadow-sm disabled:opacity-60 disabled:pointer-events-none bg-surface-container-high text-on-surface hover:bg-surface-container-highest active:scale-95"
+                    >
+                      <span className={`material-symbols-outlined text-[20px] ${zaloThreadsLoading ? "animate-spin" : ""}`}>{zaloThreadsLoading ? "progress_activity" : "contacts"}</span>
+                      {zaloThreadsLoading ? "Dang lay danh sach Zalo..." : "Lay danh sach ban be / nhom Zalo"}
+                    </button>
+
+                    {zaloThreads.length > 0 && (
+                      <select
+                        value={`${settings.zalo_thread_type || "user"}:${settings.zalo_thread_id || ""}`}
+                        onChange={(e) => {
+                          const [type, ...idParts] = e.target.value.split(":");
+                          const id = idParts.join(":");
+                          const picked = zaloThreads.find((thread) => thread.id === id && thread.type === type);
+                          setSettings((s) => ({
+                            ...s,
+                            zalo_thread_type: type || "user",
+                            zalo_thread_id: id,
+                          }));
+                          if (picked) alert(`Da chon ${picked.type === "group" ? "nhom" : "ca nhan"}: ${picked.name || picked.id}`);
+                        }}
+                        className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-bold text-on-surface outline-none"
+                      >
+                        <option value={`${settings.zalo_thread_type || "user"}:${settings.zalo_thread_id || ""}`}>Chon nguoi/nhom nhan bill</option>
+                        {zaloThreads.map((thread) => (
+                          <option key={`${thread.type}:${thread.id}`} value={`${thread.type}:${thread.id}`}>
+                            {thread.type === "group" ? "Nhom" : "Ca nhan"} - {thread.name || thread.id}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">

@@ -61,7 +61,7 @@ const { listWindowsPrintersApi } = require("./core/windowsPrinters/listWindowsPr
 const { createWindowsPrinter } = require("./core/windowsPrinters/createWindowsPrinter");
 const { updateWindowsPrinter } = require("./core/windowsPrinters/updateWindowsPrinter");
 const { deleteWindowsPrinter } = require("./core/windowsPrinters/deleteWindowsPrinter");
-const { sendBillToZalo, getZaloConfig } = require("./core/zalo/sendBillToZalo");
+const { sendBillToZalo, getZaloConfig, listZaloThreads } = require("./core/zalo/sendBillToZalo");
 const { listLegacyPrinters } = require("./core/print/listLegacyPrinters");
 const { legacyCreatePrinter } = require("./core/print/legacyCreatePrinter");
 const { legacyUpdatePrinter } = require("./core/print/legacyUpdatePrinter");
@@ -523,6 +523,15 @@ function startServer() {
         cashierName: req.user?.full_name || req.user?.username || "",
       }, settingsCache, body.zaloConfig || {});
       res.status(200).json(result);
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message || String(e) });
+    }
+  });
+
+  app.post("/zalo/threads", authMiddleware, requireRole("admin"), async (req, res) => {
+    try {
+      const result = await listZaloThreads(settingsCache, (req.body || {}).zaloConfig || {});
+      res.status(result.ok === false ? 400 : 200).json(result);
     } catch (e) {
       res.status(500).json({ ok: false, error: e.message || String(e) });
     }

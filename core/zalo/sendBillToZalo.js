@@ -38,6 +38,14 @@ function getZaloConfig(settings = {}, overrides = {}) {
   };
 }
 
+function getMissingLoginFields(config) {
+  const missing = [];
+  if (!config.cookie) missing.push("ZALO_COOKIE_JSON");
+  if (!config.imei) missing.push("ZALO_IMEI");
+  if (!config.userAgent) missing.push("ZALO_USER_AGENT");
+  return missing;
+}
+
 async function getZaloApi(config) {
   if (apiConfigKey !== config.configKey) {
     apiPromise = null;
@@ -64,6 +72,61 @@ async function getZaloApi(config) {
   return apiPromise;
 }
 
+function toArray(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.data)) return value.data;
+  if (Array.isArray(value?.items)) return value.items;
+  if (value && typeof value === "object") return Object.values(value);
+  return [];
+}
+
+function getThreadName(item) {
+  return String(
+    item?.displayName ||
+    item?.name ||
+    item?.zaloName ||
+    item?.userName ||
+    item?.groupName ||
+    item?.title ||
+    ""
+  ).trim();
+}
+
+function getThreadId(item) {
+  return String(
+    item?.userId ||
+    item?.uid ||
+    item?.id ||
+    item?.groupId ||
+    item?.grid ||
+    item?.threadId ||
+    ""
+  ).trim();
+}
+
+async function listZaloThreads(settings = {}, overrides = {}) {
+  const config = getZaloConfig(settings, overrides);
+  const missing = getMissingLoginFields(config);
+  if (missing.length) {
+    return { ok: false, error: `Zalo chua du cau hinh dang nhap: thieu ${missing.join(", ")}`, missing };
+  }
+
+  const api = await getZaloApi(config);
+  const [friendsRaw, groupsRaw] = await Promise.all([
+    typeof api.getAllFriends === "function" ? api.getAllFriends() : [],
+    typeof api.getAllGroups === "function" ? api.getAllGroups() : [],
+  ]);
+
+  const friends = toArray(friendsRaw)
+    .map((item) => ({ id: getThreadId(item), name: getThreadName(item), type: "user" }))
+    .filter((item) => item.id);
+  const groups = toArray(groupsRaw)
+    .map((item) => ({ id: getThreadId(item), name: getThreadName(item), type: "group" }))
+    .filter((item) => item.id);
+
+  return { ok: true, friends, groups };
+}
+
 async function sendBillToZalo(input = {}, settings = {}, overrides = {}) {
   const config = getZaloConfig(settings, overrides);
   if (!config.enabled) {
@@ -88,4 +151,4 @@ async function sendBillToZalo(input = {}, settings = {}, overrides = {}) {
   return { ok: true, skipped: false, result };
 }
 
-module.exports = { sendBillToZalo, getZaloConfig };
+module.exports = { sendBillToZalo, getZaloConfig, listZaloThreads };

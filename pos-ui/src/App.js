@@ -533,10 +533,8 @@ export default function App() {
       if (!statusRes.ok) throw new Error(status.error || `HTTP ${statusRes.status}`);
       if (!status.enabled) {
         const missing = [];
-        if (!String(settings.zalo_cookie_json || "").trim()) missing.push("ZALO_COOKIE_JSON");
-        if (!String(settings.zalo_imei || "").trim()) missing.push("ZALO_IMEI");
-        if (!String(settings.zalo_user_agent || "").trim()) missing.push("ZALO_USER_AGENT");
-        if (!String(settings.zalo_thread_id || "").trim()) missing.push("ZALO_THREAD_ID");
+        if (!String(settings.zalo_bot_token || "").trim()) missing.push("ZALO_BOT_TOKEN");
+        if (!String(settings.zalo_bot_chat_id || "").trim()) missing.push("ZALO_BOT_CHAT_ID");
         if (missing.length) {
           alert(`Zalo chua san sang. Thieu: ${missing.join(", ")}`);
           return;
@@ -554,6 +552,8 @@ export default function App() {
           subtotal: 100,
           paymentMethod: "CASH",
           zaloConfig: {
+            zalo_bot_token: settings.zalo_bot_token || "",
+            zalo_bot_chat_id: settings.zalo_bot_chat_id || "",
             zalo_cookie_json: settings.zalo_cookie_json || "",
             zalo_imei: settings.zalo_imei || "",
             zalo_user_agent: settings.zalo_user_agent || "",
@@ -586,6 +586,8 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           zaloConfig: {
+            zalo_bot_token: settings.zalo_bot_token || "",
+            zalo_bot_chat_id: settings.zalo_bot_chat_id || "",
             zalo_cookie_json: settings.zalo_cookie_json || "",
             zalo_imei: settings.zalo_imei || "",
             zalo_user_agent: settings.zalo_user_agent || "",
@@ -597,7 +599,7 @@ export default function App() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data.ok === false) {
         if (response.status === 404) {
-          throw new Error("Backend chua deploy chuc nang lay danh sach Zalo. Vao Render deploy latest commit 1544985.");
+          throw new Error("Backend chua deploy chuc nang lay Chat ID Zalo. Vao Render deploy latest commit moi nhat.");
         }
         throw new Error(data.error || `HTTP ${response.status}`);
       }
@@ -606,7 +608,7 @@ export default function App() {
         ...(Array.isArray(data.groups) ? data.groups : []),
       ];
       setZaloThreads(nextThreads);
-      if (!nextThreads.length) alert("Khong tim thay ban be/nhom Zalo nao.");
+      if (!nextThreads.length) alert("Chua thay hoi thoai nao. Hay nhan 1 tin vao Bot Zalo, roi bam lay Chat ID lai.");
     } catch (e) {
       alert(`Khong lay duoc danh sach Zalo: ${e.message || e}`);
     } finally {
@@ -2656,36 +2658,32 @@ export default function App() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Cookie JSON</label>
-                    <textarea
-                      rows={4}
-                      value={settings.zalo_cookie_json || ""}
-                      onChange={(e) => setSettings((s) => ({ ...s, zalo_cookie_json: e.target.value }))}
-                      placeholder='[{"domain":".zalo.me","name":"...","value":"..."}]'
-                      className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono text-xs text-on-surface outline-none resize-y"
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Bot Token</label>
+                    <input
+                      className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono text-xs text-on-surface outline-none"
+                      type="password"
+                      value={settings.zalo_bot_token || ""}
+                      onChange={(e) => setSettings((s) => ({ ...s, zalo_bot_token: e.target.value }))}
+                      placeholder="Token tu Zalo Bot Creator"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">IMEI</label>
+                      <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Chat ID</label>
                       <input
                         className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none"
                         type="text"
-                        value={settings.zalo_imei || ""}
-                        onChange={(e) => setSettings((s) => ({ ...s, zalo_imei: e.target.value }))}
-                        placeholder="localStorage z_uuid"
+                        value={settings.zalo_bot_chat_id || ""}
+                        onChange={(e) => setSettings((s) => ({ ...s, zalo_bot_chat_id: e.target.value }))}
+                        placeholder="ID hoi thoai voi bot"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Thread ID</label>
-                      <input
-                        className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none"
-                        type="text"
-                        value={settings.zalo_thread_id || ""}
-                        onChange={(e) => setSettings((s) => ({ ...s, zalo_thread_id: e.target.value }))}
-                        placeholder="ID ca nhan hoac nhom"
-                      />
+                      <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Cach lay Chat ID</label>
+                      <div className="min-h-[48px] flex items-center bg-surface-container rounded-xl px-4 py-3 text-sm font-medium text-on-surface-variant">
+                        Nhan tin vao bot, roi bam nut ben duoi.
+                      </div>
                     </div>
                   </div>
 
@@ -2697,12 +2695,12 @@ export default function App() {
                       className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold transition-all shadow-sm disabled:opacity-60 disabled:pointer-events-none bg-surface-container-high text-on-surface hover:bg-surface-container-highest active:scale-95"
                     >
                       <span className={`material-symbols-outlined text-[20px] ${zaloThreadsLoading ? "animate-spin" : ""}`}>{zaloThreadsLoading ? "progress_activity" : "contacts"}</span>
-                      {zaloThreadsLoading ? "Dang lay danh sach Zalo..." : "Lay danh sach ban be / nhom Zalo"}
+                      {zaloThreadsLoading ? "Dang lay Chat ID..." : "Lay Chat ID tu tin nhan Bot"}
                     </button>
 
                     {zaloThreads.length > 0 && (
                       <select
-                        value={`${settings.zalo_thread_type || "user"}:${settings.zalo_thread_id || ""}`}
+                        value={`${settings.zalo_thread_type || "user"}:${settings.zalo_bot_chat_id || ""}`}
                         onChange={(e) => {
                           const [type, ...idParts] = e.target.value.split(":");
                           const id = idParts.join(":");
@@ -2710,13 +2708,13 @@ export default function App() {
                           setSettings((s) => ({
                             ...s,
                             zalo_thread_type: type || "user",
-                            zalo_thread_id: id,
+                            zalo_bot_chat_id: id,
                           }));
                           if (picked) alert(`Da chon ${picked.type === "group" ? "nhom" : "ca nhan"}: ${picked.name || picked.id}`);
                         }}
                         className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-bold text-on-surface outline-none"
                       >
-                        <option value={`${settings.zalo_thread_type || "user"}:${settings.zalo_thread_id || ""}`}>Chon nguoi/nhom nhan bill</option>
+                        <option value={`${settings.zalo_thread_type || "user"}:${settings.zalo_bot_chat_id || ""}`}>Chon hoi thoai nhan bill</option>
                         {zaloThreads.map((thread) => (
                           <option key={`${thread.type}:${thread.id}`} value={`${thread.type}:${thread.id}`}>
                             {thread.type === "group" ? "Nhom" : "Ca nhan"} - {thread.name || thread.id}
@@ -2724,29 +2722,6 @@ export default function App() {
                         ))}
                       </select>
                     )}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">User Agent</label>
-                    <input
-                      className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium text-on-surface outline-none"
-                      type="text"
-                      value={settings.zalo_user_agent || ""}
-                      onChange={(e) => setSettings((s) => ({ ...s, zalo_user_agent: e.target.value }))}
-                      placeholder="navigator.userAgent"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Nguoi nhan</label>
-                    <select
-                      value={settings.zalo_thread_type || "user"}
-                      onChange={(e) => setSettings((s) => ({ ...s, zalo_thread_type: e.target.value }))}
-                      className="w-full bg-surface-container border-none rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-bold text-on-surface outline-none"
-                    >
-                      <option value="user">Ca nhan</option>
-                      <option value="group">Nhom</option>
-                    </select>
                   </div>
 
                   <button

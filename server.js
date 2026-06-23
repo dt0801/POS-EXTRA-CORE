@@ -507,6 +507,9 @@ function startServer() {
     const config = getZaloConfig(settingsCache);
     res.json({
       enabled: config.enabled,
+      mode: config.mode,
+      botTokenConfigured: Boolean(config.botToken),
+      botChatIdConfigured: Boolean(config.botChatId),
       cookieConfigured: Boolean(config.cookie),
       imeiConfigured: Boolean(config.imei),
       userAgentConfigured: Boolean(config.userAgent),
@@ -654,7 +657,7 @@ function startServer() {
   });
 
   app.get("/settings", authMiddleware, (req, res) => {
-    const result = getSettings(settingsCache);
+    const result = getSettings(settingsCache, { redactSecrets: req.user?.role !== "admin" });
     res.status(result.status).json(result.body);
   });
 

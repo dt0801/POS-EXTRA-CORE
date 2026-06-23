@@ -161,6 +161,36 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
     nextPaymentReductionRef.current = paymentReduction;
   }, []);
 
+  const saveOrderSessionNow = useCallback(async ({ tableOrders: nextTableOrders, itemNotes: nextItemNotes, kitchenSent: nextKitchenSent, paymentReduction } = {}) => {
+    if (!authToken || !authValidated) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    nextPaymentReductionRef.current = null;
+    const payload = {
+      tableOrders: nextTableOrders && typeof nextTableOrders === "object" ? nextTableOrders : tableOrders,
+      itemNotes: nextItemNotes && typeof nextItemNotes === "object" ? nextItemNotes : itemNotes,
+      kitchenSent: nextKitchenSent && typeof nextKitchenSent === "object" ? nextKitchenSent : kitchenSent,
+      ...(paymentReduction ? { paymentReduction } : {}),
+    };
+    const request = authedFetch(`${API_URL}/order-session`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(async (response) => {
+      if (response.ok) return payload;
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${response.status}`);
+    });
+    inFlightSaveRef.current = request;
+    try {
+      return await request;
+    } finally {
+      if (inFlightSaveRef.current === request) inFlightSaveRef.current = null;
+    }
+  }, [authToken, authValidated, authedFetch, tableOrders, itemNotes, kitchenSent]);
+
   return {
     tableOrders,
     setTableOrders,
@@ -172,5 +202,6 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
     applyServerTableReset,
     prepareForTableReset,
     markNextSavePaymentReduction,
+    saveOrderSessionNow,
   };
 }

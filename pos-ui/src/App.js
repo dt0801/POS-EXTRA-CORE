@@ -243,6 +243,7 @@ export default function App() {
     applyServerTableReset,
     prepareForTableReset,
     markNextSavePaymentReduction,
+    saveOrderSessionNow,
   } = useOrderSession({ authedFetch, authToken, authValidated });
 
   // ----- MANAGE STATE -----
@@ -758,64 +759,79 @@ export default function App() {
     [currentItems, splitPaySelected]
   );
 
-  const applySplitPayDeduction = useCallback(
+  const buildSplitPayDeductionSnapshot = useCallback(
     ({ selected }) => {
-      if (!currentTable) return { remainingCount: currentItems.length };
+      if (!currentTable) {
+        return {
+          tableOrders,
+          itemNotes,
+          kitchenSent,
+          remainingCount: currentItems.length,
+        };
+      }
       const selectedMap = selected && typeof selected === "object" ? selected : {};
       const curQtyMap = {};
       currentItems.forEach((it) => {
         curQtyMap[it.id] = Number(it.qty || 0);
       });
 
-      setTableOrders((prev) => {
-        const table = prev[currentTable] || {};
-        const updated = { ...table };
-        Object.entries(selectedMap).forEach(([itemId, qtyPay]) => {
-          const ex = updated[itemId];
-          if (!ex) return;
-          const q = Math.max(0, Math.round(Number(qtyPay) || 0));
-          const nextQty = Number(ex.qty || 0) - q;
-          if (nextQty <= 0) delete updated[itemId];
-          else updated[itemId] = { ...ex, qty: nextQty };
-        });
-        return { ...prev, [currentTable]: updated };
+      const table = tableOrders[currentTable] || {};
+      const updatedTable = { ...table };
+      Object.entries(selectedMap).forEach(([itemId, qtyPay]) => {
+        const ex = updatedTable[itemId];
+        if (!ex) return;
+        const q = Math.max(0, Math.round(Number(qtyPay) || 0));
+        const nextQty = Number(ex.qty || 0) - q;
+        if (nextQty <= 0) delete updatedTable[itemId];
+        else updatedTable[itemId] = { ...ex, qty: nextQty };
       });
+      const nextTableOrders = { ...tableOrders, [currentTable]: updatedTable };
 
-      setItemNotes((prev) => {
-        const notes = prev[currentTable] || {};
-        if (!notes || typeof notes !== "object") return prev;
-        const updated = { ...notes };
+      const notes = itemNotes[currentTable] || {};
+      const nextItemNotes = { ...itemNotes };
+      if (notes && typeof notes === "object") {
+        const updatedNotes = { ...notes };
         Object.keys(selectedMap).forEach((itemId) => {
           const qtyPay = Math.max(0, Math.round(Number(selectedMap[itemId]) || 0));
           const curQty = Number(curQtyMap[itemId] || 0);
-          if (qtyPay >= curQty) delete updated[itemId];
+          if (qtyPay >= curQty) delete updatedNotes[itemId];
         });
-        return { ...prev, [currentTable]: updated };
-      });
+        nextItemNotes[currentTable] = updatedNotes;
+      }
 
-      setKitchenSent((prev) => {
-        const sent = prev[currentTable] || {};
-        if (!sent || typeof sent !== "object") return prev;
-        const updated = { ...sent };
+      const sent = kitchenSent[currentTable] || {};
+      const nextKitchenSent = { ...kitchenSent };
+      if (sent && typeof sent === "object") {
+        const updatedSent = { ...sent };
         Object.entries(selectedMap).forEach(([itemId, qtyPay]) => {
-          const oldSent = Number(updated[itemId] || 0);
+          const oldSent = Number(updatedSent[itemId] || 0);
           const curQty = Number(curQtyMap[itemId] || 0);
           const q = Math.max(0, Math.round(Number(qtyPay) || 0));
           const nextQty = curQty - q;
-          if (nextQty <= 0) delete updated[itemId];
-          else updated[itemId] = Math.min(oldSent, nextQty);
+          if (nextQty <= 0) delete updatedSent[itemId];
+          else updatedSent[itemId] = Math.min(oldSent, nextQty);
         });
-        return { ...prev, [currentTable]: updated };
-      });
+        nextKitchenSent[currentTable] = updatedSent;
+      }
 
       const remainingCount = currentItems.reduce((cnt, it) => {
         const qPay = Math.max(0, Math.round(Number(selectedMap[it.id]) || 0));
         const remain = Number(it.qty || 0) - qPay;
         return cnt + (remain > 0 ? 1 : 0);
       }, 0);
-      return { remainingCount };
+      return { tableOrders: nextTableOrders, itemNotes: nextItemNotes, kitchenSent: nextKitchenSent, remainingCount };
     },
-    [currentItems, currentTable, setItemNotes, setKitchenSent, setTableOrders]
+    [currentItems, currentTable, itemNotes, kitchenSent, tableOrders]
+  );
+
+  const applySplitPayDeductionSnapshot = useCallback(
+    (snapshot) => {
+      if (!snapshot) return;
+      setTableOrders(snapshot.tableOrders || {});
+      setItemNotes(snapshot.itemNotes || {});
+      setKitchenSent(snapshot.kitchenSent || {});
+    },
+    [setItemNotes, setKitchenSent, setTableOrders]
   );
 
   const confirmSplitPayment = useCallback(
@@ -853,10 +869,15 @@ export default function App() {
           shouldMarkPaying: false,
         });
         if (!paymentResult?.ok) return;
+        const deductionSnapshot = buildSplitPayDeductionSnapshot({ selected: splitPaySelected });
         if (paymentResult?.billId) {
           markNextSavePaymentReduction({ bill_id: paymentResult.billId });
+          await saveOrderSessionNow({
+            ...deductionSnapshot,
+            paymentReduction: { bill_id: paymentResult.billId },
+          });
         }
-        applySplitPayDeduction({ selected: splitPaySelected });
+        applySplitPayDeductionSnapshot(deductionSnapshot);
         if (shouldMarkPaying) updateTableStatus(currentTable, "PAYING");
         else updateTableStatus(currentTable, "OPEN");
         setShowPaymentMethodModal(false);
@@ -866,12 +887,14 @@ export default function App() {
       }
     },
     [
-      applySplitPayDeduction,
+      applySplitPayDeductionSnapshot,
+      buildSplitPayDeductionSnapshot,
       buildDiscountedPaymentItems,
       currentItems,
       currentTable,
       handlePayment,
       markNextSavePaymentReduction,
+      saveOrderSessionNow,
       splitPaySelected,
       updateTableStatus,
     ]

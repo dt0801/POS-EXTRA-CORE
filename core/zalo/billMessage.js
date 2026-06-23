@@ -7,7 +7,16 @@ function formatMoney(cents) {
 }
 
 function paymentLabel(method) {
-  return String(method || "").toUpperCase() === "CARD" ? "The" : "Tien mat";
+  return String(method || "").toUpperCase() === "CARD" ? "The / Card" : "Tien mat";
+}
+
+function formatQty(qty) {
+  const value = Number(qty || 0);
+  return Number.isInteger(value) ? String(value) : String(value).replace(".", ",");
+}
+
+function formatMessageTime(date = new Date()) {
+  return formatEuropeDateTime(date, "vi-VN").replace(/:\d{2}(?=\s|$)/, "");
 }
 
 function buildZaloBillMessage(input = {}) {
@@ -25,32 +34,39 @@ function buildZaloBillMessage(input = {}) {
     cashierName,
   } = input;
 
-  const lines = [
-    `BILL #${billId || "-"}`,
-    `Ban: ${tableNum || "-"}`,
-    `Thoi gian: ${formatEuropeDateTime(new Date(), "vi-VN")}`,
-    cashierName ? `Nhan vien: ${cashierName}` : "",
-    `Thanh toan: ${paymentLabel(paymentMethod)}`,
-    "",
-    "Mon:",
-  ].filter(Boolean);
+  const normalizedItems = Array.isArray(items) ? items : [];
+  const totalDiscount = Number(discountAmount || 0) + Number(billDiscountAmount || 0);
+  const separator = "━━━━━━━━━━━━━━";
+  const lines = [];
 
-  (Array.isArray(items) ? items : []).forEach((item) => {
+  lines.push(`🧾 HUMAMI BILL #${billId || "-"}`);
+  lines.push(separator);
+  lines.push(`🪑 Ban: ${tableNum || "-"}`);
+  lines.push(`🕒 Gio: ${formatMessageTime(new Date())}`);
+  if (cashierName) lines.push(`👤 Nhan vien: ${cashierName}`);
+  lines.push(`${String(paymentMethod || "").toUpperCase() === "CARD" ? "💳" : "💵"} Thanh toan: ${paymentLabel(paymentMethod)}`);
+  lines.push(separator);
+  lines.push("🍽️ Mon da ban");
+
+  normalizedItems.forEach((item, index) => {
     const qty = Number(item.qty || 0);
     const name = String(item.name || "").trim() || "Mon";
     const lineTotal = Number(item.price || 0) * qty;
-    lines.push(`- ${name} x${qty}: ${formatMoney(lineTotal)}`);
+    const itemDiscount = Number(item.discount_percent || 0);
+    lines.push(`${index + 1}. ${name}`);
+    lines.push(`   ${formatQty(qty)} x ${formatMoney(item.price)} = ${formatMoney(lineTotal)}${itemDiscount > 0 ? ` (-${itemDiscount}%)` : ""}`);
   });
 
-  lines.push("");
+  lines.push(separator);
   if (subtotal != null && Number(subtotal) !== Number(total)) {
-    lines.push(`Tam tinh: ${formatMoney(subtotal)}`);
+    lines.push(`📌 Tam tinh: ${formatMoney(subtotal)}`);
   }
-  const totalDiscount = Number(discountAmount || 0) + Number(billDiscountAmount || 0);
-  if (totalDiscount > 0) lines.push(`Giam gia: -${formatMoney(totalDiscount)}`);
-  lines.push(`Tong cong: ${formatMoney(total)}`);
-  if (cashGiven > 0) lines.push(`Khach dua: ${formatMoney(cashGiven)}`);
-  if (changeDue > 0) lines.push(`Tra lai: ${formatMoney(changeDue)}`);
+  if (totalDiscount > 0) lines.push(`🏷️ Giam gia: -${formatMoney(totalDiscount)}`);
+  lines.push(`✅ Tong cong: ${formatMoney(total)}`);
+  if (cashGiven > 0) lines.push(`💶 Khach dua: ${formatMoney(cashGiven)}`);
+  if (changeDue > 0) lines.push(`↩️ Tra lai: ${formatMoney(changeDue)}`);
+  lines.push(separator);
+  lines.push("Cam on quy khach!");
 
   return lines.join("\n");
 }

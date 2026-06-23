@@ -242,6 +242,7 @@ export default function App() {
     orderSessionReady,
     applyServerTableReset,
     prepareForTableReset,
+    markNextSavePaymentReduction,
   } = useOrderSession({ authedFetch, authToken, authValidated });
 
   // ----- MANAGE STATE -----
@@ -843,7 +844,7 @@ export default function App() {
 
       setPaymentSubmitting(true);
       try {
-        await handlePayment({
+        const paymentResult = await handlePayment({
           payment_method: method,
           items: discountedItemsToPay,
           total: splitTotal,
@@ -851,6 +852,10 @@ export default function App() {
           discount_amount: splitDiscount,
           shouldMarkPaying: false,
         });
+        if (!paymentResult?.ok) return;
+        if (paymentResult?.billId) {
+          markNextSavePaymentReduction({ bill_id: paymentResult.billId });
+        }
         applySplitPayDeduction({ selected: splitPaySelected });
         if (shouldMarkPaying) updateTableStatus(currentTable, "PAYING");
         else updateTableStatus(currentTable, "OPEN");
@@ -866,6 +871,7 @@ export default function App() {
       currentItems,
       currentTable,
       handlePayment,
+      markNextSavePaymentReduction,
       splitPaySelected,
       updateTableStatus,
     ]

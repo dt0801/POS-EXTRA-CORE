@@ -35,6 +35,7 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
   const skipNextRemoteSaveRef = useRef(false);
   const saveTimerRef = useRef(null);
   const inFlightSaveRef = useRef(null);
+  const nextPaymentReductionRef = useRef(null);
 
   const hydrateFromServer = useCallback(async () => {
     const response = await authedFetch(`${API_URL}/order-session`);
@@ -96,10 +97,17 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
     }
     const timer = setTimeout(() => {
       saveTimerRef.current = null;
+      const paymentReduction = nextPaymentReductionRef.current;
+      nextPaymentReductionRef.current = null;
       const request = authedFetch(`${API_URL}/order-session`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tableOrders, itemNotes, kitchenSent }),
+        body: JSON.stringify({
+          tableOrders,
+          itemNotes,
+          kitchenSent,
+          ...(paymentReduction ? { paymentReduction } : {}),
+        }),
       }).then(async (response) => {
         if (response.ok) return;
         const data = await response.json().catch(() => ({}));
@@ -149,6 +157,10 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
     });
   }, []);
 
+  const markNextSavePaymentReduction = useCallback((paymentReduction) => {
+    nextPaymentReductionRef.current = paymentReduction;
+  }, []);
+
   return {
     tableOrders,
     setTableOrders,
@@ -159,5 +171,6 @@ export default function useOrderSession({ authedFetch, authToken, authValidated 
     orderSessionReady,
     applyServerTableReset,
     prepareForTableReset,
+    markNextSavePaymentReduction,
   };
 }

@@ -510,11 +510,6 @@ function startServer() {
       mode: config.mode,
       botTokenConfigured: Boolean(config.botToken),
       botChatIdConfigured: Boolean(config.botChatId),
-      cookieConfigured: Boolean(config.cookie),
-      imeiConfigured: Boolean(config.imei),
-      userAgentConfigured: Boolean(config.userAgent),
-      threadIdConfigured: Boolean(config.threadId),
-      threadType: config.threadType,
     });
   });
 

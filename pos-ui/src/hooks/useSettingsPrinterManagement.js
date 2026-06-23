@@ -21,10 +21,6 @@ export default function useSettingsPrinterManagement({ authUser, authValidated, 
     kitchen_categories_json: DEFAULT_KITCHEN_CATEGORIES_JSON,
     zalo_bot_token: "",
     zalo_bot_chat_id: "",
-    zalo_cookie_json: "",
-    zalo_imei: "",
-    zalo_user_agent: "",
-    zalo_thread_id: "",
     zalo_thread_type: "user",
   });
   const [settingsSaved, setSettingsSaved] = useState(false);

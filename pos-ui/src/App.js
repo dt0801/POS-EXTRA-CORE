@@ -554,11 +554,6 @@ export default function App() {
           zaloConfig: {
             zalo_bot_token: settings.zalo_bot_token || "",
             zalo_bot_chat_id: settings.zalo_bot_chat_id || "",
-            zalo_cookie_json: settings.zalo_cookie_json || "",
-            zalo_imei: settings.zalo_imei || "",
-            zalo_user_agent: settings.zalo_user_agent || "",
-            zalo_thread_id: settings.zalo_thread_id || "",
-            zalo_thread_type: settings.zalo_thread_type || "user",
           },
         }),
       });
@@ -588,11 +583,6 @@ export default function App() {
           zaloConfig: {
             zalo_bot_token: settings.zalo_bot_token || "",
             zalo_bot_chat_id: settings.zalo_bot_chat_id || "",
-            zalo_cookie_json: settings.zalo_cookie_json || "",
-            zalo_imei: settings.zalo_imei || "",
-            zalo_user_agent: settings.zalo_user_agent || "",
-            zalo_thread_id: settings.zalo_thread_id || "",
-            zalo_thread_type: settings.zalo_thread_type || "user",
           },
         }),
       });

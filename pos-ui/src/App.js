@@ -882,6 +882,8 @@ export default function App() {
         else updateTableStatus(currentTable, "OPEN");
         setShowPaymentMethodModal(false);
         setSplitPaySelected({});
+      } catch (error) {
+        alert(error?.message || "Khong cap nhat duoc bill con lai sau khi tach bill.");
       } finally {
         setPaymentSubmitting(false);
       }

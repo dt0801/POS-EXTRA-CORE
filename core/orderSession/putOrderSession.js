@@ -46,7 +46,7 @@ function findStaffDeletionOrReduction(previousOrders, nextOrders) {
 }
 
 function itemMatchKey(item) {
-  return `${String(item?.name || "").trim().toLowerCase()}|${Number(item?.price || 0)}`;
+  return String(item?.name || "").trim().toLowerCase();
 }
 
 async function isAllowedPaidReduction({ mongoDb, reductions, paymentReduction, actorUser }) {
